@@ -1,0 +1,45 @@
+{
+  "recommendations": [
+    // Svelte
+    "svelte.svelte-vscode",
+
+    // Tailwind CSS
+    "bradlc.vscode-tailwindcss",
+
+    // Formatting & Linting
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+
+    // TypeScript
+    "ms-vscode.vscode-typescript-next",
+
+    // Markdown
+    "yzhang.markdown-all-in-one",
+
+    // Git
+    "eamodio.gitlens",
+
+    // Code Quality
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker",
+
+    // UI/UX
+    "naumovs.color-highlight",
+    "oderwat.indent-rainbow",
+
+    // Productivity
+    "formulahendry.auto-rename-tag",
+    "steoates.autoimport",
+
+    // SQL (for DuckDB queries)
+    "mtxr.sqltools",
+
+    // Optional but useful
+    "github.copilot",
+    "github.copilot-chat"
+  ],
+  "unwantedRecommendations": [
+    "octref.vetur",
+    "hookyqr.beautify"
+  ]
+}

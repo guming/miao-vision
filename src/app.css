@@ -1,0 +1,336 @@
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Evidence.dev Base Styles */
+@layer base {
+  :root {
+    /* Dark mode color scheme */
+    color-scheme: dark;
+
+    /* Font rendering optimization - Modern web standards */
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* Font feature settings for OpenType features */
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+
+    /* Subpixel rendering for sharper text */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Strong reset for html and body */
+  html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    @apply min-w-[320px] min-h-screen;
+    /* Gemini dark mode - dark background with light text */
+    @apply font-sans text-base text-gray-100 bg-gray-950;
+  }
+
+  #app {
+    @apply w-full h-screen m-0 p-0;
+  }
+}
+
+/* Custom Component Styles */
+@layer components {
+  /* Add custom Evidence.dev-style component classes here */
+
+  /* Card style - dark mode */
+  .evidence-card {
+    @apply bg-gray-900 border border-gray-800 rounded-lg shadow-sm p-6;
+  }
+
+  /* Button Design System */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply font-medium text-sm;
+    @apply rounded-lg border;
+    @apply transition-all duration-200 ease-out;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Button Sizes */
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .btn-md {
+    @apply px-4 py-2 text-sm;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  /* Button Variants */
+  .btn-primary {
+    @apply bg-gradient-to-r from-gemini-blue to-gemini-purple;
+    @apply text-white border-transparent;
+    @apply hover:shadow-gemini-md hover:-translate-y-0.5;
+    @apply focus-visible:ring-gemini-blue;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-800 text-gray-200 border-gray-700;
+    @apply hover:bg-gray-700 hover:border-gray-600;
+    @apply focus-visible:ring-gray-500;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-gray-300 border-transparent;
+    @apply hover:bg-gray-800 hover:text-gray-100;
+    @apply focus-visible:ring-gray-500;
+  }
+
+  .btn-danger {
+    @apply bg-error-600 text-white border-transparent;
+    @apply hover:bg-error-700 hover:shadow-md;
+    @apply focus-visible:ring-error-500;
+  }
+
+  .btn-outline {
+    @apply bg-transparent text-gray-300 border-gray-700;
+    @apply hover:bg-gray-800 hover:border-gray-600 hover:text-gray-100;
+    @apply focus-visible:ring-gray-500;
+  }
+
+  /* Icon Buttons */
+  .btn-icon {
+    @apply p-2 w-9 h-9;
+  }
+
+  .btn-icon-sm {
+    @apply p-1.5 w-7 h-7;
+  }
+
+  /* Legacy Evidence styles (deprecated, use .btn-* instead) */
+  .evidence-button {
+    @apply px-4 py-2 rounded-md font-medium transition-colors;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .evidence-button-primary {
+    @apply bg-primary-500 text-white hover:bg-primary-600;
+    @apply focus:ring-primary-500;
+  }
+
+  .evidence-button-secondary {
+    @apply bg-gray-800 text-gray-200 hover:bg-gray-700;
+    @apply focus:ring-gray-500;
+  }
+
+  /* Form Input Design System */
+  .form-input,
+  .form-select,
+  .form-textarea {
+    @apply w-full px-3 py-2;
+    @apply bg-gray-900 border border-gray-700 rounded-lg;
+    @apply text-gray-100 text-sm;
+    @apply placeholder-gray-500;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-800;
+  }
+
+  .form-input:hover:not(:disabled):not(:focus),
+  .form-select:hover:not(:disabled):not(:focus),
+  .form-textarea:hover:not(:disabled):not(:focus) {
+    @apply border-gray-600;
+  }
+
+  .form-input-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .form-input-lg {
+    @apply px-4 py-3 text-base;
+  }
+
+  /* Form Label */
+  .form-label {
+    @apply block text-sm font-medium text-gray-300 mb-1.5;
+  }
+
+  .form-label-sm {
+    @apply text-xs mb-1;
+  }
+
+  /* Form Group */
+  .form-group {
+    @apply mb-4;
+  }
+
+  .form-group-sm {
+    @apply mb-3;
+  }
+
+  /* Form Error */
+  .form-error {
+    @apply mt-1.5 text-xs text-error-400;
+  }
+
+  /* Form Hint */
+  .form-hint {
+    @apply mt-1.5 text-xs text-gray-500;
+  }
+
+  /* Legacy Evidence styles (deprecated, use .form-* instead) */
+  .evidence-input {
+    @apply w-full px-3 py-2 border border-gray-700 rounded-md bg-gray-900 text-gray-100;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply placeholder-gray-500;
+  }
+}
+
+/* Custom Utilities */
+@layer utilities {
+  /* Scrollbar styling for dark mode */
+  .evidence-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.700') theme('colors.gray.900');
+  }
+
+  .evidence-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .evidence-scrollbar::-webkit-scrollbar-track {
+    background: theme('colors.gray.900');
+  }
+
+  .evidence-scrollbar::-webkit-scrollbar-thumb {
+    background: theme('colors.gray.700');
+    border-radius: 4px;
+  }
+
+  .evidence-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.gray.600');
+  }
+
+  /* Gemini Gradient Text Utilities */
+  .gemini-text-gradient {
+    background: linear-gradient(90deg, #4285F4 0%, #A855F7 50%, #EC4899 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gemini Gradient Button */
+  .gemini-button-gradient {
+    background: linear-gradient(135deg, #4285F4 0%, #8B5CF6 50%, #EC4899 100%);
+    color: white;
+    border: none;
+    transition: all 0.3s ease;
+  }
+
+  .gemini-button-gradient:hover {
+    background: linear-gradient(135deg, #3B78E7 0%, #7C4FDB 50%, #D93D85 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+  }
+
+  .gemini-button-gradient:active {
+    transform: translateY(0);
+  }
+
+  /* Gemini Gradient Border - Dark Mode */
+  .gemini-border-gradient {
+    position: relative;
+    background: #1F2937;
+    border-radius: 0.75rem;
+  }
+
+  .gemini-border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 2px;
+    background: linear-gradient(135deg, #4285F4 0%, #EC4899 100%);
+    border-radius: inherit;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* Gemini Card with Gradient Overlay - Dark Mode */
+  .gemini-card {
+    @apply bg-gray-900 border border-gray-800 rounded-2xl shadow-md p-6;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gemini-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%);
+    pointer-events: none;
+  }
+
+  /* Glassmorphism Effect - Dark Mode */
+  .gemini-glass {
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Gemini Active State */
+  .gemini-active {
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+    border-left: 3px solid transparent;
+    border-image: linear-gradient(to bottom, #4285F4, #EC4899) 1;
+  }
+
+  /* Gemini Badge */
+  .gemini-badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+    color: #4285F4;
+    border: 1px solid rgba(66, 133, 244, 0.2);
+  }
+
+  /* Monaco Editor Dark Theme Overrides */
+  .monaco-editor,
+  .monaco-editor-background,
+  .monaco-editor .margin {
+    background-color: #1E1E1E !important;
+  }
+
+  .monaco-editor .view-line {
+    color: #D4D4D4 !important;
+  }
+
+  /* Ensure minimap is dark */
+  .monaco-editor .minimap {
+    background-color: #1E1E1E !important;
+  }
+
+  .monaco-editor .minimap-slider {
+    background-color: rgba(100, 100, 100, 0.2) !important;
+  }
+
+  /* Scrollbar dark theme */
+  .monaco-editor .decorationsOverviewRuler {
+    background-color: #1E1E1E !important;
+  }
+}

@@ -1,0 +1,98 @@
+date,product,category,region,sales_person,quantity,unit_price,revenue,cost,profit,margin
+2024-01-05,Laptop Pro,Electronics,North,Alice Chen,15,8999,134985,105000,29985,0.222
+2024-01-08,Office Chair,Furniture,South,Bob Wang,25,599,14975,11250,3725,0.249
+2024-01-12,Wireless Mouse,Electronics,East,Carol Liu,120,129,15480,7200,8280,0.535
+2024-01-15,Standing Desk,Furniture,West,David Zhang,8,1299,10392,7200,3192,0.307
+2024-01-18,USB-C Hub,Electronics,North,Alice Chen,45,189,8505,4950,3555,0.418
+2024-01-22,Monitor 27",Electronics,South,Bob Wang,18,2499,44982,36000,8982,0.200
+2024-01-25,Desk Lamp,Furniture,East,Carol Liu,30,159,4770,3300,1470,0.308
+2024-01-29,Keyboard Mech,Electronics,West,David Zhang,22,899,19778,13200,6578,0.333
+2024-02-02,Laptop Air,Electronics,North,Alice Chen,12,6999,83988,63000,20988,0.250
+2024-02-05,Bookshelf,Furniture,South,Bob Wang,15,399,5985,4500,1485,0.248
+2024-02-09,Webcam HD,Electronics,East,Carol Liu,35,299,10465,7000,3465,0.331
+2024-02-12,Conference Table,Furniture,West,David Zhang,3,3999,11997,9000,2997,0.250
+2024-02-16,Headphones Pro,Electronics,North,Alice Chen,28,599,16772,11200,5572,0.332
+2024-02-19,Filing Cabinet,Furniture,South,Bob Wang,12,799,9588,7200,2388,0.249
+2024-02-23,Tablet 10",Electronics,East,Carol Liu,20,2999,59980,48000,11980,0.200
+2024-02-27,Ergonomic Chair,Furniture,West,David Zhang,18,1299,23382,16200,7182,0.307
+2024-03-01,Wireless Keyboard,Electronics,North,Alice Chen,40,199,7960,5600,2360,0.296
+2024-03-05,Coffee Table,Furniture,South,Bob Wang,10,699,6990,5000,1990,0.285
+2024-03-08,Docking Station,Electronics,East,Carol Liu,15,899,13485,9000,4485,0.333
+2024-03-12,Whiteboard,Furniture,West,David Zhang,8,599,4792,3200,1592,0.332
+2024-03-15,Smart Watch,Electronics,North,Alice Chen,25,1999,49975,40000,9975,0.200
+2024-03-19,Office Sofa,Furniture,South,Bob Wang,5,2999,14995,12000,2995,0.200
+2024-03-22,Printer Laser,Electronics,East,Carol Liu,10,2499,24990,18000,6990,0.280
+2024-03-26,Storage Cabinet,Furniture,West,David Zhang,14,899,12586,8400,4186,0.333
+2024-03-29,Phone Stand,Electronics,North,Alice Chen,80,49,3920,2400,1520,0.388
+2024-04-02,Executive Desk,Furniture,South,Bob Wang,6,2499,14994,12000,2994,0.200
+2024-04-05,External SSD 1TB,Electronics,East,Carol Liu,30,599,17970,12000,5970,0.332
+2024-04-09,Task Chair,Furniture,West,David Zhang,20,499,9980,7000,2980,0.299
+2024-04-12,Bluetooth Speaker,Electronics,North,Alice Chen,35,299,10465,7000,3465,0.331
+2024-04-16,Corner Desk,Furniture,South,Bob Wang,9,1099,9891,6300,3591,0.363
+2024-04-19,Graphics Tablet,Electronics,East,Carol Liu,12,1299,15588,10800,4788,0.307
+2024-04-23,Reading Lamp,Furniture,West,David Zhang,25,129,3225,2000,1225,0.380
+2024-04-26,Laptop Stand,Electronics,North,Alice Chen,45,159,7155,4500,2655,0.371
+2024-04-30,Meeting Chair,Furniture,South,Bob Wang,30,399,11970,9000,2970,0.248
+2024-05-03,Mechanical Mouse,Electronics,East,Carol Liu,50,189,9450,6000,3450,0.365
+2024-05-07,L-Desk,Furniture,West,David Zhang,7,1799,12593,9800,2793,0.222
+2024-05-10,USB Microphone,Electronics,North,Alice Chen,20,399,7980,5600,2380,0.298
+2024-05-14,Storage Shelf,Furniture,South,Bob Wang,16,299,4784,3200,1584,0.331
+2024-05-17,Portable Charger,Electronics,East,Carol Liu,60,79,4740,2400,2340,0.494
+2024-05-21,Computer Desk,Furniture,West,David Zhang,11,799,8789,5500,3289,0.374
+2024-05-24,Wireless Earbuds,Electronics,North,Alice Chen,40,199,7960,5600,2360,0.296
+2024-05-28,Ottoman,Furniture,South,Bob Wang,18,249,4482,3240,1242,0.277
+2024-05-31,Ring Light,Electronics,East,Carol Liu,25,159,3975,2500,1475,0.371
+2024-06-04,Adjustable Desk,Furniture,West,David Zhang,10,1599,15990,12000,3990,0.250
+2024-06-07,Smart Speaker,Electronics,North,Alice Chen,30,129,3870,2400,1470,0.380
+2024-06-11,Bar Stool,Furniture,South,Bob Wang,20,199,3980,3000,980,0.246
+2024-06-14,Gaming Mouse,Electronics,East,Carol Liu,35,299,10465,7000,3465,0.331
+2024-06-18,Side Table,Furniture,West,David Zhang,22,159,3498,2200,1298,0.371
+2024-06-21,Laptop Bag,Electronics,North,Alice Chen,40,99,3960,2400,1560,0.394
+2024-06-25,Desk Organizer,Furniture,South,Bob Wang,50,39,1950,1500,450,0.231
+2024-06-28,Cable Management,Electronics,East,Carol Liu,70,29,2030,1400,630,0.310
+2024-07-02,Footrest,Furniture,West,David Zhang,28,79,2212,1680,532,0.241
+2024-07-05,Monitor Arm,Electronics,North,Alice Chen,16,399,6384,4480,1904,0.298
+2024-07-09,Cushion Set,Furniture,South,Bob Wang,35,59,2065,1400,665,0.322
+2024-07-12,HDMI Cable,Electronics,East,Carol Liu,100,19,1900,1000,900,0.474
+2024-07-16,Magazine Rack,Furniture,West,David Zhang,15,89,1335,900,435,0.326
+2024-07-19,Power Strip,Electronics,North,Alice Chen,45,39,1755,1350,405,0.231
+2024-07-23,Wall Clock,Furniture,South,Bob Wang,25,79,1975,1500,475,0.241
+2024-07-26,Mouse Pad,Electronics,East,Carol Liu,80,29,2320,1600,720,0.310
+2024-07-30,Coat Rack,Furniture,West,David Zhang,12,129,1548,960,588,0.380
+2024-08-02,Laptop Cooler,Electronics,North,Alice Chen,30,69,2070,1500,570,0.275
+2024-08-06,Trash Can,Furniture,South,Bob Wang,40,49,1960,1600,360,0.184
+2024-08-09,USB Hub 4-Port,Electronics,East,Carol Liu,55,39,2145,1650,495,0.231
+2024-08-13,Plant Stand,Furniture,West,David Zhang,20,69,1380,1000,380,0.275
+2024-08-16,Screen Protector,Electronics,North,Alice Chen,90,19,1710,900,810,0.474
+2024-08-20,Pen Holder,Furniture,South,Bob Wang,60,15,900,720,180,0.200
+2024-08-23,Laptop Sleeve,Electronics,East,Carol Liu,50,49,2450,1500,950,0.388
+2024-08-27,Memo Board,Furniture,West,David Zhang,30,39,1170,900,270,0.231
+2024-08-30,Screen Cleaner,Electronics,North,Alice Chen,70,12,840,560,280,0.333
+2024-09-03,Desktop Fan,Furniture,South,Bob Wang,22,89,1958,1320,638,0.326
+2024-09-06,Charging Cable,Electronics,East,Carol Liu,100,15,1500,1000,500,0.333
+2024-09-10,Paper Tray,Furniture,West,David Zhang,35,25,875,700,175,0.200
+2024-09-13,Keyboard Cover,Electronics,North,Alice Chen,65,19,1235,975,260,0.211
+2024-09-17,Shelf Bracket,Furniture,South,Bob Wang,45,29,1305,1125,180,0.138
+2024-09-20,Phone Charger,Electronics,East,Carol Liu,75,25,1875,1500,375,0.200
+2024-09-24,Picture Frame,Furniture,West,David Zhang,40,35,1400,1120,280,0.200
+2024-09-27,Wrist Rest,Electronics,North,Alice Chen,55,29,1595,1375,220,0.138
+2024-10-01,Wastebasket,Furniture,South,Bob Wang,50,19,950,800,150,0.158
+2024-10-04,Audio Cable,Electronics,East,Carol Liu,85,15,1275,1020,255,0.200
+2024-10-08,Nameplate,Furniture,West,David Zhang,30,29,870,720,150,0.172
+2024-10-11,Screen Filter,Electronics,North,Alice Chen,40,49,1960,1600,360,0.184
+2024-10-15,Calendar,Furniture,South,Bob Wang,60,12,720,600,120,0.167
+2024-10-18,Stylus Pen,Electronics,East,Carol Liu,70,35,2450,1750,700,0.286
+2024-10-22,Door Stop,Furniture,West,David Zhang,80,8,640,560,80,0.125
+2024-10-25,Laptop Lock,Electronics,North,Alice Chen,45,39,1755,1485,270,0.154
+2024-10-29,Hook Set,Furniture,South,Bob Wang,55,15,825,715,110,0.133
+2024-11-01,Screen Stand,Electronics,East,Carol Liu,35,59,2065,1575,490,0.237
+2024-11-05,Label Maker,Furniture,West,David Zhang,20,79,1580,1200,380,0.241
+2024-11-08,Privacy Filter,Electronics,North,Alice Chen,25,89,2225,1625,600,0.270
+2024-11-12,Bin Set,Furniture,South,Bob Wang,40,35,1400,1200,200,0.143
+2024-11-15,Cable Clips,Electronics,East,Carol Liu,90,9,810,720,90,0.111
+2024-11-19,Drawer Divider,Furniture,West,David Zhang,50,19,950,850,100,0.105
+2024-11-22,Surge Protector,Electronics,North,Alice Chen,30,59,1770,1350,420,0.237
+2024-11-26,Bulletin Board,Furniture,South,Bob Wang,28,45,1260,980,280,0.222
+2024-11-29,Adapter Kit,Electronics,East,Carol Liu,60,25,1500,1320,180,0.120
+2024-12-03,Pen Cup,Furniture,West,David Zhang,70,12,840,770,70,0.083
+2024-12-06,Extension Cord,Electronics,North,Alice Chen,40,29,1160,1000,160,0.138
