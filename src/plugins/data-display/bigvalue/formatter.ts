@@ -1,59 +1,30 @@
 /**
  * BigValue Formatter
  *
- * Utility functions for formatting numbers, currency, and percentages
+ * Utility functions for formatting numbers, currency, and percentages.
+ * Uses the core format system for consistency.
  */
 
 import type { ComparisonData } from './types'
+import { fmt, type FormatType } from '@core/shared/format'
 
-/**
- * Format number with thousands separator
- */
-export function formatNumber(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 2
-  }).format(value)
-}
-
-/**
- * Format currency (default: CNY ¥)
- */
-export function formatCurrency(value: number, currency: string = 'CNY'): string {
-  return new Intl.NumberFormat('zh-CN', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(value)
-}
-
-/**
- * Format percentage
- */
-export function formatPercent(value: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'percent',
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 2
-  }).format(value)
-}
+// Re-export core formatters for convenience
+export {
+  formatNumber,
+  formatCurrency,
+  formatPercent,
+  formatCompact
+} from '@core/shared/format'
 
 /**
  * Format value based on specified format type
+ * Maps BigValue format types to core format types
  */
 export function formatValue(
   value: number,
-  format: 'number' | 'currency' | 'percent' = 'number'
+  format: FormatType | 'number' | 'currency' | 'percent' = 'number'
 ): string {
-  switch (format) {
-    case 'currency':
-      return formatCurrency(value)
-    case 'percent':
-      return formatPercent(value)
-    case 'number':
-    default:
-      return formatNumber(value)
-  }
+  return fmt(value, format)
 }
 
 /**

@@ -21,8 +21,14 @@ import {
 } from '@core/engine/chart-metadata'
 
 // Import component registrations from plugins
-import { dropdownRegistration, buttonGroupRegistration } from '@plugins/inputs'
-import { bigValueRegistration, dataTableRegistration, valueRegistration } from '@plugins/data-display'
+import {
+  dropdownRegistration,
+  buttonGroupRegistration,
+  textInputRegistration,
+  sliderRegistration,
+  dateRangeRegistration
+} from '@plugins/inputs'
+import { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration } from '@plugins/data-display'
 import { alertRegistration } from '@plugins/ui'
 
 // Import chart builder (charts still use legacy approach)
@@ -138,9 +144,13 @@ export function initializeComponents(): void {
   const componentRegistrations: import('./component-registry').RegisteredComponent<any>[] = [
     dropdownRegistration,
     buttonGroupRegistration,
+    textInputRegistration,
+    sliderRegistration,
+    dateRangeRegistration,
     bigValueRegistration,
     dataTableRegistration,
     valueRegistration,
+    sparklineRegistration,
     alertRegistration
   ]
 

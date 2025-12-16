@@ -77,6 +77,29 @@ export { findAffectedBlocks, reExecuteAffectedBlocks } from './reactive-executor
 export { analyzeDependencies, topologicalSort } from './dependency-graph'
 ```
 
+### shared/format/
+全局格式化系统，提供数字、货币、百分比、日期等格式化功能。
+
+```typescript
+import { fmt, formatters } from '@core/shared/format'
+
+// 基本使用
+fmt(1234567.89, 'currency')    // ¥1,234,567.89
+fmt(0.1234, 'percent')         // 12.34%
+fmt(1234567, 'num0')           // 1,234,568
+fmt(1234567, 'compact')        // 123.5万
+fmt(new Date(), 'date')        // 2024-01-15
+fmt(new Date(), 'relative')    // 3天前
+
+// 支持的格式类型
+// number, num0, num1, num2, num3 - 数字格式
+// currency, usd, eur - 货币格式
+// percent, pct0, pct1 - 百分比格式
+// date, datetime, time, shortdate, longdate, relative - 日期格式
+// compact - 紧凑格式 (1.2K, 3.4M, 123万)
+// bytes - 字节格式 (1.5 KB, 2.3 MB)
+```
+
 ### registry/
 组件注册系统 - 插件架构的核心。
 
@@ -287,17 +310,40 @@ export function initializePlugins(): void {
 |------|----------|------|
 | Dropdown | `dropdown` | 下拉选择器 |
 | ButtonGroup | `buttongroup` | 按钮组选择 |
+| TextInput | `textinput` | 文本搜索框 |
+| Slider | `slider` | 数值滑块 |
+| DateRange | `daterange` | 日期范围选择 |
 
 ```markdown
 \`\`\`dropdown
 name: region
-label: 选择区域
-defaultValue: East
-options:
-  - value: East
-    label: 东部
-  - value: West
-    label: 西部
+data: regions_query
+value: region_code
+label: region_name
+title: 选择区域
+\`\`\`
+
+\`\`\`textinput
+name: search_term
+title: 搜索产品
+placeholder: 输入关键词...
+debounce: 300
+\`\`\`
+
+\`\`\`slider
+name: price_max
+title: 最高价格
+min: 0
+max: 1000
+step: 10
+defaultValue: 500
+format: currency
+\`\`\`
+
+\`\`\`daterange
+name: date_filter
+title: 选择日期范围
+presets: true
 \`\`\`
 ```
 
@@ -308,6 +354,7 @@ options:
 | BigValue | `bigvalue` | 大数值卡片 |
 | DataTable | `datatable` | 数据表格 |
 | Value | `value` | 内联数值 |
+| Sparkline | `sparkline` | 迷你趋势图 |
 
 ```markdown
 \`\`\`bigvalue
@@ -315,6 +362,16 @@ query: total_revenue
 value: revenue
 title: 总收入
 format: currency
+comparison: last_month_revenue
+comparisonLabel: 环比
+\`\`\`
+
+\`\`\`sparkline
+query: daily_sales
+value: revenue
+type: line
+color: #10B981
+height: 40
 \`\`\`
 ```
 

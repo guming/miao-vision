@@ -205,20 +205,25 @@ export const AlertSchema: ConfigSchema = {
  * Example:
  * ```slider
  * name: price_range
+ * title: Maximum Price
  * min: 0
  * max: 1000
  * step: 10
  * defaultValue: 500
+ * format: currency
  * ```
  */
 export const SliderSchema: ConfigSchema = {
   fields: [
     { name: 'name', type: 'string', required: true },
+    { name: 'title', type: 'string' },
     { name: 'min', type: 'number', default: 0 },
     { name: 'max', type: 'number', default: 100 },
     { name: 'step', type: 'number', default: 1 },
     { name: 'defaultValue', type: 'number' },
-    { name: 'title', type: 'string' }
+    { name: 'showValue', type: 'boolean', default: true },
+    { name: 'showMinMax', type: 'boolean', default: true },
+    { name: 'format', type: 'enum', enum: ['number', 'currency', 'percent'], default: 'number' }
   ]
 }
 
@@ -246,16 +251,21 @@ export const CheckboxSchema: ConfigSchema = {
  * Example:
  * ```textinput
  * name: search_query
+ * title: Search Products
  * placeholder: Search...
- * defaultValue:
+ * debounce: 300
  * ```
  */
 export const TextInputSchema: ConfigSchema = {
   fields: [
     { name: 'name', type: 'string', required: true },
+    { name: 'title', type: 'string' },
     { name: 'placeholder', type: 'string' },
     { name: 'defaultValue', type: 'string', default: '' },
-    { name: 'title', type: 'string' }
+    { name: 'debounce', type: 'number', default: 300 },
+    { name: 'minLength', type: 'number', default: 0 },
+    { name: 'maxLength', type: 'number' },
+    { name: 'inputType', type: 'enum', enum: ['text', 'search', 'email', 'url', 'tel'], default: 'text' }
   ]
 }
 
@@ -265,16 +275,21 @@ export const TextInputSchema: ConfigSchema = {
  * Example:
  * ```daterange
  * name: date_filter
+ * title: Select Date Range
  * startDefault: 2024-01-01
  * endDefault: 2024-12-31
+ * presets: true
  * ```
  */
 export const DateRangeSchema: ConfigSchema = {
   fields: [
     { name: 'name', type: 'string', required: true },
+    { name: 'title', type: 'string' },
     { name: 'startDefault', type: 'string' },
     { name: 'endDefault', type: 'string' },
-    { name: 'title', type: 'string' }
+    { name: 'minDate', type: 'string' },
+    { name: 'maxDate', type: 'string' },
+    { name: 'presets', type: 'boolean', default: false }
   ]
 }
 
