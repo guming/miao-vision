@@ -8,12 +8,12 @@ import Progress from './Progress.svelte'
 import { fmt } from '@core/shared/format'
 import type { ProgressConfig, ProgressData } from './types'
 
-// Schema for Progress config
+// Schema for Progress config - all fields optional to support static mode
 const ProgressSchema = {
   fields: [
-    { name: 'query', type: 'string' as const, required: true },
-    { name: 'value', type: 'string' as const, required: true },
-    { name: 'max', type: 'string' as const },
+    { name: 'query', type: 'string' as const, required: false },  // Optional - static mode if omitted
+    { name: 'value', type: 'string' as const, required: false },  // Static number OR column name
+    { name: 'max', type: 'string' as const, required: false },    // Static number OR column name
     { name: 'maxValue', type: 'number' as const, default: 100 },
     { name: 'label', type: 'string' as const },
     { name: 'format', type: 'string' as const, default: 'number' },
@@ -30,6 +30,68 @@ interface ProgressProps {
 }
 
 /**
+ * Parse progress config from block content
+ */
+function parseProgressContent(content: string): Partial<ProgressConfig> {
+  const config: Partial<ProgressConfig> = {}
+  const lines = content.split('\n')
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+
+    const colonIdx = trimmed.indexOf(':')
+    if (colonIdx > 0) {
+      const key = trimmed.substring(0, colonIdx).trim()
+      const value = trimmed.substring(colonIdx + 1).trim()
+
+      switch (key) {
+        case 'value':
+          // Try to parse as number for static mode
+          const numVal = parseFloat(value)
+          ;(config as any).value = isNaN(numVal) ? value : numVal
+          ;(config as any)._staticValue = !isNaN(numVal)
+          break
+        case 'max':
+          const numMax = parseFloat(value)
+          ;(config as any).max = isNaN(numMax) ? value : numMax
+          ;(config as any)._staticMax = !isNaN(numMax)
+          break
+        case 'maxValue':
+          config.maxValue = parseFloat(value) || 100
+          break
+        case 'label':
+          config.label = value
+          break
+        case 'color':
+          config.color = value as any
+          break
+        case 'size':
+          config.size = value as any
+          break
+        case 'showValue':
+          config.showValue = value === 'true'
+          break
+        case 'showPercent':
+          config.showPercent = value === 'true'
+          break
+        case 'animated':
+          config.animated = value === 'true'
+          break
+        case 'query':
+          config.query = value
+          break
+        case 'format':
+          config.format = value
+          break
+      }
+    }
+  }
+
+  return config
+}
+
+/**
  * Progress Bar component registration
  */
 export const progressRegistration = defineComponent<ProgressConfig, ProgressProps>({
@@ -38,44 +100,49 @@ export const progressRegistration = defineComponent<ProgressConfig, ProgressProp
   component: Progress,
   containerClass: 'progress-wrapper',
 
-  dataBinding: {
-    sourceField: 'query',
-    transform: (queryResult, config) => {
-      const row = queryResult.data[0] || {}
-      return { row }
+  // No dataBinding - handle both static and SQL modes in buildProps
+  buildProps: (config, _extractedData, context) => {
+    const block = (context as any).block
+
+    // Parse content to get config values
+    let parsedConfig: Partial<ProgressConfig> & { _staticValue?: boolean; _staticMax?: boolean } = {}
+    if (block?.content) {
+      parsedConfig = parseProgressContent(block.content)
     }
-  },
 
-  buildProps: (config, extractedData, _context) => {
-    if (!extractedData) return null
+    // Merge configs
+    const finalConfig = { ...config, ...parsedConfig }
 
-    const { row } = extractedData as { row: Record<string, unknown> }
+    // Static mode: value is a number directly
+    const isStaticMode = parsedConfig._staticValue || !finalConfig.query
 
-    // Get current value
-    const rawValue = row[config.value]
-    const value = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue)) || 0
+    let value: number
+    let max: number
 
-    // Get max value (from column or fixed)
-    let max = config.maxValue || 100
-    if (config.max && row[config.max]) {
-      const rawMax = row[config.max]
-      max = typeof rawMax === 'number' ? rawMax : parseFloat(String(rawMax)) || 100
+    if (isStaticMode) {
+      // Static mode - value and max are numbers
+      value = typeof parsedConfig.value === 'number' ? parsedConfig.value : parseFloat(String(finalConfig.value)) || 0
+      max = typeof parsedConfig.max === 'number' ? parsedConfig.max : (finalConfig.maxValue || 100)
+    } else {
+      // Data-bound mode would need SQL result - for now return placeholder
+      // TODO: Add SQL data binding support
+      return null
     }
 
     // Calculate percentage
     const percent = max > 0 ? (value / max) * 100 : 0
 
     // Format the value
-    const formatted = fmt(value, config.format || 'number')
+    const formatted = fmt(value, finalConfig.format || 'number')
 
     return {
       data: {
-        config,
+        config: finalConfig as ProgressConfig,
         value,
         max,
         percent,
         formatted,
-        label: config.label
+        label: finalConfig.label
       }
     }
   }

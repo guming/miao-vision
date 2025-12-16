@@ -3,9 +3,9 @@
  */
 
 export interface ProgressConfig {
-  query: string           // SQL result name
-  value: string           // Column for current value
-  max?: string            // Column for max value (or fixed number)
+  query?: string          // SQL result name (optional for static mode)
+  value?: string | number // Static number OR column name
+  max?: string | number   // Static number OR column name
   maxValue?: number       // Fixed max value (default: 100)
   label?: string          // Display label
   format?: string         // Format type (percent, number, currency)

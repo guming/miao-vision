@@ -16,14 +16,14 @@ export const ProgressMetadata = createMetadata({
     {
       name: 'query',
       type: 'string',
-      required: true,
-      description: 'SQL result name'
+      required: false,
+      description: 'SQL result name (optional for static values)'
     },
     {
       name: 'value',
       type: 'string',
-      required: true,
-      description: 'Column for current value'
+      required: false,
+      description: 'Static number OR column name'
     },
     {
       name: 'max',
