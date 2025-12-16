@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createInputStore, type InputStore } from '@app/stores/report-inputs'
+import { createInputStore, type InputStore } from '@/app/stores/report-inputs'
 
 // ============================================================================
 // InputStore Tests (Foundation for useInput)
