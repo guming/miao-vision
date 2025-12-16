@@ -1,7 +1,7 @@
 /**
  * Data Display Plugin
  *
- * Components for displaying data: BigValue, DataTable, Value, Sparkline
+ * Components for displaying data: BigValue, DataTable, Value, Sparkline, KPIGrid
  */
 
 import type { ComponentRegistry } from '@core/registry'
@@ -11,21 +11,27 @@ import { bigValueRegistration } from './bigvalue'
 import { dataTableRegistration } from './datatable'
 import { valueRegistration } from './value'
 import { sparklineRegistration } from './sparkline'
+import { kpiGridRegistration } from './kpigrid'
+import { progressRegistration } from './progress'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
 export { default as DataTable } from './datatable/DataTable.svelte'
 export { default as Value } from './value/Value.svelte'
 export { default as Sparkline } from './sparkline/Sparkline.svelte'
+export { default as KPIGrid } from './kpigrid/KPIGrid.svelte'
+export { default as Progress } from './progress/Progress.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
 export type { DataTableConfig, DataTableData, ColumnConfig } from './datatable/types'
 export type { ValueConfig, ValueData } from './value/types'
 export type { SparklineConfig, SparklineData } from './sparkline/types'
+export type { KPIGridConfig, KPIGridData, KPICardConfig } from './kpigrid/types'
+export type { ProgressConfig, ProgressData } from './progress/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -40,8 +46,10 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(dataTableRegistration)
   registry.register(valueRegistration)
   registry.register(sparklineRegistration)
+  registry.register(kpiGridRegistration)
+  registry.register(progressRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, sparkline')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, sparkline, kpigrid, progress')
 }
 
 /**
@@ -51,5 +59,7 @@ export const dataDisplayPlugins = [
   bigValueRegistration,
   dataTableRegistration,
   valueRegistration,
-  sparklineRegistration
+  sparklineRegistration,
+  kpiGridRegistration,
+  progressRegistration
 ]
