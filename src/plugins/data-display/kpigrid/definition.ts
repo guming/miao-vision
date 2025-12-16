@@ -5,15 +5,14 @@
 import { defineComponent } from '@core/registry'
 import { KPIGridMetadata } from './metadata'
 import KPIGrid from './KPIGrid.svelte'
-import { fmt } from '@core/shared/format'
 import type { KPIGridConfig, KPIGridData, KPICardData, KPICardConfig } from './types'
 
 // Schema for KPI Grid config
 const KPIGridSchema = {
   fields: [
-    { name: 'query', type: 'string' as const },  // Optional - static mode if omitted
-    { name: 'columns', type: 'number' as const, default: 0 },
-    { name: 'gap', type: 'string' as const, default: '1rem' }
+    { name: 'query', type: 'string' as const, required: false },  // Optional - static mode if omitted
+    { name: 'columns', type: 'number' as const, required: false, default: 0 },
+    { name: 'gap', type: 'string' as const, required: false, default: '1rem' }
   ],
   sections: [
     {
@@ -37,22 +36,6 @@ const KPIGridSchema = {
 
 interface KPIGridProps {
   data: KPIGridData
-}
-
-/**
- * Calculate trend from current and comparison values
- */
-function calculateTrend(current: number, compare: number, label?: string) {
-  if (!compare || compare === 0) return undefined
-
-  const percent = ((current - compare) / Math.abs(compare)) * 100
-  const direction = percent > 0.5 ? 'up' : percent < -0.5 ? 'down' : 'neutral'
-
-  return {
-    direction: direction as 'up' | 'down' | 'neutral',
-    percent,
-    label: label || ''
-  }
 }
 
 /**
@@ -158,38 +141,7 @@ function buildStaticCards(cardConfigs: KPICardConfig[]): KPICardData[] {
   })
 }
 
-/**
- * Build cards from SQL query result
- */
-function buildDataBoundCards(
-  cardConfigs: KPICardConfig[],
-  row: Record<string, unknown>
-): KPICardData[] {
-  return cardConfigs.map(cardConfig => {
-    const rawValue = row[cardConfig.value]
-    const numValue = typeof rawValue === 'number' ? rawValue : parseFloat(String(rawValue)) || 0
-
-    // Format the value
-    const formatted = fmt(numValue, cardConfig.format || 'number')
-
-    // Calculate trend if comparison value exists
-    let trend = undefined
-    if (cardConfig.compareValue) {
-      const compareRaw = row[cardConfig.compareValue]
-      const compareValue = typeof compareRaw === 'number' ? compareRaw : parseFloat(String(compareRaw)) || 0
-      trend = calculateTrend(numValue, compareValue, cardConfig.compareLabel)
-    }
-
-    return {
-      label: cardConfig.label,
-      value: numValue,
-      formatted,
-      icon: cardConfig.icon,
-      color: cardConfig.color || 'blue',
-      trend
-    }
-  })
-}
+// TODO: Add buildDataBoundCards for SQL mode later
 
 /**
  * KPI Grid component registration
@@ -200,19 +152,8 @@ export const kpiGridRegistration = defineComponent<KPIGridConfig, KPIGridProps>(
   component: KPIGrid,
   containerClass: 'kpigrid-wrapper',
 
-  // Data binding only when query is specified
-  dataBinding: {
-    sourceField: 'query',
-    transform: (queryResult, config) => {
-      // If no query specified, return null to skip data binding
-      if (!config.query) return null
-
-      const row = queryResult.data[0] || {}
-      return { row, cards: config.cards || [] }
-    }
-  },
-
-  buildProps: (config, extractedData, context) => {
+  // No dataBinding - we handle both static and SQL modes in buildProps
+  buildProps: (config, _extractedData, context) => {
     // Get the original block to access raw content
     const block = (context as any).block
 
@@ -235,23 +176,9 @@ export const kpiGridRegistration = defineComponent<KPIGridConfig, KPIGridProps>(
 
     const cardConfigs = finalConfig.cards
 
-    // Static mode: no query specified
-    if (!finalConfig.query) {
-      const cards = buildStaticCards(cardConfigs)
-      return {
-        data: {
-          config: finalConfig,
-          cards
-        }
-      }
-    }
-
-    // Data-bound mode: query specified
-    if (!extractedData) return null
-
-    const { row } = extractedData as { row: Record<string, unknown>; cards: KPICardConfig[] }
-    const cards = buildDataBoundCards(cardConfigs, row)
-
+    // For now, only support static mode
+    // TODO: Add SQL data binding support later
+    const cards = buildStaticCards(cardConfigs)
     return {
       data: {
         config: finalConfig,
