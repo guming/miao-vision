@@ -158,6 +158,7 @@ export class ConfigParser {
     // Validate required fields
     for (const field of schema.fields) {
       if (field.required && result[field.name] === undefined) {
+        console.log(`[ConfigParser] Field "${field.name}" required=${field.required}, value=${result[field.name]}`)
         errors.push(`Missing required field: ${field.name}`)
       }
     }
@@ -187,10 +188,12 @@ export class ConfigParser {
   parseBlock<T>(block: ParsedCodeBlock, schema: ConfigSchema): ParseResult<T> {
     // Prefer metadata if available (already parsed frontmatter)
     if (block.metadata && Object.keys(block.metadata).length > 0) {
+      console.log(`[ConfigParser.parseBlock] Using validateMetadata for ${block.language}, metadata keys:`, Object.keys(block.metadata))
       return this.validateMetadata<T>(block.metadata as Record<string, unknown>, schema)
     }
 
     // Otherwise parse content
+    console.log(`[ConfigParser.parseBlock] Using parse() for ${block.language}, schema fields:`, schema.fields.map(f => `${f.name}:${f.required}`))
     return this.parse<T>(block.content, schema)
   }
 
@@ -210,6 +213,7 @@ export class ConfigParser {
         result[field.name] = field.default
       }
       if (field.required && result[field.name] === undefined) {
+        console.log(`[ConfigParser.validateMetadata] Field "${field.name}" required=${field.required}`)
         errors.push(`Missing required field: ${field.name}`)
       }
       if (
