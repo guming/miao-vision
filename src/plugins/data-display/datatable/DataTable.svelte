@@ -2,7 +2,7 @@
   import type { DataTableData, SortState, FilterState, ColumnFilter } from './types'
   import { processData, toggleSort, getSortIcon } from './operations'
   import { formatValue } from './formatter'
-  import { downloadCSV } from './export'
+  import { downloadCSV, downloadExcel } from './export'
 
   interface Props {
     data: DataTableData
@@ -26,6 +26,9 @@
       return acc
     }, {} as Record<string, boolean>)
   )
+
+  // Export menu state
+  let showExportMenu = $state(false)
 
   let visibleColumns = $derived(
     data.columns.filter(col => columnVisibility[col.name] !== false)
@@ -220,10 +223,22 @@
   let allSelected = $derived(processedData.length > 0 && selectedRows.size === processedData.length)
   let someSelected = $derived(selectedRows.size > 0 && selectedRows.size < processedData.length)
 
-  function handleExport() {
+  function handleExportCSV() {
     if (!data.config.exportable) return
     const filename = `${data.config.query}_${new Date().toISOString().split('T')[0]}.csv`
     downloadCSV(processedData, visibleColumns, filename)
+    showExportMenu = false
+  }
+
+  function handleExportExcel() {
+    if (!data.config.exportable) return
+    const filename = `${data.config.query}_${new Date().toISOString().split('T')[0]}.xlsx`
+    downloadExcel(processedData, visibleColumns, filename)
+    showExportMenu = false
+  }
+
+  function toggleExportMenu() {
+    showExportMenu = !showExportMenu
   }
 
   function getCellValue(row: any, column: typeof data.columns[0]): string {
@@ -288,6 +303,106 @@
 
     return ((value - min) / (max - min)) * 100
   }
+
+  // Color scale palettes
+  const colorScalePalettes: Record<string, [string, string, string?]> = {
+    'red-green': ['#EF4444', '#22C55E'],
+    'green-red': ['#22C55E', '#EF4444'],
+    'red-yellow-green': ['#EF4444', '#EAB308', '#22C55E'],
+    'blue-white-red': ['#3B82F6', '#FFFFFF', '#EF4444'],
+    'white-blue': ['#FFFFFF', '#3B82F6']
+  }
+
+  function interpolateColor(color1: string, color2: string, factor: number): string {
+    const hex = (c: string) => parseInt(c, 16)
+    const r1 = hex(color1.slice(1, 3)), g1 = hex(color1.slice(3, 5)), b1 = hex(color1.slice(5, 7))
+    const r2 = hex(color2.slice(1, 3)), g2 = hex(color2.slice(3, 5)), b2 = hex(color2.slice(5, 7))
+    const r = Math.round(r1 + (r2 - r1) * factor)
+    const g = Math.round(g1 + (g2 - g1) * factor)
+    const b = Math.round(b1 + (b2 - b1) * factor)
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  }
+
+  function getColorScaleBackground(row: any, column: typeof data.columns[0]): string {
+    if (!column.colorScale) return ''
+
+    const value = Number(row[column.name])
+    if (isNaN(value)) return ''
+
+    const values = processedData
+      .map(r => Number(r[column.name]))
+      .filter(v => !isNaN(v))
+
+    if (values.length === 0) return ''
+
+    const min = column.colorScale.min ?? Math.min(...values)
+    const max = column.colorScale.max ?? Math.max(...values)
+
+    if (max === min) return ''
+
+    const palette = colorScalePalettes[column.colorScale.type] || colorScalePalettes['red-green']
+    const factor = Math.max(0, Math.min(1, (value - min) / (max - min)))
+
+    if (palette.length === 3) {
+      // Three-color gradient
+      if (factor <= 0.5) {
+        return interpolateColor(palette[0], palette[1], factor * 2)
+      } else {
+        return interpolateColor(palette[1], palette[2]!, (factor - 0.5) * 2)
+      }
+    } else {
+      // Two-color gradient
+      return interpolateColor(palette[0], palette[1], factor)
+    }
+  }
+
+  // Icon sets
+  const iconSets: Record<string, [string, string, string]> = {
+    'arrows': ['↓', '→', '↑'],      // Down, Right, Up
+    'trend': ['▼', '–', '▲'],       // Down triangle, dash, Up triangle
+    'rating': ['★', '★★', '★★★'],   // Stars
+    'flags': ['🔴', '🟡', '🟢'],    // Red, Yellow, Green
+    'symbols': ['✕', '●', '✓']     // X, Circle, Check
+  }
+
+  const iconColors: Record<string, [string, string, string]> = {
+    'arrows': ['#EF4444', '#9CA3AF', '#22C55E'],
+    'trend': ['#EF4444', '#9CA3AF', '#22C55E'],
+    'rating': ['#F59E0B', '#F59E0B', '#F59E0B'],
+    'flags': ['#EF4444', '#EAB308', '#22C55E'],
+    'symbols': ['#EF4444', '#9CA3AF', '#22C55E']
+  }
+
+  function getIconForValue(row: any, column: typeof data.columns[0]): { icon: string; color: string } | null {
+    if (!column.iconSet) return null
+
+    const value = Number(row[column.name])
+    if (isNaN(value)) return null
+
+    const values = processedData
+      .map(r => Number(r[column.name]))
+      .filter(v => !isNaN(v))
+
+    if (values.length === 0) return null
+
+    const sortedValues = [...values].sort((a, b) => a - b)
+    const thresholds = column.iconSet.thresholds || [33, 67]
+    const lowIdx = Math.floor(sortedValues.length * thresholds[0] / 100)
+    const highIdx = Math.floor(sortedValues.length * thresholds[1] / 100)
+    const lowThreshold = sortedValues[lowIdx] || sortedValues[0]
+    const highThreshold = sortedValues[highIdx] || sortedValues[sortedValues.length - 1]
+
+    const icons = iconSets[column.iconSet.type] || iconSets['arrows']
+    const colors = iconColors[column.iconSet.type] || iconColors['arrows']
+
+    if (value < lowThreshold) {
+      return { icon: icons[0], color: colors[0] }
+    } else if (value >= highThreshold) {
+      return { icon: icons[2], color: colors[2] }
+    } else {
+      return { icon: icons[1], color: colors[1] }
+    }
+  }
 </script>
 
 <div class="datatable-container">
@@ -332,9 +447,21 @@
     {/if}
 
     {#if data.config.exportable}
-      <button class="export-btn" onclick={handleExport}>
-        Export CSV
-      </button>
+      <div class="export-wrapper">
+        <button class="export-btn" onclick={toggleExportMenu}>
+          📥 Export
+        </button>
+        {#if showExportMenu}
+          <div class="export-dropdown">
+            <button class="export-option" onclick={handleExportCSV}>
+              📄 CSV
+            </button>
+            <button class="export-option" onclick={handleExportExcel}>
+              📊 Excel
+            </button>
+          </div>
+        {/if}
+      </div>
     {/if}
 
     {#if data.config.columnSelector}
@@ -542,17 +669,31 @@
                         </td>
                       {/if}
                       {#each visibleColumns as column}
+                        {@const colorScaleBg = getColorScaleBackground(row, column)}
+                        {@const iconInfo = getIconForValue(row, column)}
+                        {@const cellStyle = [
+                          getCellStyle(row, column),
+                          colorScaleBg ? `background-color: ${colorScaleBg}` : ''
+                        ].filter(Boolean).join('; ')}
                         <td
                           class="data-cell"
                           class:has-data-bar={column.showDataBar}
+                          class:has-color-scale={!!colorScaleBg}
                           style:text-align={column.align || 'left'}
-                          style={getCellStyle(row, column)}
+                          style={cellStyle}
                         >
                           {#if column.showDataBar}
                             <div class="cell-with-bar">
                               <div class="data-bar" style="width: {getDataBarWidth(row, column)}%"></div>
                               <span class="cell-value">{getCellValue(row, column)}</span>
                             </div>
+                          {:else if iconInfo}
+                            <span class="cell-with-icon">
+                              <span class="cell-icon" style="color: {iconInfo.color}">{iconInfo.icon}</span>
+                              {#if column.iconSet?.showValue !== false}
+                                <span class="cell-value">{getCellValue(row, column)}</span>
+                              {/if}
+                            </span>
                           {:else}
                             {getCellValue(row, column)}
                           {/if}
@@ -705,6 +846,10 @@
     background: #4B5563;
   }
 
+  .export-wrapper {
+    position: relative;
+  }
+
   .export-btn {
     padding: 0.5rem 1rem;
     background: #3B82F6;
@@ -719,6 +864,41 @@
 
   .export-btn:hover {
     background: #2563EB;
+  }
+
+  .export-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.25rem;
+    background: #1F2937;
+    border: 1px solid #4B5563;
+    border-radius: 6px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    z-index: 20;
+    min-width: 120px;
+    overflow: hidden;
+  }
+
+  .export-option {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: #F3F4F6;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .export-option:hover {
+    background: #374151;
+  }
+
+  .export-option:first-child {
+    border-bottom: 1px solid #4B5563;
   }
 
   .column-selector-wrapper {
@@ -1038,6 +1218,24 @@
   .cell-value {
     position: relative;
     z-index: 1;
+  }
+
+  /* Color scale cells */
+  .data-cell.has-color-scale {
+    transition: background-color 0.2s ease;
+  }
+
+  /* Icon set cells */
+  .cell-with-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .cell-icon {
+    font-size: 0.875rem;
+    font-weight: 600;
+    flex-shrink: 0;
   }
 
   tfoot {

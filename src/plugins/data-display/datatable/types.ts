@@ -7,12 +7,30 @@ export type FormatType = 'number' | 'currency' | 'percent' | 'date' | 'text'
 export type SummaryType = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'none'
 
 export interface ConditionalFormat {
-  condition: 'greater_than' | 'less_than' | 'equals' | 'between'
+  condition: 'greater_than' | 'less_than' | 'equals' | 'between' | 'top_n' | 'bottom_n'
   value: number
   value2?: number  // For 'between'
   backgroundColor?: string
   textColor?: string
   fontWeight?: 'normal' | 'bold'
+}
+
+// Color scale configuration (gradient from low to high)
+export type ColorScaleType = 'red-green' | 'green-red' | 'red-yellow-green' | 'blue-white-red' | 'white-blue'
+
+export interface ColorScale {
+  type: ColorScaleType
+  min?: number  // Optional manual min (default: auto from data)
+  max?: number  // Optional manual max (default: auto from data)
+}
+
+// Icon set configuration
+export type IconSetType = 'arrows' | 'trend' | 'rating' | 'flags' | 'symbols'
+
+export interface IconSet {
+  type: IconSetType
+  thresholds?: [number, number]  // [low, high] percentiles (default: [33, 67])
+  showValue?: boolean  // Show value alongside icon (default: true)
 }
 
 export interface ColumnConfig {
@@ -26,6 +44,8 @@ export interface ColumnConfig {
   summary?: SummaryType      // Summary aggregation type (default: 'none')
   conditionalFormat?: ConditionalFormat[]  // Conditional formatting rules
   showDataBar?: boolean      // Show data bar in cells (default: false)
+  colorScale?: ColorScale    // Color scale gradient
+  iconSet?: IconSet          // Icon set for value indicators
 }
 
 export interface DataTableConfig {

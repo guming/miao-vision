@@ -82,7 +82,14 @@ function mergeColumnConfig(
       label: userCol?.label || meta.name,
       format: userCol?.format || typeToFormat(meta.type),
       align: userCol?.align || (meta.type === 'number' ? 'right' : 'left'),
-      width: userCol?.width
+      width: userCol?.width,
+      visible: userCol?.visible,
+      resizable: userCol?.resizable,
+      summary: userCol?.summary,
+      conditionalFormat: userCol?.conditionalFormat,
+      showDataBar: userCol?.showDataBar,
+      colorScale: userCol?.colorScale,
+      iconSet: userCol?.iconSet
     }
   })
 }

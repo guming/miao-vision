@@ -85,10 +85,11 @@ export interface ComponentDefinition<TConfig = unknown, TProps = unknown> {
 }
 
 /**
- * Extended render context with inputStore
+ * Extended render context with inputStore and block
  */
 export interface ExtendedRenderContext extends RenderContext {
   inputStore?: unknown
+  block?: ParsedCodeBlock
 }
 
 /**
@@ -139,16 +140,21 @@ export function createRegistration<TConfig = unknown, TProps = unknown>(
       }
     }
 
-    // 3. Build props
+    // 3. Build props - include block in context for custom parsing
+    const extendedContext = {
+      ...context,
+      block  // Add block for components that need raw content access
+    } as ExtendedRenderContext
+
     if (buildProps) {
-      return buildProps(config, resolvedData, context as ExtendedRenderContext)
+      return buildProps(config, resolvedData, extendedContext)
     }
 
     // Default props structure
     return {
       config,
       data: resolvedData,
-      ...context
+      ...extendedContext
     } as TProps
   }
 
