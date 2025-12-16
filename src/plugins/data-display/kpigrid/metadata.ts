@@ -16,8 +16,8 @@ export const KPIGridMetadata = createMetadata({
     {
       name: 'query',
       type: 'string',
-      required: true,
-      description: 'SQL result name to use as data source'
+      required: false,
+      description: 'SQL result name (optional for static values)'
     },
     {
       name: 'columns',
