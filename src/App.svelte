@@ -14,6 +14,8 @@
   import type { InputStore } from '@app/stores/report-inputs'
   import { initializeMosaic } from '@core/database'
   import { reportExecutionService } from '@core/engine/report-execution.service'
+  import { htmlExportService } from '@core/export'
+  import { exportToPDF } from '@/lib/export'
   import type { ChartConfig } from './types/chart'
   import type { QueryResult } from './types/database'
   import type { Report } from './types/report'
@@ -28,6 +30,8 @@
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
   let isExecutingReport = $state(false)
+  let isExportingReport = $state(false)
+  let isExportingPDF = $state(false)
   let currentInputStore = $state<InputStore | null>(null)
 
   onMount(async () => {
@@ -158,6 +162,66 @@
   function handleSaveReport() {
     reportStore.saveReports()
     console.log('Report saved')
+  }
+
+  async function handleExportReport() {
+    if (!reportStore.state.currentReport) {
+      alert('No report to export')
+      return
+    }
+
+    // Find the preview pane element
+    const previewPane = document.querySelector('.preview-pane .report-renderer')
+    if (!previewPane) {
+      alert('Report preview not found. Please execute the report first.')
+      return
+    }
+
+    isExportingReport = true
+
+    try {
+      await htmlExportService.export(previewPane as HTMLElement, {
+        title: reportStore.state.currentReport.name,
+        darkTheme: true,
+        includeTimestamp: true
+      })
+      console.log('✅ Report exported successfully')
+    } catch (error) {
+      console.error('❌ Export failed:', error)
+      alert(`Export failed: ${error instanceof Error ? error.message : error}`)
+    } finally {
+      isExportingReport = false
+    }
+  }
+
+  async function handleExportPDF() {
+    if (!reportStore.state.currentReport) {
+      alert('No report to export')
+      return
+    }
+
+    // Find the preview pane element
+    const previewPane = document.querySelector('.preview-pane .report-renderer')
+    if (!previewPane) {
+      alert('Report preview not found. Please execute the report first.')
+      return
+    }
+
+    isExportingPDF = true
+
+    try {
+      await exportToPDF(previewPane as HTMLElement, {
+        filename: reportStore.state.currentReport.name.replace(/\s+/g, '_'),
+        format: 'a4',
+        orientation: 'portrait'
+      })
+      console.log('✅ PDF exported successfully')
+    } catch (error) {
+      console.error('❌ PDF export failed:', error)
+      alert(`PDF export failed: ${error instanceof Error ? error.message : error}`)
+    } finally {
+      isExportingPDF = false
+    }
   }
 
   function handleSelectReport(report: Report) {
@@ -396,7 +460,11 @@
                 bind:editor={markdownEditor}
                 onExecute={handleExecuteReport}
                 onSave={handleSaveReport}
+                onExport={handleExportReport}
+                onExportPDF={handleExportPDF}
                 isExecuting={isExecutingReport}
+                isExporting={isExportingReport}
+                isExportingPDF={isExportingPDF}
               />
 
               <div class="report-workspace">

@@ -12,6 +12,8 @@ import { buttonGroupRegistration } from './buttongroup'
 import { textInputRegistration } from './textinput'
 import { sliderRegistration } from './slider'
 import { dateRangeRegistration } from './daterange'
+import { checkboxRegistration } from './checkbox'
+import { dimensionGridRegistration } from './dimensiongrid'
 
 // Re-export registrations for direct import
 export {
@@ -19,7 +21,9 @@ export {
   buttonGroupRegistration,
   textInputRegistration,
   sliderRegistration,
-  dateRangeRegistration
+  dateRangeRegistration,
+  checkboxRegistration,
+  dimensionGridRegistration
 }
 
 // Re-export components for direct use
@@ -28,11 +32,15 @@ export { default as ButtonGroup } from './buttongroup/ButtonGroup.svelte'
 export { default as TextInput } from './textinput/TextInput.svelte'
 export { default as Slider } from './slider/Slider.svelte'
 export { default as DateRange } from './daterange/DateRange.svelte'
+export { default as Checkbox } from './checkbox/Checkbox.svelte'
+export { default as DimensionGrid } from './dimensiongrid/DimensionGrid.svelte'
 export type { DropdownConfig, DropdownOption, DropdownData } from './dropdown/types'
 export type { ButtonGroupConfig, ButtonGroupOption, ButtonGroupData } from './buttongroup/types'
 export type { TextInputConfig, TextInputData } from './textinput/types'
 export type { SliderConfig, SliderData } from './slider/types'
 export type { DateRangeConfig, DateRangeData, DateRangePreset } from './daterange/types'
+export type { CheckboxConfig, CheckboxData } from './checkbox/types'
+export type { DimensionGridConfig, DimensionGridItem, DimensionGridData } from './dimensiongrid/types'
 
 // Re-export utilities
 export { useInput, useStringInput, useNumberInput, useBooleanInput, useArrayInput } from './use-input.svelte'
@@ -50,8 +58,10 @@ export function registerInputPlugins(registry: ComponentRegistry): void {
   registry.register(textInputRegistration)
   registry.register(sliderRegistration)
   registry.register(dateRangeRegistration)
+  registry.register(checkboxRegistration)
+  registry.register(dimensionGridRegistration)
 
-  console.log('✅ Input plugins registered: dropdown, buttongroup, textinput, slider, daterange')
+  console.log('✅ Input plugins registered: dropdown, buttongroup, textinput, slider, daterange, checkbox, dimensiongrid')
 }
 
 /**
@@ -62,5 +72,7 @@ export const inputPlugins = [
   buttonGroupRegistration,
   textInputRegistration,
   sliderRegistration,
-  dateRangeRegistration
+  dateRangeRegistration,
+  checkboxRegistration,
+  dimensionGridRegistration
 ]

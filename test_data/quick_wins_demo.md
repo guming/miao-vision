@@ -358,4 +358,439 @@ WHERE region = ${inputs.selected_region}
 
 ---
 
-测试完成！所有 Quick Wins 组件均已实现。
+## Checkbox 布尔输入组件
+
+### 基础复选框
+
+```checkbox
+name: show_inactive
+label: 显示已停用的项目
+defaultValue: false
+```
+
+```checkbox
+name: include_tax
+label: 包含税费
+defaultValue: true
+description: 勾选此项将在计算中包含税费
+```
+
+### 当前选中状态
+
+- 显示已停用: **${inputs.show_inactive}**
+- 包含税费: **${inputs.include_tax}**
+
+### 根据 Checkbox 过滤数据
+
+```sql checkbox_filtered_data
+SELECT city, revenue, orders,
+       CASE WHEN ${inputs.include_tax} = true
+            THEN ROUND(revenue * 1.13, 0)
+            ELSE revenue END as display_revenue
+FROM sales_by_region
+WHERE (${inputs.show_inactive} = true OR revenue > 500000)
+```
+
+```datatable
+query: checkbox_filtered_data
+sortable: true
+columns:
+  - name: city
+    label: 城市
+  - name: revenue
+    label: 原始金额
+    format: currency
+  - name: display_revenue
+    label: 显示金额
+    format: currency
+  - name: orders
+    label: 订单数
+```
+
+---
+
+## Modal 弹窗组件
+
+### 基础弹窗
+
+```modal
+buttonText: 查看产品详情
+title: 产品信息
+size: md
+---
+**产品名称**: Miaoshou Vision
+
+这是一个本地优先的数据分析框架，具有以下特点：
+
+- 完全在浏览器中运行
+- 使用 DuckDB-WASM 进行 SQL 分析
+- 支持 Mosaic vgplot 可视化
+- Markdown 驱动的报告系统
+```
+
+### 大尺寸弹窗
+
+```modal
+buttonText: 查看详细文档
+title: 技术架构说明
+size: lg
+---
+**核心技术栈**
+
+*前端框架*: Svelte 5 with Runes
+*数据引擎*: DuckDB-WASM
+*可视化*: Mosaic vgplot
+*编辑器*: Monaco Editor
+
+**数据流**
+
+1. 文件通过 FileUploader 上传
+2. DuckDB-WASM 在 Web Worker 中处理数据
+3. SQL 查询执行后返回 Apache Arrow 格式
+4. 可视化通过 Mosaic Coordinator 渲染到 DOM
+```
+
+### 小尺寸确认弹窗
+
+```modal
+buttonText: 删除确认
+title: 确认操作
+size: sm
+---
+确定要执行此操作吗？
+
+此操作**不可撤销**。
+```
+
+---
+
+## Details 可展开详情
+
+### 默认收起
+
+```details
+title: 技术实现细节
+icon: 🔧
+defaultOpen: false
+---
+**DuckDB-WASM 集成**
+
+DuckDB-WASM 在 Web Worker 中运行，提供完整的 SQL 支持：
+
+- 支持窗口函数、CTE、子查询
+- 列式存储提供高效的分析查询
+- 支持 Parquet、CSV、JSON 格式
+```
+
+### 默认展开
+
+```details
+title: 快速开始指南
+icon: 🚀
+defaultOpen: true
+---
+1. 上传数据文件（CSV、Parquet、JSON）
+2. 编写 SQL 查询分析数据
+3. 使用可视化组件展示结果
+4. 导出报告分享给他人
+```
+
+### 无边框样式
+
+```details
+title: 注意事项
+bordered: false
+---
+所有数据处理都在浏览器本地完成，数据不会上传到服务器。
+```
+
+---
+
+## Note 提示信息组件
+
+### 各种类型
+
+```note
+type: note
+---
+这是一条普通的提示信息，用于展示一般性说明。
+```
+
+```note
+type: tip
+---
+这是一条有用的提示，可以帮助用户更好地使用功能。
+```
+
+```note
+type: important
+---
+这是一条重要信息，请务必注意！
+```
+
+```note
+type: warning
+---
+警告：此操作可能会影响现有数据，请谨慎操作。
+```
+
+```note
+type: caution
+---
+危险操作：此操作不可撤销，将永久删除数据。
+```
+
+### 自定义标题
+
+```note
+type: tip
+title: 性能优化建议
+---
+使用 Parquet 格式的数据文件可以显著提升查询性能，特别是对于大型数据集。
+```
+
+### 可折叠的提示
+
+```note
+type: important
+title: 版本更新说明
+collapsible: true
+defaultOpen: false
+---
+**v2.0 新功能：**
+
+- 新增 Modal 弹窗组件
+- 新增 Details 可展开组件
+- 新增 Note 提示组件
+- 优化 Checkbox 组件性能
+```
+
+---
+
+## BoxPlot 箱线图
+
+### 示例数据
+
+```sql create_boxplot_data
+CREATE OR REPLACE TABLE department_salaries AS
+SELECT * FROM (VALUES
+  ('Engineering', 85000),
+  ('Engineering', 92000),
+  ('Engineering', 78000),
+  ('Engineering', 105000),
+  ('Engineering', 88000),
+  ('Engineering', 95000),
+  ('Engineering', 72000),
+  ('Engineering', 110000),
+  ('Sales', 55000),
+  ('Sales', 62000),
+  ('Sales', 48000),
+  ('Sales', 75000),
+  ('Sales', 58000),
+  ('Sales', 52000),
+  ('Sales', 68000),
+  ('Marketing', 65000),
+  ('Marketing', 72000),
+  ('Marketing', 58000),
+  ('Marketing', 80000),
+  ('Marketing', 68000),
+  ('Marketing', 62000),
+  ('HR', 52000),
+  ('HR', 58000),
+  ('HR', 48000),
+  ('HR', 62000),
+  ('HR', 55000)
+) AS t(department, salary)
+```
+
+```sql boxplot_data
+SELECT * FROM department_salaries
+```
+
+### 按部门的薪资分布
+
+```boxplot
+data: boxplot_data
+x: department
+y: salary
+title: Department Salary Distribution
+xLabel: Department
+yLabel: Salary ($)
+```
+
+---
+
+## Heatmap 热力图
+
+### 示例数据
+
+```sql create_heatmap_data
+CREATE OR REPLACE TABLE activity_heatmap AS
+SELECT * FROM (VALUES
+  ('Mon', '9AM', 12),
+  ('Mon', '10AM', 25),
+  ('Mon', '11AM', 38),
+  ('Mon', '12PM', 45),
+  ('Mon', '1PM', 32),
+  ('Mon', '2PM', 28),
+  ('Mon', '3PM', 35),
+  ('Mon', '4PM', 22),
+  ('Mon', '5PM', 15),
+  ('Tue', '9AM', 18),
+  ('Tue', '10AM', 32),
+  ('Tue', '11AM', 42),
+  ('Tue', '12PM', 50),
+  ('Tue', '1PM', 38),
+  ('Tue', '2PM', 35),
+  ('Tue', '3PM', 40),
+  ('Tue', '4PM', 28),
+  ('Tue', '5PM', 20),
+  ('Wed', '9AM', 22),
+  ('Wed', '10AM', 35),
+  ('Wed', '11AM', 48),
+  ('Wed', '12PM', 55),
+  ('Wed', '1PM', 42),
+  ('Wed', '2PM', 38),
+  ('Wed', '3PM', 45),
+  ('Wed', '4PM', 32),
+  ('Wed', '5PM', 25),
+  ('Thu', '9AM', 15),
+  ('Thu', '10AM', 28),
+  ('Thu', '11AM', 35),
+  ('Thu', '12PM', 42),
+  ('Thu', '1PM', 35),
+  ('Thu', '2PM', 30),
+  ('Thu', '3PM', 38),
+  ('Thu', '4PM', 25),
+  ('Thu', '5PM', 18),
+  ('Fri', '9AM', 10),
+  ('Fri', '10AM', 22),
+  ('Fri', '11AM', 30),
+  ('Fri', '12PM', 38),
+  ('Fri', '1PM', 28),
+  ('Fri', '2PM', 25),
+  ('Fri', '3PM', 30),
+  ('Fri', '4PM', 20),
+  ('Fri', '5PM', 12)
+) AS t(day, hour, activity)
+```
+
+```sql heatmap_data
+SELECT * FROM activity_heatmap
+```
+
+### 用户活动热力图
+
+```heatmap
+data: heatmap_data
+x: hour
+y: day
+color: activity
+title: Weekly Activity Heatmap
+xLabel: Hour of Day
+yLabel: Day of Week
+```
+
+---
+
+## Funnel Chart 漏斗图
+
+### 示例数据
+
+```sql create_funnel_data
+CREATE OR REPLACE TABLE conversion_funnel AS
+SELECT * FROM (VALUES
+  ('Website Visits', 10000),
+  ('Product Views', 6500),
+  ('Add to Cart', 3200),
+  ('Checkout', 1800),
+  ('Purchase', 1200)
+) AS t(stage, count)
+```
+
+```sql funnel_data
+SELECT * FROM conversion_funnel
+```
+
+### 电商转化漏斗
+
+```funnel
+data: funnel_data
+x: stage
+y: count
+title: E-commerce Conversion Funnel
+```
+
+---
+
+## DimensionGrid 维度网格选择
+
+### 基础网格选择
+
+```dimensiongrid
+name: selected_category
+title: 选择产品类别
+columns: 4
+items:
+  - label: 电子产品
+    value: electronics
+    icon: 📱
+  - label: 服装鞋帽
+    value: clothing
+    icon: 👔
+  - label: 家居用品
+    value: home
+    icon: 🏠
+  - label: 食品饮料
+    value: food
+    icon: 🍎
+  - label: 图书文具
+    value: books
+    icon: 📚
+  - label: 运动户外
+    value: sports
+    icon: ⚽
+  - label: 美妆护肤
+    value: beauty
+    icon: 💄
+  - label: 母婴用品
+    value: baby
+    icon: 🍼
+```
+
+当前选择: **${inputs.selected_category}**
+
+### 多选网格（带计数）
+
+```dimensiongrid
+name: selected_regions
+title: 选择区域（可多选）
+columns: 3
+multiple: true
+showCounts: true
+items:
+  - label: 华东
+    value: east
+    count: 1250
+  - label: 华南
+    value: south
+    count: 890
+  - label: 华北
+    value: north
+    count: 1120
+  - label: 西南
+    value: southwest
+    count: 650
+  - label: 华中
+    value: central
+    count: 780
+  - label: 西北
+    value: northwest
+    count: 420
+```
+
+当前选择: **${inputs.selected_regions}**
+
+---
+
+测试完成！所有组件均已实现，包括 Modal、Details、Note、BoxPlot、Heatmap、FunnelChart 和 DimensionGrid。

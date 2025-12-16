@@ -108,7 +108,7 @@ export interface ReportState {
  * Chart block configuration (simplified syntax)
  */
 export interface ChartBlockConfig {
-  type: 'bar' | 'line' | 'scatter' | 'histogram' | 'area' | 'pie'
+  type: 'bar' | 'line' | 'scatter' | 'histogram' | 'area' | 'pie' | 'boxplot' | 'heatmap' | 'funnel'
   data: string // Table name or query result reference
   x: string
   y?: string  // Optional for histogram
@@ -131,6 +131,8 @@ export interface ChartBlockConfig {
   cornerRadius?: number  // Corner radius for slices
   showLabels?: boolean  // Show labels on slices
   showPercentages?: boolean  // Show percentages in labels
+  // Heatmap specific options
+  color?: string  // Column for color encoding (defaults to y or group)
 }
 
 /**

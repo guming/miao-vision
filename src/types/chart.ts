@@ -7,7 +7,7 @@
 /**
  * Supported chart types
  */
-export type ChartType = 'bar' | 'line' | 'scatter' | 'histogram' | 'area' | 'pie'
+export type ChartType = 'bar' | 'line' | 'scatter' | 'histogram' | 'area' | 'pie' | 'boxplot' | 'heatmap' | 'funnel'
 
 /**
  * Chart data configuration
@@ -65,6 +65,8 @@ export interface ChartOptions {
   showLabels?: boolean
   /** Show percentages on pie chart */
   showPercentages?: boolean
+  /** Color encoding column for heatmap */
+  color?: string
 }
 
 /**
@@ -169,5 +171,23 @@ export const CHART_TYPES: ChartTypeInfo[] = [
     label: 'Pie Chart',
     icon: '🥧',
     description: 'Show proportions of a whole'
+  },
+  {
+    type: 'boxplot',
+    label: 'Box Plot',
+    icon: '📦',
+    description: 'Show statistical distribution with quartiles'
+  },
+  {
+    type: 'heatmap',
+    label: 'Heatmap',
+    icon: '🔥',
+    description: 'Show values as colors in a grid'
+  },
+  {
+    type: 'funnel',
+    label: 'Funnel Chart',
+    icon: '🔻',
+    description: 'Show conversion funnel stages'
   }
 ]

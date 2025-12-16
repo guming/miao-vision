@@ -241,6 +241,421 @@
     }
   }
 
+  /**
+   * Render boxplot using D3
+   * Since vgplot doesn't support boxplot marks natively
+   */
+  async function renderBoxPlot() {
+    if (!chartContainer || !config) return
+
+    try {
+      const coord = coordinator()
+      if (!coord) {
+        throw new Error('Mosaic coordinator not initialized')
+      }
+
+      // Query data and calculate statistics
+      const query = `
+        SELECT
+          "${config.data.x}" as category,
+          "${config.data.y}" as value
+        FROM "${config.data.table}"
+      `
+      console.log('BoxPlot query:', query)
+
+      const result = await coord.query(query)
+      const rawData: Array<{ category: string; value: number }> = []
+
+      for (const row of result) {
+        rawData.push({
+          category: String(row.category),
+          value: Number(row.value)
+        })
+      }
+
+      if (rawData.length === 0) {
+        throw new Error('No data available for boxplot')
+      }
+
+      // Group data by category and calculate statistics
+      const categories = [...new Set(rawData.map(d => d.category))]
+      const boxData = categories.map(cat => {
+        const values = rawData
+          .filter(d => d.category === cat)
+          .map(d => d.value)
+          .sort((a, b) => a - b)
+
+        const q1 = d3.quantile(values, 0.25) || 0
+        const median = d3.quantile(values, 0.5) || 0
+        const q3 = d3.quantile(values, 0.75) || 0
+        const iqr = q3 - q1
+        const min = Math.max(d3.min(values) || 0, q1 - 1.5 * iqr)
+        const max = Math.min(d3.max(values) || 0, q3 + 1.5 * iqr)
+
+        // Outliers
+        const outliers = values.filter(v => v < min || v > max)
+
+        return { category: cat, q1, median, q3, min, max, outliers }
+      })
+
+      // Chart dimensions
+      const width = config.options.width || 680
+      const height = config.options.height || 400
+      const margin = { top: 40, right: 30, bottom: 50, left: 60 }
+      const innerWidth = width - margin.left - margin.right
+      const innerHeight = height - margin.top - margin.bottom
+
+      // Create SVG
+      const svg = d3.create('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [0, 0, width, height])
+        .attr('style', 'max-width: 100%; height: auto;')
+
+      const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`)
+
+      // Scales
+      const x = d3.scaleBand()
+        .domain(categories)
+        .range([0, innerWidth])
+        .padding(0.4)
+
+      const yValues = rawData.map(d => d.value)
+      const y = d3.scaleLinear()
+        .domain([d3.min(yValues) || 0, d3.max(yValues) || 0])
+        .nice()
+        .range([innerHeight, 0])
+
+      // Color scale
+      const color = d3.scaleOrdinal<string>()
+        .domain(categories)
+        .range(d3.schemeTableau10)
+
+      // X axis
+      g.append('g')
+        .attr('transform', `translate(0,${innerHeight})`)
+        .call(d3.axisBottom(x))
+        .selectAll('text')
+        .attr('fill', '#E5E7EB')
+      g.selectAll('.domain, .tick line').attr('stroke', '#4B5563')
+
+      // Y axis
+      g.append('g')
+        .call(d3.axisLeft(y))
+        .selectAll('text')
+        .attr('fill', '#E5E7EB')
+      g.selectAll('.domain, .tick line').attr('stroke', '#4B5563')
+
+      // Grid lines
+      g.append('g')
+        .attr('class', 'grid')
+        .call(d3.axisLeft(y).tickSize(-innerWidth).tickFormat(() => ''))
+        .selectAll('line')
+        .attr('stroke', '#374151')
+        .attr('stroke-opacity', 0.5)
+      g.select('.grid .domain').remove()
+
+      // Draw boxes
+      const boxWidth = x.bandwidth()
+
+      boxData.forEach(d => {
+        const xPos = x(d.category) || 0
+        const center = xPos + boxWidth / 2
+
+        // Vertical line (whiskers)
+        g.append('line')
+          .attr('x1', center)
+          .attr('x2', center)
+          .attr('y1', y(d.min))
+          .attr('y2', y(d.max))
+          .attr('stroke', '#9CA3AF')
+          .attr('stroke-width', 1)
+
+        // Box
+        g.append('rect')
+          .attr('x', xPos)
+          .attr('y', y(d.q3))
+          .attr('width', boxWidth)
+          .attr('height', y(d.q1) - y(d.q3))
+          .attr('fill', color(d.category))
+          .attr('stroke', '#E5E7EB')
+          .attr('stroke-width', 1)
+          .attr('rx', 2)
+          .style('opacity', 0.8)
+
+        // Median line
+        g.append('line')
+          .attr('x1', xPos)
+          .attr('x2', xPos + boxWidth)
+          .attr('y1', y(d.median))
+          .attr('y2', y(d.median))
+          .attr('stroke', '#E5E7EB')
+          .attr('stroke-width', 2)
+
+        // Whisker caps
+        const capWidth = boxWidth * 0.5
+        g.append('line')
+          .attr('x1', center - capWidth / 2)
+          .attr('x2', center + capWidth / 2)
+          .attr('y1', y(d.min))
+          .attr('y2', y(d.min))
+          .attr('stroke', '#9CA3AF')
+          .attr('stroke-width', 1)
+
+        g.append('line')
+          .attr('x1', center - capWidth / 2)
+          .attr('x2', center + capWidth / 2)
+          .attr('y1', y(d.max))
+          .attr('y2', y(d.max))
+          .attr('stroke', '#9CA3AF')
+          .attr('stroke-width', 1)
+
+        // Outliers
+        d.outliers.forEach(outlier => {
+          g.append('circle')
+            .attr('cx', center)
+            .attr('cy', y(outlier))
+            .attr('r', 3)
+            .attr('fill', color(d.category))
+            .attr('stroke', '#E5E7EB')
+            .attr('stroke-width', 1)
+        })
+      })
+
+      // Title
+      if (config.options.title) {
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', 20)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#E5E7EB')
+          .attr('font-size', '18px')
+          .attr('font-weight', '600')
+          .text(config.options.title)
+      }
+
+      // X label
+      if (config.options.xLabel) {
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', height - 10)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#9CA3AF')
+          .attr('font-size', '12px')
+          .text(config.options.xLabel)
+      }
+
+      // Y label
+      if (config.options.yLabel) {
+        svg.append('text')
+          .attr('transform', 'rotate(-90)')
+          .attr('x', -height / 2)
+          .attr('y', 15)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#9CA3AF')
+          .attr('font-size', '12px')
+          .text(config.options.yLabel)
+      }
+
+      // Check if component is still mounted
+      if (!mounted || !chartContainer) {
+        console.log('Component unmounted during boxplot render, aborting')
+        return
+      }
+
+      // Append to container
+      if (document.body.contains(chartContainer)) {
+        const svgNode = svg.node()
+        if (svgNode) {
+          chartContainer.appendChild(svgNode)
+          plotElement = svgNode
+          console.log('BoxPlot rendered successfully')
+        }
+      }
+    } catch (err) {
+      console.error('Failed to render boxplot:', err)
+      if (mounted) {
+        error = err instanceof Error ? err.message : 'Failed to render boxplot'
+      }
+    } finally {
+      if (mounted) {
+        loading = false
+      }
+    }
+  }
+
+  /**
+   * Render funnel chart using D3
+   * Shows a conversion funnel with progressively smaller segments
+   */
+  async function renderFunnelChart() {
+    if (!chartContainer || !config) return
+
+    try {
+      const coord = coordinator()
+      if (!coord) {
+        throw new Error('Mosaic coordinator not initialized')
+      }
+
+      // Query data - x is the stage label, y is the value
+      const query = `
+        SELECT
+          "${config.data.x}" as stage,
+          "${config.data.y}" as value
+        FROM "${config.data.table}"
+      `
+      console.log('Funnel chart query:', query)
+
+      const result = await coord.query(query)
+      const data: Array<{ stage: string; value: number }> = []
+
+      for (const row of result) {
+        data.push({
+          stage: String(row.stage),
+          value: Number(row.value)
+        })
+      }
+
+      if (data.length === 0) {
+        throw new Error('No data available for funnel chart')
+      }
+
+      console.log('Funnel chart data:', data)
+
+      // Chart dimensions
+      const width = config.options.width || 680
+      const height = config.options.height || 400
+      const margin = { top: 50, right: 20, bottom: 30, left: 20 }
+      const innerWidth = width - margin.left - margin.right
+      const innerHeight = height - margin.top - margin.bottom
+
+      // Create SVG
+      const svg = d3.create('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [0, 0, width, height])
+        .attr('style', 'max-width: 100%; height: auto;')
+
+      const g = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`)
+
+      // Calculate max value for scaling
+      const maxValue = d3.max(data, d => d.value) || 1
+
+      // Color scale
+      const color = d3.scaleOrdinal<string>()
+        .domain(data.map(d => d.stage))
+        .range(d3.schemeTableau10)
+
+      // Height for each segment
+      const segmentHeight = innerHeight / data.length
+      const centerX = innerWidth / 2
+
+      // Draw funnel segments
+      data.forEach((d, i) => {
+        const topWidth = (d.value / maxValue) * innerWidth
+        const nextValue = data[i + 1]?.value || d.value * 0.5
+        const bottomWidth = (nextValue / maxValue) * innerWidth
+
+        const y1 = i * segmentHeight
+        const y2 = (i + 1) * segmentHeight
+
+        // Create trapezoid path
+        const path = `
+          M ${centerX - topWidth / 2},${y1}
+          L ${centerX + topWidth / 2},${y1}
+          L ${centerX + bottomWidth / 2},${y2}
+          L ${centerX - bottomWidth / 2},${y2}
+          Z
+        `
+
+        // Draw segment
+        g.append('path')
+          .attr('d', path)
+          .attr('fill', color(d.stage))
+          .attr('stroke', '#1F2937')
+          .attr('stroke-width', 2)
+          .style('opacity', 0.9)
+          .append('title')
+          .text(`${d.stage}: ${d.value.toLocaleString()}`)
+
+        // Add label
+        g.append('text')
+          .attr('x', centerX)
+          .attr('y', y1 + segmentHeight / 2)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('fill', '#E5E7EB')
+          .attr('font-size', '14px')
+          .attr('font-weight', '500')
+          .text(`${d.stage}`)
+
+        // Add value
+        g.append('text')
+          .attr('x', centerX)
+          .attr('y', y1 + segmentHeight / 2 + 18)
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'middle')
+          .attr('fill', '#9CA3AF')
+          .attr('font-size', '12px')
+          .text(d.value.toLocaleString())
+
+        // Calculate and show conversion rate (except for last stage)
+        if (i > 0) {
+          const prevValue = data[i - 1].value
+          const conversionRate = ((d.value / prevValue) * 100).toFixed(1)
+
+          g.append('text')
+            .attr('x', centerX + topWidth / 2 + 10)
+            .attr('y', y1)
+            .attr('text-anchor', 'start')
+            .attr('dominant-baseline', 'middle')
+            .attr('fill', '#6B7280')
+            .attr('font-size', '11px')
+            .text(`${conversionRate}%`)
+        }
+      })
+
+      // Title
+      if (config.options.title) {
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', 25)
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#E5E7EB')
+          .attr('font-size', '18px')
+          .attr('font-weight', '600')
+          .text(config.options.title)
+      }
+
+      // Check if component is still mounted
+      if (!mounted || !chartContainer) {
+        console.log('Component unmounted during funnel chart render, aborting')
+        return
+      }
+
+      // Append to container
+      if (document.body.contains(chartContainer)) {
+        const svgNode = svg.node()
+        if (svgNode) {
+          chartContainer.appendChild(svgNode)
+          plotElement = svgNode
+          console.log('Funnel chart rendered successfully')
+        }
+      }
+    } catch (err) {
+      console.error('Failed to render funnel chart:', err)
+      if (mounted) {
+        error = err instanceof Error ? err.message : 'Failed to render funnel chart'
+      }
+    } finally {
+      if (mounted) {
+        loading = false
+      }
+    }
+  }
+
   async function renderChart() {
     if (!mounted || !chartContainer || !config) {
       console.log('Chart render skipped:', { mounted, chartContainer: !!chartContainer, config: !!config })
@@ -319,10 +734,35 @@
           )
           break
 
+        case 'boxplot':
+          // BoxPlot uses D3 instead of vgplot since vgplot doesn't have native boxplot support
+          await renderBoxPlot()
+          return  // Exit early - boxplot handles its own rendering
+
         case 'pie':
           // Pie charts use D3 instead of vgplot
           await renderPieChart()
           return  // Exit early - pie chart handles its own rendering
+
+        case 'heatmap':
+          // Heatmap uses cell marks with color encoding
+          // color can be specified in options or defaults to group or y
+          const colorColumn = config.options.color || config.data.group || config.data.y
+          mark = vg.cell(
+            vg.from(config.data.table),
+            {
+              x: config.data.x,
+              y: config.data.y,
+              fill: colorColumn,
+              inset: 0.5
+            }
+          )
+          break
+
+        case 'funnel':
+          // Funnel charts use D3
+          await renderFunnelChart()
+          return  // Exit early - funnel chart handles its own rendering
 
         default:
           throw new Error(`Unsupported chart type: ${config.type}`)

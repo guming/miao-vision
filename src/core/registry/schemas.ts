@@ -323,6 +323,47 @@ export const ChartSchema: ConfigSchema = {
 }
 
 /**
+ * DimensionGrid input schema
+ *
+ * Example:
+ * ```dimensiongrid
+ * name: selected_category
+ * title: Select Category
+ * columns: 4
+ * multiple: false
+ * showCounts: true
+ * items:
+ *   - label: Sales
+ *     value: sales
+ *     icon: 💰
+ *     count: 1250
+ * ```
+ */
+export const DimensionGridSchema: ConfigSchema = {
+  fields: [
+    { name: 'name', type: 'string', required: true },
+    { name: 'title', type: 'string' },
+    { name: 'columns', type: 'number', default: 4 },
+    { name: 'multiple', type: 'boolean', default: false },
+    { name: 'showCounts', type: 'boolean', default: false },
+    { name: 'defaultValue', type: 'string' },
+    { name: 'gap', type: 'string', default: '0.75rem' }
+  ],
+  sections: [
+    {
+      name: 'items',
+      itemFields: [
+        { name: 'label', type: 'string', required: true },
+        { name: 'value', type: 'string', required: true },
+        { name: 'icon', type: 'string' },
+        { name: 'count', type: 'number' },
+        { name: 'color', type: 'string' }
+      ]
+    }
+  ]
+}
+
+/**
  * Schema registry - maps component types to their schemas
  */
 export const SchemaRegistry: Record<string, ConfigSchema> = {
@@ -336,7 +377,8 @@ export const SchemaRegistry: Record<string, ConfigSchema> = {
   checkbox: CheckboxSchema,
   textinput: TextInputSchema,
   daterange: DateRangeSchema,
-  chart: ChartSchema
+  chart: ChartSchema,
+  dimensiongrid: DimensionGridSchema
 }
 
 /**

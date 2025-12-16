@@ -143,7 +143,7 @@ export class ChartService {
     // Required fields
     if (!config.type) {
       errors.push('Chart type is required')
-    } else if (!['bar', 'line', 'scatter', 'histogram', 'area', 'pie'].includes(config.type)) {
+    } else if (!['bar', 'line', 'scatter', 'histogram', 'area', 'pie', 'boxplot', 'heatmap', 'funnel'].includes(config.type)) {
       errors.push(`Invalid chart type: ${config.type}`)
     }
 
@@ -205,7 +205,7 @@ export class ChartService {
       console.log('  Block language:', chartBlock.language)
 
       // Determine chart type from language (for specific chart types like ```pie, ```bar, etc.)
-      const specificChartTypes = ['line', 'area', 'bar', 'scatter', 'histogram', 'pie'] as const
+      const specificChartTypes = ['line', 'area', 'bar', 'scatter', 'histogram', 'pie', 'boxplot', 'heatmap', 'funnel'] as const
       type ChartTypeFromLanguage = typeof specificChartTypes[number]
       const inferredType: ChartTypeFromLanguage | null = specificChartTypes.includes(chartBlock.language as ChartTypeFromLanguage)
         ? chartBlock.language as ChartTypeFromLanguage
@@ -295,7 +295,9 @@ export class ChartService {
           padAngle: chartConfig.padAngle,
           cornerRadius: chartConfig.cornerRadius,
           showLabels: chartConfig.showLabels,
-          showPercentages: chartConfig.showPercentages
+          showPercentages: chartConfig.showPercentages,
+          // Heatmap options
+          color: chartConfig.color
         }
       }
 
@@ -332,7 +334,8 @@ export class ChartService {
     const chartBlocks = blocks.filter(
       b => b.language === 'chart' || b.language === 'histogram' || b.language === 'area' ||
            b.language === 'line' || b.language === 'bar' || b.language === 'scatter' ||
-           b.language === 'pie'
+           b.language === 'pie' || b.language === 'boxplot' || b.language === 'heatmap' ||
+           b.language === 'funnel'
     )
 
     console.log(`  Found ${chartBlocks.length} chart blocks`)

@@ -39,6 +39,7 @@
     "@uwdata/mosaic-sql": "latest",
     "@uwdata/vgplot": "latest",
     "apache-arrow": "^18.1.0",
+    "html2pdf.js": "^0.12.1",
     "monaco-editor": "^0.52.2",
     "rehype-stringify": "^10.0.1",
     "remark-parse": "^11.0.0",

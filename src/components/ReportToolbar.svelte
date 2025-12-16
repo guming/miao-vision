@@ -5,16 +5,24 @@
     editor?: MarkdownEditor | null
     onExecute?: () => void
     onSave?: () => void
+    onExport?: () => void
+    onExportPDF?: () => void
     isExecuting?: boolean
     isSaving?: boolean
+    isExporting?: boolean
+    isExportingPDF?: boolean
   }
 
   let {
     editor = $bindable(null),
     onExecute,
     onSave,
+    onExport,
+    onExportPDF,
     isExecuting = false,
-    isSaving = false
+    isSaving = false,
+    isExporting = false,
+    isExportingPDF = false
   }: Props = $props()
 
   function handleInsertSQL() {
@@ -45,6 +53,18 @@
   function handleSave() {
     if (onSave && !isSaving) {
       onSave()
+    }
+  }
+
+  function handleExport() {
+    if (onExport && !isExporting) {
+      onExport()
+    }
+  }
+
+  function handleExportPDF() {
+    if (onExportPDF && !isExportingPDF) {
+      onExportPDF()
     }
   }
 
@@ -106,6 +126,24 @@
       title="Save Report"
     >
       {isSaving ? '💾 Saving...' : '💾 Save'}
+    </button>
+
+    <button
+      class="toolbar-btn btn-export"
+      onclick={handleExport}
+      disabled={isExporting}
+      title="Export as HTML"
+    >
+      {isExporting ? '📥 Exporting...' : '📥 HTML'}
+    </button>
+
+    <button
+      class="toolbar-btn btn-export-pdf"
+      onclick={handleExportPDF}
+      disabled={isExportingPDF}
+      title="Export as PDF"
+    >
+      {isExportingPDF ? '📄 Exporting...' : '📄 PDF'}
     </button>
 
     <button
@@ -186,6 +224,26 @@
   .btn-save:hover:not(:disabled) {
     background-color: rgba(102, 126, 234, 0.3);
     border-color: rgba(102, 126, 234, 0.5);
+  }
+
+  .btn-export {
+    background-color: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.3);
+  }
+
+  .btn-export:hover:not(:disabled) {
+    background-color: rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.5);
+  }
+
+  .btn-export-pdf {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .btn-export-pdf:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.5);
   }
 
   .btn-execute {
