@@ -184,4 +184,76 @@ items:
 
 ---
 
+## Sparkline / Mini Chart - 迷你图
+
+### 基础折线图
+
+```sparkline
+values: 10, 15, 12, 18, 14, 20, 22, 19, 25
+type: line
+showMinMax: true
+showLast: true
+width: 150
+height: 40
+color: #3B82F6
+```
+
+### 带参考线的面积图
+
+```sparkline
+values: 45, 52, 48, 60, 55, 58, 62, 59, 65
+type: area
+referenceLine: avg
+showLast: true
+width: 150
+height: 40
+color: #10B981
+```
+
+### Win/Loss 正负图
+
+```sparkline
+values: 5, -3, 8, -2, 6, -1, 4, -4, 7, 3
+type: winloss
+width: 150
+height: 40
+```
+
+### 柱状迷你图
+
+```sparkline
+values: 20, 35, 28, 42, 38, 45, 50
+type: bar
+showMinMax: true
+width: 120
+height: 36
+color: #8B5CF6
+```
+
+### Bullet Chart 子弹图
+
+```sparkline
+values: 75
+type: bullet
+targetValue: 90
+width: 180
+height: 32
+color: #3B82F6
+```
+
+### 带范围区间的趋势图
+
+```sparkline
+values: 42, 45, 48, 52, 49, 55, 58, 54, 60
+type: line
+bandLow: 40
+bandHigh: 55
+showDots: true
+width: 150
+height: 40
+color: #F59E0B
+```
+
+---
+
 测试完成！所有 Quick Wins 组件均已实现。

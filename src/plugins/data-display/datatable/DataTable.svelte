@@ -3,12 +3,21 @@
   import { processData, toggleSort, getSortIcon } from './operations'
   import { formatValue } from './formatter'
   import { downloadCSV, downloadExcel } from './export'
+  import { drilldownService } from '@core/engine/drilldown'
 
   interface Props {
     data: DataTableData
+    inputStore?: any  // Optional input store for drill-down
   }
 
-  let { data }: Props = $props()
+  let { data, inputStore }: Props = $props()
+
+  // Initialize drill-down service with input store if available
+  $effect(() => {
+    if (inputStore && data.config.drilldown?.enabled) {
+      drilldownService.setInputStore(inputStore)
+    }
+  })
 
   // Local state
   let searchQuery = $state('')
@@ -219,6 +228,45 @@
   function clearSelection() {
     selectedRows = new Set()
   }
+
+  /**
+   * Handle drill-down row click
+   */
+  function handleDrilldownClick(row: any, rowIndex: number) {
+    const drilldown = data.config.drilldown
+    if (!drilldown?.enabled || !drilldown.mappings?.length) return
+
+    console.log('🔍 Drill-down click:', { rowIndex, row })
+
+    // Execute drill-down action via service
+    drilldownService.execute(
+      {
+        enabled: true,
+        action: {
+          type: 'setInput',
+          mappings: drilldown.mappings.map(m => ({
+            column: m.column,
+            inputName: m.inputName,
+            transform: m.transform
+          }))
+        },
+        cursor: drilldown.cursor,
+        hoverHighlight: drilldown.highlight,
+        tooltip: drilldown.tooltip
+      },
+      {
+        rowData: row,
+        rowIndex,
+        sourceComponent: 'datatable',
+        blockId: data.config.query
+      }
+    )
+  }
+
+  // Drilldown helpers
+  let drilldownEnabled = $derived(data.config.drilldown?.enabled === true)
+  let drilldownCursor = $derived(data.config.drilldown?.cursor || 'pointer')
+  let drilldownHighlight = $derived(data.config.drilldown?.highlight !== false)
 
   let allSelected = $derived(processedData.length > 0 && selectedRows.size === processedData.length)
   let someSelected = $derived(selectedRows.size > 0 && selectedRows.size < processedData.length)
@@ -656,7 +704,11 @@
                     <tr
                       class="data-row"
                       class:selected={selectedRows.has(actualIndex)}
-                      style="height: {rowHeight}px;"
+                      class:drilldown-enabled={drilldownEnabled}
+                      class:drilldown-highlight={drilldownEnabled && drilldownHighlight}
+                      style="height: {rowHeight}px; {drilldownEnabled ? `cursor: ${drilldownCursor}` : ''}"
+                      onclick={drilldownEnabled ? () => handleDrilldownClick(row, actualIndex) : undefined}
+                      title={drilldownEnabled ? (data.config.drilldown?.tooltip || 'Click to drill down') : undefined}
                     >
                       {#if data.config.selectable}
                         <td class="data-cell select-cell">
@@ -1173,6 +1225,24 @@
 
   .data-row.selected:hover {
     background: #2E4A6F;
+  }
+
+  /* Drill-down styles */
+  .data-row.drilldown-enabled {
+    cursor: pointer;
+  }
+
+  .data-row.drilldown-highlight:hover {
+    background: #3B82F6 !important;
+    box-shadow: inset 0 0 0 1px #60A5FA;
+  }
+
+  .data-row.drilldown-highlight:hover .data-cell {
+    color: #FFFFFF;
+  }
+
+  .data-row.drilldown-enabled:active {
+    background: #2563EB !important;
   }
 
   .data-cell {

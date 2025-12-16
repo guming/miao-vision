@@ -13,7 +13,9 @@ import type {
   DataTableData,
   ColumnConfig,
   ColumnMeta,
-  FormatType
+  FormatType,
+  DrilldownConfig,
+  DrilldownMapping
 } from './types'
 
 /**
@@ -21,6 +23,7 @@ import type {
  */
 interface DataTableProps {
   data: DataTableData
+  inputStore?: any
 }
 
 /**
@@ -54,6 +57,96 @@ function detectColumnMetadata(data: any[], columns: string[]): ColumnMeta[] {
       sample
     }
   })
+}
+
+/**
+ * Parse drilldown configuration from block content
+ */
+function parseDrilldownConfig(content: string): DrilldownConfig | undefined {
+  const lines = content.split('\n')
+  let inDrilldown = false
+  let inMappings = false
+  const mappings: DrilldownMapping[] = []
+  let cursor: 'pointer' | 'zoom-in' = 'pointer'
+  let highlight = true
+  let tooltip: string | undefined
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+
+    // Start of drilldown section
+    if (trimmed === 'drilldown:' || trimmed.startsWith('drilldown:')) {
+      inDrilldown = true
+      const afterColon = trimmed.substring(10).trim()
+      if (afterColon === 'false') {
+        return undefined
+      }
+      continue
+    }
+
+    // Stop at next top-level key
+    if (inDrilldown && !trimmed.startsWith('-') && !trimmed.startsWith(' ') && trimmed.includes(':') && !trimmed.startsWith('drilldown')) {
+      if (!trimmed.startsWith('cursor') && !trimmed.startsWith('highlight') && !trimmed.startsWith('tooltip') && !trimmed.startsWith('mappings')) {
+        break
+      }
+    }
+
+    if (!inDrilldown) continue
+
+    // Parse mappings list
+    if (trimmed === 'mappings:') {
+      inMappings = true
+      continue
+    }
+
+    // Parse mapping item: "- column → inputName" or "- column: inputName"
+    if (inMappings && trimmed.startsWith('-')) {
+      const mapping = trimmed.substring(1).trim()
+      const arrowMatch = mapping.match(/^(\w+)\s*[→:]\s*(\w+)(?:\s*\((\w+)\))?$/)
+      if (arrowMatch) {
+        mappings.push({
+          column: arrowMatch[1],
+          inputName: arrowMatch[2],
+          transform: arrowMatch[3] as 'string' | 'number' | 'date' | undefined
+        })
+      }
+      continue
+    }
+
+    // Parse other drilldown properties
+    if (trimmed.includes(':')) {
+      const colonIdx = trimmed.indexOf(':')
+      const key = trimmed.substring(0, colonIdx).trim()
+      const value = trimmed.substring(colonIdx + 1).trim()
+
+      switch (key) {
+        case 'cursor':
+          if (value === 'pointer' || value === 'zoom-in') {
+            cursor = value
+          }
+          break
+        case 'highlight':
+          highlight = value !== 'false'
+          break
+        case 'tooltip':
+          tooltip = value
+          break
+      }
+    }
+  }
+
+  // Only return config if we have mappings
+  if (mappings.length > 0) {
+    return {
+      enabled: true,
+      mappings,
+      cursor,
+      highlight,
+      tooltip
+    }
+  }
+
+  return undefined
 }
 
 /**
@@ -124,7 +217,7 @@ export const dataTableRegistration = defineComponent<DataTableConfig, DataTableP
   },
 
   // Build props
-  buildProps: (config, extractedData, _context) => {
+  buildProps: (config, extractedData, context) => {
     if (!extractedData) return null
 
     const { columns, rows } = extractedData as {
@@ -133,15 +226,29 @@ export const dataTableRegistration = defineComponent<DataTableConfig, DataTableP
       metadata: ColumnMeta[]
     }
 
+    // Parse drilldown config from block content
+    const block = (context as any).block
+    let drilldown = config.drilldown
+    if (!drilldown && block?.content) {
+      drilldown = parseDrilldownConfig(block.content)
+    }
+
+    // Get inputStore from context for drill-down
+    const inputStore = (context as any).inputStore
+
     return {
       data: {
-        config,
+        config: {
+          ...config,
+          drilldown
+        },
         columns,
         rows,
         filteredRows: rows,
         sortState: null,
         searchQuery: ''
-      }
+      },
+      inputStore
     }
   }
 })

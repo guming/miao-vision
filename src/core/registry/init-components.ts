@@ -30,6 +30,7 @@ import {
 } from '@plugins/inputs'
 import { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration } from '@plugins/data-display'
 import { alertRegistration, tabsRegistration, accordionRegistration, tooltipRegistration } from '@plugins/ui'
+import { gridRegistration } from '@plugins/layout'
 
 // Import chart builder (charts still use legacy approach)
 import { buildChartFromBlock } from '@plugins/viz/chart-builder'
@@ -156,7 +157,8 @@ export function initializeComponents(): void {
     alertRegistration,
     tabsRegistration,
     accordionRegistration,
-    tooltipRegistration
+    tooltipRegistration,
+    gridRegistration
   ]
 
   for (const registration of componentRegistrations) {

@@ -48,6 +48,26 @@ export interface ColumnConfig {
   iconSet?: IconSet          // Icon set for value indicators
 }
 
+/**
+ * Drill-down value mapping for extracting values from clicked row
+ */
+export interface DrilldownMapping {
+  column: string             // Source column name in the data
+  inputName: string          // Target input name to set
+  transform?: 'string' | 'number' | 'date'  // Optional transformation
+}
+
+/**
+ * Drill-down configuration for table rows
+ */
+export interface DrilldownConfig {
+  enabled: boolean           // Enable drill-down on row click
+  mappings: DrilldownMapping[]  // Map columns to input variables
+  cursor?: 'pointer' | 'zoom-in'  // Cursor style on hover (default: pointer)
+  highlight?: boolean        // Highlight row on hover (default: true)
+  tooltip?: string           // Tooltip text for drill-down hint
+}
+
 export interface DataTableConfig {
   query: string              // SQL result name to use as data source
   columns?: ColumnConfig[]   // Column configurations (optional, auto-detect if not provided)
@@ -60,6 +80,7 @@ export interface DataTableConfig {
   selectable?: boolean       // Enable row selection (default: false)
   rowHeight?: number         // Row height for virtual scrolling (default: 36)
   maxHeight?: number         // Max table height in pixels (default: 600)
+  drilldown?: DrilldownConfig  // Drill-down configuration for row clicks
 }
 
 export interface ColumnMeta {
