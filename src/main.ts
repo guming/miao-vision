@@ -2,30 +2,25 @@ import './app.css'
 import App from './App.svelte'
 import { mount } from 'svelte'
 
-// Import block registry to trigger registration (legacy system)
-import './lib/blocks/index'
-import { blockRegistry } from './lib/blocks/registry'
+// Import core registry
+import { componentRegistry } from '@core/registry'
 
-// Import and initialize new Component Registry system
-import { componentRegistry } from './lib/core/component-registry'
-import { initializeComponents, getComponentDocumentation } from './lib/core/init-components'
+// Import plugin initialization
+import { initializePlugins, getPluginDocumentation } from '@core/registry/init-plugins'
 
-// Verify legacy block registration
+// Initialize Plugin System
 console.log('🚀 Main.ts: App starting...')
-console.log('📦 Legacy blocks:', blockRegistry.getAll())
+console.log('\n🔌 Initializing Plugin System...')
+initializePlugins()
 
-// Initialize new Component Registry
-console.log('\n🎨 Initializing Component Registry System...')
-initializeComponents()
-
-// Log component documentation
-const componentDocs = getComponentDocumentation()
-console.log('\n📚 Component Documentation:')
-console.log('  Total components:', componentDocs.total)
-console.log('  By category:', componentDocs.byCategory)
+// Log plugin documentation
+const pluginDocs = getPluginDocumentation()
+console.log('\n📚 Plugin Documentation:')
+console.log('  Total components:', pluginDocs.total)
+console.log('  By category:', pluginDocs.byCategory)
 console.log('  Registered languages:', componentRegistry.getAllLanguages())
 
-console.log('\n✨ Component Registry initialized successfully!\n')
+console.log('\n✨ Plugin system initialized successfully!\n')
 
 const app = mount(App, {
   target: document.getElementById('app')!

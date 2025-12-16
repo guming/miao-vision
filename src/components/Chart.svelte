@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { initializeMosaic } from '@/lib/database'
+  import { initializeMosaic } from '@core/database'
 
   interface Props {
     spec: any

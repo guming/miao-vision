@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "check:size": "bash scripts/check-file-size.sh"
+    "check:size": "bash scripts/check-file-size.sh",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.2",
@@ -17,14 +20,17 @@
     "@tailwindcss/typography": "^0.5.19",
     "@tsconfig/svelte": "^5.0.6",
     "@types/d3": "^7.4.3",
+    "@vitest/coverage-v8": "^4.0.15",
     "autoprefixer": "^10.4.22",
+    "jsdom": "^27.0.1",
     "postcss": "^8.5.6",
     "svelte": "^5.15.1",
     "svelte-check": "^4.1.1",
     "tailwindcss": "^3.4.19",
     "tslib": "^2.8.1",
     "typescript": "^5.7.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^4.0.15"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.0",

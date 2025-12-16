@@ -19,7 +19,10 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@core/*": ["./src/core/*"],
+      "@plugins/*": ["./src/plugins/*"],
+      "@app/*": ["./src/app/*"]
     },
     "skipLibCheck": true
   },

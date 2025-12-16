@@ -1,13 +1,13 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { wasmConnector } from '@uwdata/mosaic-core'
-  import { coordinator } from '@/lib/database'
+  import { coordinator } from '@core/database'
   import type { Report } from '@/types/report'
   import type { ParsedCodeBlock } from '@/types/report'
-  import { parseMarkdown } from '@/lib/markdown/parser'
-  import { blockRenderer } from '@/lib/renderers/block-renderer'
-  import type { InputStore } from '@/lib/stores/report-inputs'
-  import { databaseStore } from '@/lib/stores/database.svelte'
+  import { parseMarkdown } from '@core/markdown/parser'
+  import { blockRenderer } from '@core/engine/block-renderer'
+  import type { InputStore } from '@app/stores/report-inputs'
+  import { databaseStore } from '@app/stores/database.svelte'
 
   interface Props {
     report: Report | null

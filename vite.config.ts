@@ -7,7 +7,10 @@ export default defineConfig({
   plugins: [svelte()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      '@core': path.resolve(__dirname, './src/core'),
+      '@plugins': path.resolve(__dirname, './src/plugins'),
+      '@app': path.resolve(__dirname, './src/app')
     }
   },
   optimizeDeps: {

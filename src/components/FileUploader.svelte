@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { databaseStore } from '@/lib/stores/database.svelte'
+  import { databaseStore } from '@app/stores/database.svelte'
 
   let fileInput: HTMLInputElement
   let dragOver = $state(false)

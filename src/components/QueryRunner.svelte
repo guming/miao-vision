@@ -1,6 +1,6 @@
 <script lang="ts">
   import MonacoEditor from './MonacoEditor.svelte'
-  import { databaseStore } from '@/lib/stores/database.svelte'
+  import { databaseStore } from '@app/stores/database.svelte'
   import type { QueryResult } from '@/types/database'
 
   interface Props {

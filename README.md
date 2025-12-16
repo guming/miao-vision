@@ -23,19 +23,42 @@
 
 ## 📁 项目结构
 
+本项目采用 **Evidence.dev 风格的插件架构**，实现核心引擎与可插拔组件的分离。
+
 ```
 src/
-├── components/      # Svelte 组件
-├── lib/
-│   ├── database/   # DuckDB-WASM 封装
-│   ├── markdown/   # Markdown 解析器
-│   ├── viz/        # 可视化组件
-│   └── stores/     # Svelte 5 Runes 状态管理
-├── utils/          # 工具函数
-├── types/          # TypeScript 类型定义
-├── App.svelte      # 主应用组件
-└── main.ts         # 应用入口
+├── core/              # 核心引擎（不可插拔）
+│   ├── database/      # DuckDB-WASM, Mosaic 集成
+│   ├── engine/        # Block 渲染, 响应式执行
+│   ├── markdown/      # Markdown 解析, SQL 执行
+│   ├── registry/      # 组件注册系统
+│   └── shared/        # DI 容器, 纯函数, 共享服务
+│
+├── plugins/           # 可插拔组件
+│   ├── inputs/        # 输入组件 (Dropdown, ButtonGroup)
+│   ├── data-display/  # 数据展示 (BigValue, DataTable, Value)
+│   ├── viz/           # 图表工具
+│   └── ui/            # UI 组件 (Alert)
+│
+├── app/               # 应用层
+│   └── stores/        # Svelte stores (report, database, chart)
+│
+├── components/        # Svelte UI 组件
+├── types/             # TypeScript 类型定义
+├── App.svelte         # 主应用组件
+└── main.ts            # 应用入口
 ```
+
+### 路径别名
+
+| 别名 | 路径 | 用途 |
+|------|------|------|
+| `@core/` | `src/core/` | 核心引擎 |
+| `@plugins/` | `src/plugins/` | 插件系统 |
+| `@app/` | `src/app/` | 应用层 |
+| `@/` | `src/` | 通用导入 |
+
+📚 详细文档：[Plugin Architecture](./docs/PLUGIN_ARCHITECTURE.md)
 
 ## 🎨 UI 设计系统
 

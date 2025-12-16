@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { reportStore } from '@/lib/stores/report.svelte'
+  import { reportStore } from '@app/stores/report.svelte'
   import type { Report } from '@/types/report'
 
   interface Props {

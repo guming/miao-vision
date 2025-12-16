@@ -2,7 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import * as vg from '@uwdata/vgplot'
   import * as d3 from 'd3'
-  import { coordinator } from '@/lib/database'
+  import { coordinator } from '@core/database'
   import type { ChartConfig } from '@/types/chart'
 
   interface Props {

@@ -27,19 +27,54 @@ npm run preview  # Preview production build
 - **Monaco Editor** - SQL and Markdown editing
 - **Unified/Remark** - Markdown parsing with custom plugins
 
-### Key Directories
+### Plugin Architecture (Evidence.dev Style)
+
+The project uses a plugin architecture that separates the core engine from pluggable components.
+
 ```
 src/
-├── components/       # Svelte UI components
-├── lib/
-│   ├── blocks/       # Block-level rendering (SQL, charts)
-│   ├── core/         # Core application logic
-│   ├── database/     # DuckDB-WASM wrapper
-│   ├── markdown/     # Markdown parser and plugins
-│   ├── stores/       # Svelte 5 Runes state management
-│   └── viz/          # Mosaic/vgplot connector
-├── types/            # TypeScript type definitions
-└── App.svelte        # Main application component
+├── core/              # Core engine (not pluggable)
+│   ├── database/      # DuckDB-WASM, Mosaic, table loading
+│   ├── engine/        # Block rendering, reactive execution
+│   ├── markdown/      # Parser, SQL executor, conditionals
+│   ├── registry/      # Component registration system
+│   └── shared/        # DI, pure functions, chart service
+│
+├── plugins/           # Pluggable components
+│   ├── inputs/        # Dropdown, ButtonGroup
+│   ├── data-display/  # BigValue, DataTable, Value
+│   ├── viz/           # Chart utilities, data adapter
+│   └── ui/            # Alert
+│
+├── app/               # Application layer
+│   └── stores/        # Svelte stores (report, database, chart, inputs)
+│
+├── components/        # Svelte UI components
+├── types/             # TypeScript type definitions
+└── App.svelte         # Main application component
+```
+
+### Path Aliases
+
+| Alias | Path | Usage |
+|-------|------|-------|
+| `@core/` | `src/core/` | Core engine imports |
+| `@plugins/` | `src/plugins/` | Plugin imports |
+| `@app/` | `src/app/` | Application layer imports |
+| `@/` | `src/` | General imports |
+
+**Import Examples:**
+```typescript
+// Core imports
+import { componentRegistry, parseMarkdown } from '@core'
+import { duckDBManager } from '@core/database'
+
+// Plugin imports
+import { Dropdown, useInput } from '@plugins/inputs'
+import { BigValue, DataTable } from '@plugins/data-display'
+
+// App imports
+import { reportStore, databaseStore } from '@app/stores'
 ```
 
 ### Data Flow
@@ -47,8 +82,13 @@ src/
 2. SQL queries executed via QueryRunner → DuckDB → Apache Arrow → JSON
 3. Visualization: Query results → Mosaic Coordinator → vgplot → DOM
 
-### Path Alias
-Use `@/` for imports from `src/` (configured in tsconfig.json and vite.config.ts).
+### Creating New Plugins
+
+See `docs/PLUGIN_ARCHITECTURE.md` for detailed instructions on:
+- Plugin directory structure
+- Metadata definition
+- Component registration
+- Best practices
 
 ## Important Conventions
 
