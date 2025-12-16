@@ -256,4 +256,106 @@ color: #F59E0B
 
 ---
 
+## Drill-down 钻取功能演示
+
+### 示例数据
+
+```sql create_sales_data
+CREATE OR REPLACE TABLE sales_by_region AS
+SELECT * FROM (VALUES
+  ('华东', '上海', 1250000, 156),
+  ('华东', '杭州', 890000, 128),
+  ('华东', '南京', 720000, 112),
+  ('华北', '北京', 1580000, 189),
+  ('华北', '天津', 650000, 98),
+  ('华北', '石家庄', 420000, 76),
+  ('华南', '广州', 1120000, 145),
+  ('华南', '深圳', 1380000, 167),
+  ('华南', '东莞', 580000, 89),
+  ('西南', '成都', 780000, 102),
+  ('西南', '重庆', 690000, 94),
+  ('西南', '昆明', 340000, 58)
+) AS t(region, city, revenue, orders)
+```
+
+```sql sales_by_region
+SELECT * FROM sales_by_region
+```
+
+### 点击表格行选择区域
+
+点击下方表格中的任意一行，将自动设置 `selected_region` 和 `selected_city` 输入变量：
+
+```datatable
+query: sales_by_region
+searchable: true
+sortable: true
+drilldown:
+  mappings:
+    - region → selected_region
+    - city → selected_city
+  highlight: true
+  tooltip: 点击选择区域查看详情
+columns:
+  - name: region
+    label: 区域
+  - name: city
+    label: 城市
+  - name: revenue
+    label: 销售额
+    format: currency
+  - name: orders
+    label: 订单数
+    format: number
+```
+
+### 当前选中
+
+> 💡 点击上方表格任意一行，下方数据将自动过滤
+
+当前选择的区域: **${inputs.selected_region}**
+
+当前选择的城市: **${inputs.selected_city}**
+
+### 基于选择的过滤数据
+
+```sql filtered_data
+SELECT city, revenue, orders,
+       ROUND(revenue * 1.0 / orders, 2) as avg_order_value
+FROM sales_by_region
+WHERE region = ${inputs.selected_region}
+  OR ${inputs.selected_region} IS NULL
+```
+
+```datatable
+query: filtered_data
+sortable: true
+columns:
+  - name: city
+    label: 城市
+  - name: revenue
+    label: 销售额
+    format: currency
+  - name: orders
+    label: 订单数
+  - name: avg_order_value
+    label: 客单价
+    format: currency
+```
+
+### 选中区域的 KPI
+
+```sql region_summary
+SELECT
+  SUM(revenue) as total_revenue,
+  SUM(orders) as total_orders,
+  ROUND(AVG(revenue), 0) as avg_revenue,
+  COUNT(*) as city_count
+FROM sales_by_region
+WHERE region = ${inputs.selected_region}
+  OR ${inputs.selected_region} IS NULL
+```
+
+---
+
 测试完成！所有 Quick Wins 组件均已实现。
