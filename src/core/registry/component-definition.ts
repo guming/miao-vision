@@ -106,6 +106,9 @@ export function createRegistration<TConfig = unknown, TProps = unknown>(
     block: ParsedCodeBlock,
     context: RenderContext
   ): TProps | null => {
+    // Debug: log the schema being used
+    console.log(`[${metadata.language}] Parser using configSchema:`, configSchema.fields.map(f => `${f.name}:req=${f.required}`))
+
     // 1. Parse configuration using schema
     const parseResult = configParser.parseBlock<TConfig>(block, configSchema)
 
