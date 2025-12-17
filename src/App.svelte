@@ -1,14 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import FileUploader from './components/FileUploader.svelte'
-  import QueryRunner from './components/QueryRunner.svelte'
-  import ChartConfigPanel from './components/ChartConfigPanel.svelte'
-  import VgplotChart from './components/VgplotChart.svelte'
+  import { SQLWorkspace } from './components/sql-workspace'
   import MarkdownEditor from './components/MarkdownEditor.svelte'
   import ReportToolbar from './components/ReportToolbar.svelte'
   import ReportRenderer from './components/ReportRenderer.svelte'
   import { databaseStore } from '@app/stores/database.svelte'
-  import { chartStore } from '@app/stores/chart.svelte'
   import { reportStore } from '@app/stores/report.svelte'
   import { getInputStore } from '@app/stores/report-inputs'
   import type { InputStore } from '@app/stores/report-inputs'
@@ -16,16 +12,12 @@
   import { reportExecutionService } from '@core/engine/report-execution.service'
   import { htmlExportService } from '@core/export'
   import { exportToPDF } from '@/lib/export'
-  import type { ChartConfig } from './types/chart'
-  import type { QueryResult } from './types/database'
   import type { Report } from './types/report'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
   let subtitle = $state('Local-First Analytics')
-  let activeTab = $state<'upload' | 'query' | 'visualize' | 'report'>('upload')
-  let lastQueryResult = $state<QueryResult | null>(null)
-  let currentChartConfig = $state<ChartConfig | null>(null)
+  let activeTab = $state<'workspace' | 'report'>('workspace')
 
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
@@ -70,33 +62,8 @@
     }
   })
 
-  function setTab(tab: 'upload' | 'query' | 'visualize' | 'report') {
+  function setTab(tab: 'workspace' | 'report') {
     activeTab = tab
-  }
-
-  async function handleQueryResult(result: QueryResult) {
-    lastQueryResult = result
-    console.log('Query result received:', result)
-  }
-
-  async function handleCreateChart() {
-    if (!lastQueryResult) {
-      alert('Please run a query first!')
-      return
-    }
-
-    try {
-      await chartStore.loadQueryResult(lastQueryResult)
-      setTab('visualize')
-    } catch (error) {
-      console.error('Failed to prepare chart:', error)
-      alert('Failed to prepare chart data')
-    }
-  }
-
-  function handleGenerateChart(config: ChartConfig) {
-    currentChartConfig = config
-    console.log('Generating chart with config:', config)
   }
 
   // Report tab handlers
@@ -296,26 +263,10 @@
     <nav class="sidebar-nav">
       <button
         class="nav-item"
-        class:active={activeTab === 'upload'}
-        onclick={() => setTab('upload')}
+        class:active={activeTab === 'workspace'}
+        onclick={() => setTab('workspace')}
       >
-        <span class="nav-label">Upload</span>
-      </button>
-      <button
-        class="nav-item"
-        class:active={activeTab === 'query'}
-        onclick={() => setTab('query')}
-        disabled={!databaseStore.state.initialized}
-      >
-        <span class="nav-label">Query</span>
-      </button>
-      <button
-        class="nav-item"
-        class:active={activeTab === 'visualize'}
-        onclick={() => setTab('visualize')}
-        disabled={!databaseStore.state.initialized}
-      >
-        <span class="nav-label">Visualize</span>
+        <span class="nav-label">Workspace</span>
       </button>
 
       <div class="nav-section">
@@ -387,71 +338,23 @@
   <div class="main-wrapper">
     <header class="top-header">
       <h2 class="page-title">
-        {#if activeTab === 'upload'}Upload Data
-        {:else if activeTab === 'query'}SQL Query
-        {:else if activeTab === 'visualize'}Data Visualization
+        {#if activeTab === 'workspace'}Data Workspace
         {:else if activeTab === 'report'}Markdown Reports
         {/if}
       </h2>
     </header>
 
-    <div class="content" class:content-report={activeTab === 'report'}>
+    <div class="content" class:content-report={activeTab === 'report'} class:content-workspace={activeTab === 'workspace'}>
       {#if databaseStore.state.error}
         <div class="error-banner">
           <strong>Error:</strong> {databaseStore.state.error}
         </div>
       {/if}
 
-      {#if activeTab === 'upload'}
-        <div class="page-container">
-          <FileUploader />
+      {#if activeTab === 'workspace'}
+        <div class="page-container workspace-page">
+          <SQLWorkspace />
         </div>
-      {:else if activeTab === 'query'}
-        <div class="page-container">
-          <QueryRunner onQueryResult={handleQueryResult} />
-
-          {#if lastQueryResult && lastQueryResult.rowCount > 0}
-            <div class="chart-action">
-              <button class="btn-create-chart" onclick={handleCreateChart}>
-                Create Chart from Result
-              </button>
-            </div>
-          {/if}
-        </div>
-      {:else if activeTab === 'visualize'}
-        <div class="page-container visualize-layout">
-
-        {#if chartStore.isReady()}
-          <div class="viz-container">
-            <aside class="config-sidebar">
-              <ChartConfigPanel
-                availableColumns={chartStore.state.availableColumns}
-                availableTables={chartStore.tableName ? [chartStore.tableName] : []}
-                onGenerate={handleGenerateChart}
-              />
-            </aside>
-
-            <div class="chart-display">
-              {#if currentChartConfig}
-                <VgplotChart config={currentChartConfig} />
-              {:else}
-                <div class="empty-state">
-                  <p>👈 Configure your chart and click "Generate Chart"</p>
-                </div>
-              {/if}
-            </div>
-          </div>
-        {:else}
-          <div class="empty-state-large">
-            <div class="icon">📊</div>
-            <h3>No Data Available</h3>
-            <p>Run a SQL query first, then click "Create Chart" to visualize your data.</p>
-            <button class="btn-nav" onclick={() => setTab('query')}>
-              Go to Query →
-            </button>
-          </div>
-        {/if}
-      </div>
       {:else if activeTab === 'report'}
         <div class="page-container report-layout">
           <div class="report-container">
@@ -852,6 +755,7 @@
     flex: 1;
     overflow-y: auto;
     background-color: #030712;
+    position: relative;
   }
 
   .content-report {
@@ -859,10 +763,25 @@
     overflow: hidden;
   }
 
+  .content-workspace {
+    overflow: hidden;
+  }
+
   .page-container {
     max-width: 80rem; /* 1280px */
     margin: 0 auto;
     padding: 2rem;
+  }
+
+  .page-container.workspace-page {
+    max-width: none;
+    padding: 0;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 
   .error-banner {
@@ -888,70 +807,8 @@
   }
 
   /* ========================================
-   * Buttons
+   * Empty States
    * ======================================== */
-
-  .btn-create-chart {
-    padding: 0.625rem 1.5rem;
-    background: linear-gradient(135deg, #4285F4 0%, #8B5CF6 100%);
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-weight: 500;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .btn-create-chart:hover {
-    background: linear-gradient(135deg, #3B78E7 0%, #7C4FDB 100%);
-    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
-  }
-
-  .chart-action {
-    margin-top: 2rem;
-    text-align: center;
-  }
-
-  /* ========================================
-   * Visualize Layout
-   * ======================================== */
-
-  .visualize-layout {
-    max-width: none;
-  }
-
-  .viz-container {
-    display: grid;
-    grid-template-columns: 16rem 1fr;
-    gap: 1.5rem;
-  }
-
-  .config-sidebar {
-    /* Styles moved to ChartConfigPanel component */
-  }
-
-  .chart-display {
-    min-height: 500px;
-    background-color: #111827;
-    border: 1px solid #374151;
-    border-radius: 16px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 3rem;
-    color: #6B7280;
-  }
-
-  .empty-state p {
-    margin: 0;
-    font-size: 0.875rem;
-  }
 
   .empty-state-large {
     text-align: center;
@@ -1089,11 +946,6 @@
       font-size: 1.375rem;
     }
 
-    .viz-container {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
-
     .report-workspace {
       grid-template-columns: 1fr;
     }
@@ -1121,10 +973,6 @@
 
     .content-wrapper {
       padding: 1rem;
-    }
-
-    .viz-container {
-      gap: 1rem;
     }
 
     .report-workspace {
