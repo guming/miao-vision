@@ -2,6 +2,8 @@
   import { onMount, onDestroy } from 'svelte'
   import loader from '@monaco-editor/loader'
   import type { MonacoEditor } from '@/types/editor'
+  import type { SQLCompletionProvider } from './sql-workspace/sql-completion'
+  import { registerSQLCompletion } from './sql-workspace/sql-completion'
 
   interface Props {
     value?: string
@@ -10,6 +12,7 @@
     readOnly?: boolean
     height?: string
     onChange?: (value: string) => void
+    sqlCompletionProvider?: SQLCompletionProvider
   }
 
   let {
@@ -18,12 +21,14 @@
     theme = 'vs-dark',
     readOnly = false,
     height = '400px',
-    onChange
+    onChange,
+    sqlCompletionProvider
   }: Props = $props()
 
   let editorContainer: HTMLDivElement
   let editor: MonacoEditor | null = null
   let monaco: typeof import('monaco-editor') | null = null
+  let completionRegistered = false
 
   onMount(async () => {
     try {
@@ -33,6 +38,12 @@
       if (!editorContainer) {
         console.error('Editor container not found')
         return
+      }
+
+      // Register SQL completion provider if provided and language is SQL
+      if (language === 'sql' && sqlCompletionProvider && !completionRegistered) {
+        registerSQLCompletion(monaco, sqlCompletionProvider)
+        completionRegistered = true
       }
 
       // Create editor instance
@@ -49,7 +60,13 @@
         lineNumbers: 'on',
         scrollBeyondLastLine: false,
         wordWrap: 'on',
-        tabSize: 2
+        tabSize: 2,
+        suggestOnTriggerCharacters: true,
+        quickSuggestions: {
+          other: true,
+          comments: false,
+          strings: true
+        }
       })
 
       // Listen for content changes
