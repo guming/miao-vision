@@ -1,5 +1,6 @@
 <script lang="ts">
   import { queryWorkspaceStore } from '@app/stores/query-workspace.svelte'
+  import { formatExecutionTime } from '@/plugins/data-display/shared/formatter'
 
   interface Props {
     onRun: () => void
@@ -126,7 +127,7 @@
                     <span class="history-time">{formatTime(item.executedAt)}</span>
                     {#if item.success}
                       <span class="history-rows">{item.rowCount} rows</span>
-                      <span class="history-duration">{item.executionTime.toFixed(0)}ms</span>
+                      <span class="history-duration">{formatExecutionTime(item.executionTime)}</span>
                     {:else}
                       <span class="history-error">Failed</span>
                     {/if}
@@ -334,6 +335,11 @@
 
   .history-item.success .history-rows {
     color: #22C55E;
+  }
+
+  .history-item.success .history-duration {
+    color: #FBBF24;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   .history-item.error .history-error {

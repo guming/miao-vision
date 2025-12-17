@@ -16,6 +16,7 @@
     ColumnStatistics
   } from './types'
   import { calculateAllColumnStats } from './types'
+  import { formatExecutionTime } from '@/plugins/data-display/shared/formatter'
   import ColumnSelector from './ColumnSelector.svelte'
   import ColumnStats from './ColumnStats.svelte'
   import ResultsChart from './ResultsChart.svelte'
@@ -287,7 +288,13 @@
         {/if}
       </div>
 
-      <span class="row-count">{processedData().length.toLocaleString()} rows</span>
+      <span class="result-meta">
+        <span class="row-count">{processedData().length.toLocaleString()} rows</span>
+        <span class="meta-divider">•</span>
+        <span class="col-count">{result.columns.length} cols</span>
+        <span class="meta-divider">•</span>
+        <span class="exec-time">{formatExecutionTime(result.executionTime)}</span>
+      </span>
 
       <button class="tool-btn" onclick={openStats} title="Column Statistics">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -565,14 +572,34 @@
     color: #F3F4F6;
   }
 
-  .row-count {
-    padding: 0.25rem 0.5rem;
+  .result-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.625rem;
     background: rgba(34, 197, 94, 0.1);
     border: 1px solid rgba(34, 197, 94, 0.2);
     border-radius: 4px;
     font-size: 0.6875rem;
-    color: #4ADE80;
     white-space: nowrap;
+  }
+
+  .row-count {
+    color: #4ADE80;
+    font-weight: 500;
+  }
+
+  .col-count {
+    color: #9CA3AF;
+  }
+
+  .exec-time {
+    color: #FBBF24;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .meta-divider {
+    color: #4B5563;
   }
 
   .tool-btn {

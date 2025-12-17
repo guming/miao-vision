@@ -7,6 +7,28 @@
 export type FormatType = 'number' | 'currency' | 'percent' | 'date' | 'text'
 
 /**
+ * Format execution time in a human-readable way
+ * - < 1ms → "< 1ms"
+ * - 1-999ms → "123ms"
+ * - 1-60s → "1.23s"
+ * - > 60s → "1m 23s"
+ */
+export function formatExecutionTime(ms: number): string {
+  if (ms < 1) {
+    return '< 1ms'
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`
+  }
+  if (ms < 60000) {
+    return `${(ms / 1000).toFixed(2)}s`
+  }
+  const minutes = Math.floor(ms / 60000)
+  const seconds = Math.round((ms % 60000) / 1000)
+  return `${minutes}m ${seconds}s`
+}
+
+/**
  * Format a number with thousand separators
  */
 export function formatNumber(value: number, decimals: number = 2): string {

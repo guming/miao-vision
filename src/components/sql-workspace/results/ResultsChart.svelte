@@ -26,12 +26,14 @@
   let { result, config, onConfigChange }: Props = $props()
 
   // Chart dimensions
-  let chartWidth = $state(600)
-  let chartHeight = $state(350)
+  let chartWidth = $state(700)
+  let chartHeight = $state(400)
   let chartTitle = $state('')
   let xLabel = $state('')
   let yLabel = $state('')
   let showAdvanced = $state(false)
+  let dataLimit = $state(20) // Limit number of bars/points
+  let sortOrder = $state<'desc' | 'asc' | 'none'>('desc') // Sort by Y value
 
   // Infer column types
   const columnTypes = $derived(
@@ -64,8 +66,9 @@
     { value: 'histogram', label: 'Histogram', icon: '📶' }
   ] as const
 
-  // Aggregation options
+  // Aggregation options (None first for raw data display)
   const aggregations = [
+    { value: 'none', label: 'None (Raw)' },
     { value: 'sum', label: 'Sum' },
     { value: 'avg', label: 'Average' },
     { value: 'count', label: 'Count' },
@@ -76,26 +79,92 @@
   // Colors for charts
   const colors = ['#8B5CF6', '#4285F4', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#84CC16']
 
+  // Check if X column has duplicate values (needs aggregation)
+  function hasXColumnDuplicates(xCol: string): boolean {
+    if (!xCol || result.data.length === 0) return false
+    const values = result.data.map(row => row[xCol])
+    const uniqueValues = new Set(values)
+    return uniqueValues.size < values.length
+  }
+
+  // Get smart aggregation default based on data
+  function getSmartAggregation(xCol: string | null): string {
+    if (!xCol) return 'none'
+    return hasXColumnDuplicates(xCol) ? 'sum' : 'none'
+  }
+
   // Auto-suggest chart config if not set
   $effect(() => {
     if (!config.xColumn && allColumns.length > 0) {
       const xCol = categoricalColumns.length > 0 ? categoricalColumns[0] : allColumns[0]
       const yCol = numericColumns.length > 0 ? numericColumns[0] : (allColumns.length > 1 ? allColumns[1] : allColumns[0])
+      const smartAgg = getSmartAggregation(xCol)
       onConfigChange({
         ...config,
         xColumn: xCol,
-        yColumns: yCol ? [yCol] : []
+        yColumns: yCol ? [yCol] : [],
+        aggregation: smartAgg as any
       })
+    }
+  })
+
+  // Update aggregation when X column changes
+  $effect(() => {
+    if (config.xColumn && config.aggregation === undefined) {
+      const smartAgg = getSmartAggregation(config.xColumn)
+      if (smartAgg !== config.aggregation) {
+        onConfigChange({
+          ...config,
+          aggregation: smartAgg as any
+        })
+      }
     }
   })
 
   // Check if we can render
   const canRender = $derived(config.xColumn && config.yColumns.length > 0)
 
-  // Prepare chart data with aggregation
-  function prepareChartData() {
+  // Prepare chart data with aggregation, sorting, and limiting
+  function prepareChartData(limit?: number, sort?: 'desc' | 'asc' | 'none') {
     if (!config.xColumn || config.yColumns.length === 0) return null
 
+    const agg = config.aggregation || 'none'
+
+    // For "none" aggregation, use raw data without grouping
+    if (agg === 'none') {
+      let entries = result.data.map(row => ({
+        label: String(row[config.xColumn!] ?? 'null'),
+        values: config.yColumns.map(yCol => Number(row[yCol]) || 0)
+      }))
+
+      // Sort by first Y column value
+      const sortBy = sort ?? sortOrder
+      if (sortBy !== 'none') {
+        entries.sort((a, b) => {
+          const diff = b.values[0] - a.values[0]
+          return sortBy === 'desc' ? diff : -diff
+        })
+      }
+
+      // Limit data points
+      const maxItems = limit ?? dataLimit
+      const totalCount = entries.length
+      if (maxItems > 0 && entries.length > maxItems) {
+        entries = entries.slice(0, maxItems)
+      }
+
+      return {
+        labels: entries.map(e => e.label),
+        datasets: config.yColumns.map((col, i) => ({
+          label: col,
+          values: entries.map(e => e.values[i])
+        })),
+        totalCount,
+        limitedCount: entries.length
+      }
+    }
+
+    // With aggregation, group by X column
     const grouped = new Map<string, { values: number[], count: number }>()
 
     result.data.forEach(row => {
@@ -111,7 +180,6 @@
 
       config.yColumns.forEach((yCol, i) => {
         const yVal = Number(row[yCol]) || 0
-        const agg = config.aggregation || 'sum'
 
         if (agg === 'sum') {
           group.values[i] += yVal
@@ -133,96 +201,215 @@
     })
 
     // Calculate averages
-    if (config.aggregation === 'avg') {
+    if (agg === 'avg') {
       grouped.forEach((group) => {
         group.values = group.values.map(v => v / group.count)
       })
     }
 
+    // Convert to arrays
+    let entries = Array.from(grouped.entries()).map(([label, data]) => ({
+      label,
+      values: data.values
+    }))
+
+    // Sort by first Y column value
+    const sortBy = sort ?? sortOrder
+    if (sortBy !== 'none') {
+      entries.sort((a, b) => {
+        const diff = b.values[0] - a.values[0]
+        return sortBy === 'desc' ? diff : -diff
+      })
+    }
+
+    // Limit data points
+    const maxItems = limit ?? dataLimit
+    if (maxItems > 0 && entries.length > maxItems) {
+      entries = entries.slice(0, maxItems)
+    }
+
     return {
-      labels: Array.from(grouped.keys()),
+      labels: entries.map(e => e.label),
       datasets: config.yColumns.map((col, i) => ({
         label: col,
-        values: Array.from(grouped.values()).map(g => g.values[i])
-      }))
+        values: entries.map(e => e.values[i])
+      })),
+      totalCount: grouped.size,
+      limitedCount: entries.length
     }
   }
 
   // Render bar chart as SVG
   function renderBarChart() {
     const data = prepareChartData()
-    if (!data) return ''
+    if (!data || data.labels.length === 0) return ''
 
     const width = chartWidth
     const height = chartHeight
-    const padding = { top: 40, right: 20, bottom: 60, left: 60 }
+    const padding = { top: 50, right: 30, bottom: 80, left: 70 }
     const innerWidth = width - padding.left - padding.right
     const innerHeight = height - padding.top - padding.bottom
 
+    const numBars = data.labels.length
     const maxValue = Math.max(...data.datasets.flatMap(d => d.values), 0) || 1
-    const barGroupWidth = innerWidth / data.labels.length
-    const barWidth = (barGroupWidth * 0.8) / data.datasets.length
-    const barGap = barGroupWidth * 0.2
+
+    // Calculate nice Y-axis ticks
+    const yTicks = calculateNiceTicks(0, maxValue, 5)
+    const yMax = yTicks[yTicks.length - 1]
+
+    // Calculate bar dimensions with dynamic sizing based on data count
+    // More bars = thinner bars, fewer bars = wider bars (but not too wide)
+    const totalBarGroupWidth = innerWidth / numBars
+
+    // Dynamic bar width limits based on number of bars
+    let minBarWidth: number, maxBarWidth: number, gapRatio: number
+    if (numBars <= 5) {
+      minBarWidth = 20
+      maxBarWidth = 40
+      gapRatio = 0.4 // 40% gap for few bars
+    } else if (numBars <= 15) {
+      minBarWidth = 12
+      maxBarWidth = 30
+      gapRatio = 0.35
+    } else if (numBars <= 30) {
+      minBarWidth = 8
+      maxBarWidth = 20
+      gapRatio = 0.3
+    } else {
+      minBarWidth = 4
+      maxBarWidth = 15
+      gapRatio = 0.25 // Less gap for many bars
+    }
+
+    const barGroupGap = totalBarGroupWidth * gapRatio
+    const availableBarWidth = totalBarGroupWidth - barGroupGap
+    const barWidth = Math.min(maxBarWidth, Math.max(minBarWidth, availableBarWidth / data.datasets.length))
+    const actualGroupWidth = barWidth * data.datasets.length
 
     let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: transparent;">`
 
     // Title
     if (chartTitle) {
-      svg += `<text x="${width / 2}" y="20" fill="#E5E7EB" font-size="14" font-weight="600" text-anchor="middle">${chartTitle}</text>`
+      svg += `<text x="${width / 2}" y="24" fill="#E5E7EB" font-size="14" font-weight="600" text-anchor="middle">${chartTitle}</text>`
+    }
+
+    // Data info (showing limited)
+    if (data.totalCount > data.limitedCount) {
+      svg += `<text x="${width - padding.right}" y="24" fill="#6B7280" font-size="10" text-anchor="end">Showing top ${data.limitedCount} of ${data.totalCount}</text>`
     }
 
     // Y-axis grid lines and labels
-    for (let i = 0; i <= 5; i++) {
-      const y = padding.top + (innerHeight / 5) * i
-      const value = maxValue - (maxValue / 5) * i
-      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#374151" stroke-dasharray="4"/>`
-      svg += `<text x="${padding.left - 10}" y="${y + 4}" fill="#6B7280" font-size="10" text-anchor="end">${formatValue(value)}</text>`
-    }
+    yTicks.forEach(tick => {
+      const y = padding.top + innerHeight - (tick / yMax) * innerHeight
+      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#374151" stroke-opacity="0.5" stroke-dasharray="4"/>`
+      svg += `<text x="${padding.left - 12}" y="${y + 4}" fill="#6B7280" font-size="11" text-anchor="end">${formatValue(tick)}</text>`
+    })
+
+    // Baseline
+    svg += `<line x1="${padding.left}" y1="${padding.top + innerHeight}" x2="${width - padding.right}" y2="${padding.top + innerHeight}" stroke="#4B5563" stroke-width="1"/>`
+
+    // Calculate X-axis label interval (smart tick display)
+    const labelInterval = calculateLabelInterval(numBars, innerWidth)
 
     // Bars
     data.labels.forEach((label, i) => {
-      const groupX = padding.left + i * barGroupWidth + barGap / 2
+      const groupCenterX = padding.left + (i + 0.5) * totalBarGroupWidth
+      const groupStartX = groupCenterX - actualGroupWidth / 2
 
       data.datasets.forEach((dataset, j) => {
         const value = dataset.values[i]
-        const barHeight = maxValue > 0 ? (value / maxValue) * innerHeight : 0
-        const x = groupX + j * barWidth
+        const barHeight = yMax > 0 ? (value / yMax) * innerHeight : 0
+        const x = groupStartX + j * barWidth
         const y = padding.top + innerHeight - barHeight
         const color = colors[j % colors.length]
 
-        svg += `<rect x="${x}" y="${y}" width="${barWidth - 2}" height="${barHeight}" fill="${color}" rx="2">
-          <title>${dataset.label}: ${formatValue(value)}</title>
-        </rect>`
+        // Bar with rounded top corners (corner radius proportional to bar width)
+        if (barHeight > 0) {
+          const cornerRadius = Math.min(3, barWidth / 6)
+          const barGap = Math.max(1, barWidth * 0.08) // Small gap between bars
+          svg += `<rect x="${x + barGap}" y="${y}" width="${barWidth - barGap * 2}" height="${barHeight}" fill="${color}" rx="${cornerRadius}" ry="${cornerRadius}">
+            <title>${label}\n${dataset.label}: ${formatValue(value)}</title>
+          </rect>`
+        }
       })
 
-      // X-axis label
-      const labelText = label.length > 12 ? label.slice(0, 12) + '...' : label
-      svg += `<text x="${groupX + (barGroupWidth - barGap) / 2}" y="${height - padding.bottom + 20}" fill="#6B7280" font-size="10" text-anchor="middle" transform="rotate(-45, ${groupX + (barGroupWidth - barGap) / 2}, ${height - padding.bottom + 20})">${labelText}</text>`
+      // X-axis label (only show at intervals)
+      if (i % labelInterval === 0 || i === numBars - 1) {
+        const labelText = truncateLabel(label, 12)
+        const labelY = padding.top + innerHeight + 16
+
+        if (numBars > 10) {
+          // Rotated labels for many bars
+          svg += `<text x="${groupCenterX}" y="${labelY}" fill="#9CA3AF" font-size="10" text-anchor="end" transform="rotate(-45, ${groupCenterX}, ${labelY})">${labelText}</text>`
+        } else {
+          // Horizontal labels for few bars
+          svg += `<text x="${groupCenterX}" y="${labelY}" fill="#9CA3AF" font-size="11" text-anchor="middle">${labelText}</text>`
+        }
+      }
     })
 
     // X-axis label
-    if (xLabel) {
-      svg += `<text x="${width / 2}" y="${height - 5}" fill="#9CA3AF" font-size="11" text-anchor="middle">${xLabel}</text>`
+    if (xLabel || config.xColumn) {
+      svg += `<text x="${width / 2}" y="${height - 8}" fill="#6B7280" font-size="11" text-anchor="middle">${xLabel || config.xColumn}</text>`
     }
 
     // Y-axis label
-    if (yLabel) {
-      svg += `<text x="15" y="${height / 2}" fill="#9CA3AF" font-size="11" text-anchor="middle" transform="rotate(-90, 15, ${height / 2})">${yLabel}</text>`
+    if (yLabel || config.yColumns[0]) {
+      svg += `<text x="16" y="${height / 2}" fill="#6B7280" font-size="11" text-anchor="middle" transform="rotate(-90, 16, ${height / 2})">${yLabel || config.yColumns[0]}</text>`
     }
 
-    // Legend
-    if (data.datasets.length > 1) {
-      let legendX = padding.left
-      data.datasets.forEach((dataset, i) => {
-        const color = colors[i % colors.length]
-        svg += `<rect x="${legendX}" y="30" width="12" height="12" fill="${color}" rx="2"/>`
-        svg += `<text x="${legendX + 16}" y="40" fill="#9CA3AF" font-size="10">${dataset.label}</text>`
-        legendX += Math.min(100, dataset.label.length * 8 + 30)
-      })
-    }
+    // Legend (bottom)
+    const legendY = height - 24
+    const legendItemWidth = 100
+    const legendStartX = (width - data.datasets.length * legendItemWidth) / 2
+
+    data.datasets.forEach((dataset, i) => {
+      const x = legendStartX + i * legendItemWidth
+      const color = colors[i % colors.length]
+      svg += `<rect x="${x}" y="${legendY - 10}" width="14" height="14" fill="${color}" rx="3"/>`
+      svg += `<text x="${x + 20}" y="${legendY}" fill="#9CA3AF" font-size="11">${truncateLabel(dataset.label, 10)}</text>`
+    })
 
     svg += '</svg>'
     return svg
+  }
+
+  // Calculate nice tick values for axis
+  function calculateNiceTicks(min: number, max: number, targetCount: number): number[] {
+    const range = max - min
+    const roughStep = range / targetCount
+
+    // Find nice step value
+    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)))
+    const normalized = roughStep / magnitude
+
+    let niceStep: number
+    if (normalized <= 1) niceStep = magnitude
+    else if (normalized <= 2) niceStep = 2 * magnitude
+    else if (normalized <= 5) niceStep = 5 * magnitude
+    else niceStep = 10 * magnitude
+
+    const niceMin = Math.floor(min / niceStep) * niceStep
+    const niceMax = Math.ceil(max / niceStep) * niceStep
+
+    const ticks: number[] = []
+    for (let tick = niceMin; tick <= niceMax; tick += niceStep) {
+      ticks.push(tick)
+    }
+    return ticks
+  }
+
+  // Calculate label display interval based on available space
+  function calculateLabelInterval(numLabels: number, availableWidth: number): number {
+    const minLabelWidth = 60 // Minimum pixels per label
+    const maxVisibleLabels = Math.floor(availableWidth / minLabelWidth)
+    return Math.max(1, Math.ceil(numLabels / maxVisibleLabels))
+  }
+
+  // Truncate label with ellipsis
+  function truncateLabel(label: string, maxLength: number): string {
+    if (label.length <= maxLength) return label
+    return label.slice(0, maxLength - 1) + '…'
   }
 
   // Render line chart as SVG
@@ -530,6 +717,71 @@
       default: return ''
     }
   }
+
+  // Export chart as SVG
+  function exportSVG() {
+    const svgContent = getChartSVG()
+    if (!svgContent) return
+
+    // Add XML declaration and proper SVG header
+    const fullSvg = `<?xml version="1.0" encoding="UTF-8"?>
+${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
+
+    const blob = new Blob([fullSvg], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `chart-${config.type}-${Date.now()}.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Export chart as PNG
+  async function exportPNG() {
+    const svgContent = getChartSVG()
+    if (!svgContent) return
+
+    // Create a canvas with higher resolution for better quality
+    const scale = 2
+    const canvas = document.createElement('canvas')
+    canvas.width = chartWidth * scale
+    canvas.height = chartHeight * scale
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Fill with background
+    ctx.fillStyle = '#111827'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Convert SVG to data URL
+    const svgWithNs = svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')
+    const svgBlob = new Blob([svgWithNs], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    // Load and draw image
+    const img = new Image()
+    img.onload = () => {
+      ctx.scale(scale, scale)
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(svgUrl)
+
+      // Download
+      canvas.toBlob((blob) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `chart-${config.type}-${Date.now()}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }, 'image/png')
+    }
+    img.src = svgUrl
+  }
 </script>
 
 <div class="results-chart">
@@ -537,18 +789,15 @@
   <aside class="chart-config">
     <div class="config-section">
       <h4>Chart Type</h4>
-      <div class="chart-types">
-        {#each chartTypes as ct}
-          <button
-            class="type-btn"
-            class:active={config.type === ct.value}
-            onclick={() => onConfigChange({ ...config, type: ct.value })}
-            title={ct.label}
-          >
-            <span class="icon">{ct.icon}</span>
-            <span class="label">{ct.label.split(' ')[0]}</span>
-          </button>
-        {/each}
+      <div class="chart-type-select">
+        <select
+          value={config.type}
+          onchange={(e) => onConfigChange({ ...config, type: e.currentTarget.value as any })}
+        >
+          {#each chartTypes as ct}
+            <option value={ct.value}>{ct.label}</option>
+          {/each}
+        </select>
       </div>
     </div>
 
@@ -608,12 +857,33 @@
       <div class="config-section advanced">
         <div class="config-row">
           <div class="config-field">
+            <label for="limit">Max Items</label>
+            <select id="limit" bind:value={dataLimit}>
+              <option value={10}>Top 10</option>
+              <option value={20}>Top 20</option>
+              <option value={30}>Top 30</option>
+              <option value={50}>Top 50</option>
+              <option value={0}>All</option>
+            </select>
+          </div>
+          <div class="config-field">
+            <label for="sort">Sort</label>
+            <select id="sort" bind:value={sortOrder}>
+              <option value="desc">High → Low</option>
+              <option value="asc">Low → High</option>
+              <option value="none">Original</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="config-row">
+          <div class="config-field">
             <label for="width">Width</label>
-            <input id="width" type="number" bind:value={chartWidth} min="300" max="1200" step="50" />
+            <input id="width" type="number" bind:value={chartWidth} min="400" max="1200" step="50" />
           </div>
           <div class="config-field">
             <label for="height">Height</label>
-            <input id="height" type="number" bind:value={chartHeight} min="200" max="800" step="50" />
+            <input id="height" type="number" bind:value={chartHeight} min="250" max="800" step="50" />
           </div>
         </div>
 
@@ -638,7 +908,27 @@
   <!-- Chart Preview -->
   <div class="chart-preview">
     {#if canRender}
-      {@html getChartSVG()}
+      <div class="chart-container">
+        {@html getChartSVG()}
+      </div>
+      <div class="export-toolbar">
+        <button class="export-btn" onclick={exportPNG} title="Export as PNG">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          PNG
+        </button>
+        <button class="export-btn" onclick={exportSVG} title="Export as SVG">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          SVG
+        </button>
+      </div>
     {:else}
       <div class="chart-placeholder">
         <span class="icon">📊</span>
@@ -678,46 +968,26 @@
     color: #6B7280;
   }
 
-  .chart-types {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.375rem;
-  }
-
-  .type-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.125rem;
-    padding: 0.5rem 0.25rem;
+  .chart-type-select select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
     background: #1F2937;
     border: 1px solid #374151;
     border-radius: 6px;
+    color: #E5E7EB;
+    font-size: 0.8125rem;
     cursor: pointer;
     transition: all 0.15s;
   }
 
-  .type-btn:hover {
+  .chart-type-select select:hover {
     background: #374151;
     border-color: #4B5563;
   }
 
-  .type-btn.active {
-    background: rgba(66, 133, 244, 0.15);
+  .chart-type-select select:focus {
+    outline: none;
     border-color: #4285F4;
-  }
-
-  .type-btn .icon {
-    font-size: 1rem;
-  }
-
-  .type-btn .label {
-    font-size: 0.625rem;
-    color: #9CA3AF;
-  }
-
-  .type-btn.active .label {
-    color: #E5E7EB;
   }
 
   .config-field {
@@ -782,10 +1052,48 @@
   .chart-preview {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 1rem;
     overflow: auto;
+    position: relative;
+  }
+
+  .chart-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .export-toolbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .export-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: #1F2937;
+    border: 1px solid #374151;
+    border-radius: 6px;
+    color: #9CA3AF;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .export-btn:hover {
+    background: #374151;
+    border-color: #4B5563;
+    color: #E5E7EB;
+  }
+
+  .export-btn svg {
+    flex-shrink: 0;
   }
 
   .chart-placeholder {
@@ -806,6 +1114,11 @@
   }
 
   :global(.chart-preview svg) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :global(.chart-container svg) {
     max-width: 100%;
     height: auto;
   }

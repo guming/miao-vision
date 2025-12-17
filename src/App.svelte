@@ -5,7 +5,9 @@
   import ReportToolbar from './components/ReportToolbar.svelte'
   import ReportRenderer from './components/ReportRenderer.svelte'
   import { databaseStore } from '@app/stores/database.svelte'
+  import { connectionStore } from '@app/stores/connection.svelte'
   import { reportStore } from '@app/stores/report.svelte'
+  import ConnectionsPage from './components/connections/ConnectionsPage.svelte'
   import { getInputStore } from '@app/stores/report-inputs'
   import type { InputStore } from '@app/stores/report-inputs'
   import { initializeMosaic } from '@core/database'
@@ -17,7 +19,7 @@
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
   let subtitle = $state('Local-First Analytics')
-  let activeTab = $state<'workspace' | 'report'>('workspace')
+  let activeTab = $state<'workspace' | 'connections' | 'report'>('workspace')
 
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
@@ -62,7 +64,7 @@
     }
   })
 
-  function setTab(tab: 'workspace' | 'report') {
+  function setTab(tab: 'workspace' | 'connections' | 'report') {
     activeTab = tab
   }
 
@@ -269,6 +271,17 @@
         <span class="nav-label">Workspace</span>
       </button>
 
+      <button
+        class="nav-item"
+        class:active={activeTab === 'connections'}
+        onclick={() => setTab('connections')}
+      >
+        <span class="nav-label">Connections</span>
+        {#if connectionStore.state.connections.some(c => c.status === 'connected')}
+          <span class="connection-indicator"></span>
+        {/if}
+      </button>
+
       <div class="nav-section">
         <div class="nav-section-header">
           <span class="nav-section-title">Reports</span>
@@ -339,6 +352,7 @@
     <header class="top-header">
       <h2 class="page-title">
         {#if activeTab === 'workspace'}Data Workspace
+        {:else if activeTab === 'connections'}Connections
         {:else if activeTab === 'report'}Markdown Reports
         {/if}
       </h2>
@@ -354,6 +368,10 @@
       {#if activeTab === 'workspace'}
         <div class="page-container workspace-page">
           <SQLWorkspace />
+        </div>
+      {:else if activeTab === 'connections'}
+        <div class="page-container connections-page">
+          <ConnectionsPage />
         </div>
       {:else if activeTab === 'report'}
         <div class="page-container report-layout">
@@ -522,6 +540,19 @@
 
   .nav-label {
     flex: 1;
+  }
+
+  .connection-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: #22C55E;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
 
   /* Nav Section (for Reports) */
@@ -782,6 +813,13 @@
     left: 0;
     right: 0;
     bottom: 0;
+  }
+
+  .page-container.connections-page {
+    max-width: none;
+    padding: 0;
+    background-color: #030712;
+    min-height: calc(100vh - 120px);
   }
 
   .error-banner {
