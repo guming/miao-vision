@@ -35,6 +35,8 @@ export function createDatabaseStore() {
 
   /**
    * Switch to a different database connection
+   *
+   * Uses the connectionStore.connect() which delegates to ConnectorManager
    */
   async function switchConnection(connectionId: string): Promise<boolean> {
     const connection = connectionStore.getConnection(connectionId)
@@ -43,30 +45,23 @@ export function createDatabaseStore() {
       return false
     }
 
-    // For now, only WASM connections are fully supported
-    if (connection.scope === 'wasm') {
-      // WASM is always the same instance
+    // Check if secrets are needed for remote connections
+    if (connectionStore.needsSecrets(connection)) {
+      state.error = 'Connection requires authentication. Please enter credentials in Connection settings.'
+      return false
+    }
+
+    // Use connectionStore.connect() which handles all connection types
+    const success = await connectionStore.connect(connectionId)
+
+    if (success) {
       currentConnectionId = connectionId
-      connectionStore.updateConnectionStatus(connectionId, 'connected')
-      await connectionStore.setActiveConnection(connectionId)
-      return true
+      state.error = null
+    } else {
+      state.error = connectionStore.state.error || 'Failed to connect'
     }
 
-    if (connection.scope === 'remote') {
-      // TODO: Implement remote DuckDB connection
-      state.error = 'Remote connections are not yet implemented'
-      connectionStore.updateConnectionStatus(connectionId, 'error', 'Remote connections coming soon')
-      return false
-    }
-
-    if (connection.scope === 'motherduck') {
-      // TODO: Implement MotherDuck connection
-      state.error = 'MotherDuck connections are not yet implemented'
-      connectionStore.updateConnectionStatus(connectionId, 'error', 'MotherDuck connections coming soon')
-      return false
-    }
-
-    return false
+    return success
   }
 
   /**

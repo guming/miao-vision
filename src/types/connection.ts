@@ -7,8 +7,9 @@
 
 /**
  * Connection scope/type
+ * Maps to ConnectorType in core/connectors/types.ts
  */
-export type ConnectionScope = 'wasm' | 'remote' | 'motherduck'
+export type ConnectionScope = 'wasm' | 'http' | 'motherduck'
 
 /**
  * Connection status
@@ -108,9 +109,9 @@ export const CONNECTION_SCOPES: Array<{
     icon: '🌐'
   },
   {
-    value: 'remote',
-    label: 'Remote',
-    description: 'Remote DuckDB server via HTTP',
+    value: 'http',
+    label: 'Remote HTTP',
+    description: 'Remote DuckDB server via HTTP API',
     icon: '🔗'
   },
   {

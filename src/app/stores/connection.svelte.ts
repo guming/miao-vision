@@ -3,6 +3,8 @@
  *
  * Manages database connections including local WASM,
  * remote DuckDB servers, and MotherDuck cloud.
+ *
+ * Uses ConnectorManager from core/connectors for actual connections.
  */
 
 import type {
@@ -15,6 +17,11 @@ import {
   DEFAULT_WASM_CONNECTION,
   createConnection
 } from '@/types/connection'
+import {
+  connectorManager,
+  secretsManager,
+  type ConnectionSecrets
+} from '@core/connectors'
 
 const STORAGE_KEY = 'miao-vision-connections'
 
@@ -188,8 +195,11 @@ export function createConnectionStore() {
 
   /**
    * Connect to a database
+   *
+   * @param id - Connection ID
+   * @param secrets - Optional secrets for authentication
    */
-  async function connect(id: string): Promise<boolean> {
+  async function connect(id: string, secrets?: ConnectionSecrets): Promise<boolean> {
     const connection = state.connections.find(c => c.id === id)
     if (!connection) {
       state.error = 'Connection not found'
@@ -201,36 +211,31 @@ export function createConnectionStore() {
     updateConnectionStatus(id, 'connecting')
 
     try {
-      // For now, only WASM connections are fully supported
-      if (connection.scope === 'wasm') {
-        // WASM connection is handled by databaseStore
-        updateConnectionStatus(id, 'connected')
-        await setActiveConnection(id)
-        return true
-      }
+      // Use ConnectorManager for all connection types
+      const result = await connectorManager.connect(
+        {
+          id: connection.id,
+          name: connection.name,
+          scope: connection.scope,
+          host: connection.host,
+          database: connection.database
+        },
+        secrets
+      )
 
-      if (connection.scope === 'remote') {
-        // TODO: Implement remote DuckDB connection
-        // This would typically involve:
-        // 1. Establishing HTTP connection to DuckDB server
-        // 2. Testing connection with a simple query
-        // 3. Storing connection handle
-        state.error = 'Remote connections are not yet implemented'
-        updateConnectionStatus(id, 'error', 'Remote connections coming soon')
+      if (!result.ok) {
+        state.error = result.error.message
+        updateConnectionStatus(id, 'error', result.error.message)
         return false
       }
 
-      if (connection.scope === 'motherduck') {
-        // TODO: Implement MotherDuck connection
-        // This would involve:
-        // 1. Authenticating with MotherDuck API
-        // 2. Establishing connection
-        state.error = 'MotherDuck connections are not yet implemented'
-        updateConnectionStatus(id, 'error', 'MotherDuck connections coming soon')
-        return false
-      }
+      updateConnectionStatus(id, 'connected')
+      await setActiveConnection(id)
 
-      return false
+      // Set as active in ConnectorManager too
+      connectorManager.setActive(id)
+
+      return true
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Connection failed'
       state.error = message
@@ -248,33 +253,70 @@ export function createConnectionStore() {
     const connection = state.connections.find(c => c.id === id)
     if (!connection) return false
 
-    updateConnectionStatus(id, 'disconnected')
+    try {
+      // Use ConnectorManager to disconnect
+      await connectorManager.disconnect(id)
+      updateConnectionStatus(id, 'disconnected')
 
-    // If disconnecting active connection, it remains active but disconnected
-    // User needs to reconnect or switch to another connection
+      // If disconnecting active connection, it remains active but disconnected
+      // User needs to reconnect or switch to another connection
 
-    return true
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Disconnect failed'
+      state.error = message
+      return false
+    }
   }
 
   /**
    * Test a connection without activating it
+   *
+   * @param data - Connection form data
+   * @param secrets - Secrets for authentication
    */
-  async function testConnection(data: ConnectionFormData): Promise<{ success: boolean; message: string }> {
+  async function testConnection(
+    data: ConnectionFormData,
+    secrets?: ConnectionSecrets
+  ): Promise<{ success: boolean; message: string; latency?: number }> {
+    // WASM is always available
     if (data.scope === 'wasm') {
       return { success: true, message: 'WASM connection is always available' }
     }
 
-    if (data.scope === 'remote') {
-      // TODO: Implement remote connection test
-      return { success: false, message: 'Remote connection test not implemented' }
+    // Build connection data for testing
+    const connectionData = {
+      id: `test-${Date.now()}`,
+      name: data.name,
+      scope: data.scope,
+      host: data.host,
+      database: data.database
     }
 
-    if (data.scope === 'motherduck') {
-      // TODO: Implement MotherDuck connection test
-      return { success: false, message: 'MotherDuck connection test not implemented' }
+    // Build secrets from form data
+    const testSecrets: ConnectionSecrets = {
+      token: secrets?.token || data.token,
+      apiKey: secrets?.apiKey || data.apiKey
     }
 
-    return { success: false, message: 'Unknown connection type' }
+    try {
+      const result = await connectorManager.testConnection(connectionData, testSecrets)
+
+      if (!result.ok) {
+        return { success: false, message: result.error.message }
+      }
+
+      return {
+        success: true,
+        message: `Connected successfully (${result.value.latency.toFixed(0)}ms)`,
+        latency: result.value.latency
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Test failed'
+      }
+    }
   }
 
   /**
@@ -291,6 +333,42 @@ export function createConnectionStore() {
     state.error = null
   }
 
+  /**
+   * Save secrets for a connection
+   *
+   * @param connectionId - Connection ID
+   * @param secrets - Secrets to save
+   */
+  function saveSecrets(connectionId: string, secrets: ConnectionSecrets) {
+    secretsManager.set(connectionId, secrets)
+  }
+
+  /**
+   * Get saved secrets for a connection
+   *
+   * @param connectionId - Connection ID
+   */
+  function getSecrets(connectionId: string): ConnectionSecrets | null {
+    return secretsManager.get(connectionId)
+  }
+
+  /**
+   * Check if secrets are required for a connection
+   *
+   * @param connection - Connection to check
+   */
+  function needsSecrets(connection: DatabaseConnection): boolean {
+    if (connection.scope === 'wasm') return false
+    return !secretsManager.has(connection.id)
+  }
+
+  /**
+   * Get the active connector instance
+   */
+  function getActiveConnector() {
+    return connectorManager.getActive()
+  }
+
   return {
     get state() {
       return state
@@ -305,7 +383,11 @@ export function createConnectionStore() {
     disconnect,
     testConnection,
     updateConnectionStatus,
-    clearError
+    clearError,
+    saveSecrets,
+    getSecrets,
+    needsSecrets,
+    getActiveConnector
   }
 }
 

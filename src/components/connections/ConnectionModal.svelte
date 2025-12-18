@@ -26,11 +26,12 @@
 
   // Form state
   let name = $state(connection?.name || '')
-  let scope = $state<ConnectionScope>(connection?.scope || 'remote')
+  let scope = $state<ConnectionScope>(connection?.scope || 'http')
   let host = $state(connection?.host || '')
   let database = $state(connection?.database || '')
   let environment = $state<ConnectionEnvironment>(connection?.environment || 'DEV')
   let token = $state('')
+  let rememberSecret = $state(true)
 
   let testing = $state(false)
   let testResult = $state<{ success: boolean; message: string } | null>(null)
@@ -58,7 +59,11 @@
         environment,
         token: token || undefined
       }
-      testResult = await connectionStore.testConnection(formData)
+      // Pass secrets separately for testing
+      const secrets = scope === 'motherduck'
+        ? { apiKey: token }
+        : { token }
+      testResult = await connectionStore.testConnection(formData, secrets)
     } catch (e) {
       error = e instanceof Error ? e.message : 'Test failed'
     } finally {
@@ -82,10 +87,22 @@
         token: token || undefined
       }
 
+      let connectionId: string
+
       if (isEditing && connection) {
         connectionStore.updateConnection(connection.id, formData)
+        connectionId = connection.id
       } else {
-        connectionStore.addConnection(formData)
+        const newConnection = connectionStore.addConnection(formData)
+        connectionId = newConnection.id
+      }
+
+      // Save secrets if token provided and user wants to remember
+      if (token && rememberSecret) {
+        const secrets = scope === 'motherduck'
+          ? { apiKey: token }
+          : { token }
+        connectionStore.saveSecrets(connectionId, secrets)
       }
 
       onClose()
@@ -149,7 +166,7 @@
             id="host"
             type="text"
             class="form-input"
-            placeholder={scope === 'remote' ? 'localhost:4000' : 'md:database'}
+            placeholder={scope === 'http' ? 'localhost:4000' : 'md:database'}
             bind:value={host}
           />
         </div>
@@ -182,7 +199,7 @@
         </div>
       </div>
 
-      {#if scope === 'remote'}
+      {#if scope === 'http'}
         <div class="form-group">
           <label for="token">Authentication Token (optional)</label>
           <input
@@ -205,6 +222,16 @@
             placeholder="md_xxxxxxxxxxxxxxxx"
             bind:value={token}
           />
+        </div>
+      {/if}
+
+      {#if scope !== 'wasm' && token}
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" bind:checked={rememberSecret} />
+            <span class="checkbox-text">Remember for this session</span>
+            <span class="checkbox-hint">(Cleared when browser closes)</span>
+          </label>
         </div>
       {/if}
 
@@ -523,5 +550,29 @@
   .btn-primary:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4285F4;
+    cursor: pointer;
+  }
+
+  .checkbox-text {
+    font-size: 0.875rem;
+    color: #F3F4F6;
+  }
+
+  .checkbox-hint {
+    font-size: 0.75rem;
+    color: #6B7280;
   }
 </style>

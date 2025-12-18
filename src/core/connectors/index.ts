@@ -113,6 +113,20 @@ export type {
   HttpQueryResponse
 } from './http'
 
+// Secrets Manager
+export {
+  secretsManager,
+  createSecretsManager,
+  type ConnectionSecrets
+} from './secrets'
+
+// Connector Manager
+export {
+  connectorManager,
+  createConnectorManager,
+  type ConnectionData
+} from './manager'
+
 // Compatibility layer (for gradual migration)
 export {
   duckDBManagerCompat,
