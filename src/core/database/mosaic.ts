@@ -7,7 +7,7 @@
 
 import { wasmConnector, coordinator as mosaicCoordinator } from '@uwdata/mosaic-core'
 import * as vg from '@uwdata/vgplot'
-import { duckDBManager } from './duckdb'
+import { duckDBManager } from './index'
 
 let mosaicInitialized = false
 let vgplotContext: any = null

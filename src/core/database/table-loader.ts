@@ -5,7 +5,7 @@
  * Used to store SQL query results for chart rendering and SQL references.
  */
 
-import { duckDBManager } from './duckdb'
+import { duckDBManager } from './index'
 
 /**
  * Load data from query result into a DuckDB table

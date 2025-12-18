@@ -1,4 +1,4 @@
-import { duckDBManager } from '@core/database/duckdb'
+import { duckDBManager } from '@core/database'
 import type { DatabaseState, DataSource, QueryResult } from '@/types/database'
 import { connectionStore } from './connection.svelte'
 
