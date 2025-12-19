@@ -121,7 +121,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="modal-backdrop" onclick={handleBackdropClick} onkeydown={() => {}} role="dialog">
+<div class="modal-backdrop" onclick={handleBackdropClick} onkeydown={() => {}} role="dialog" aria-modal="true" tabindex="-1">
   <div class="modal">
     <header class="modal-header">
       <h2>{isEditing ? 'Edit Connection' : 'Add Connection'}</h2>
@@ -140,9 +140,9 @@
         />
       </div>
 
-      <div class="form-group">
-        <label>Connection Type</label>
-        <div class="scope-selector">
+      <fieldset class="form-group">
+        <legend class="form-legend">Connection Type</legend>
+        <div class="scope-selector" role="radiogroup" aria-label="Connection Type">
           {#each CONNECTION_SCOPES as scopeOption}
             <button
               type="button"
@@ -157,7 +157,7 @@
             </button>
           {/each}
         </div>
-      </div>
+      </fieldset>
 
       <div class="form-row">
         <div class="form-group">
@@ -354,12 +354,20 @@
     margin-bottom: 20px;
   }
 
-  .form-group label {
+  fieldset.form-group {
+    border: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+  }
+
+  .form-group label,
+  .form-legend {
     display: block;
     margin-bottom: 8px;
     font-size: 0.8125rem;
     font-weight: 500;
     color: #9CA3AF;
+    padding: 0;
   }
 
   .form-input {
