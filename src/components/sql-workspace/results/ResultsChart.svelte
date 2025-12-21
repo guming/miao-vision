@@ -33,7 +33,7 @@
   let yLabel = $state('')
   let showAdvanced = $state(false)
   let dataLimit = $state(20) // Limit number of bars/points
-  let sortOrder = $state<'desc' | 'asc' | 'none'>('desc') // Sort by Y value
+  let sortOrder = $state<'desc' | 'asc' | 'none'>('none') // Preserve original order by default
 
   // Infer column types
   const columnTypes = $derived(
