@@ -706,8 +706,11 @@
     return n.toFixed(2)
   }
 
-  // Get chart SVG based on type
-  function getChartSVG() {
+  // Get chart SVG based on type - use $derived for reactivity
+  const chartSVG = $derived.by(() => {
+    // Access all reactive dependencies to ensure proper tracking
+    void [config.type, config.xColumn, config.yColumns, config.aggregation, sortOrder, dataLimit, chartWidth, chartHeight, chartTitle, xLabel, yLabel]
+
     switch (config.type) {
       case 'bar': return renderBarChart()
       case 'line': return renderLineChart()
@@ -716,6 +719,11 @@
       case 'histogram': return renderHistogram()
       default: return ''
     }
+  })
+
+  // Keep function for export functionality
+  function getChartSVG() {
+    return chartSVG
   }
 
   // Export chart as SVG
@@ -909,7 +917,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
   <div class="chart-preview">
     {#if canRender}
       <div class="chart-container">
-        {@html getChartSVG()}
+        {@html chartSVG}
       </div>
       <div class="export-toolbar">
         <button class="export-btn" onclick={exportPNG} title="Export as PNG">

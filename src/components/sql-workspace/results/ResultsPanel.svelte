@@ -536,7 +536,7 @@
     background: #1F2937;
     border: 1px solid #374151;
     border-radius: 6px;
-    min-width: 12rem;
+    width: 10rem;
   }
 
   .search-box svg {
