@@ -19,31 +19,11 @@
     reportId = ''
   }: Props = $props()
 
-  // Debug: Log when props are received
-  console.log('🔷 MarkdownEditor: Props received')
-  console.log('  reportId:', reportId)
-  console.log('  value length:', value?.length || 0)
-  console.log('  value preview:', value?.substring(0, 100) || '(empty)')
-
   let editorContainer = $state<HTMLDivElement>()
   let editor: Monaco.editor.IStandaloneCodeEditor | null = null
   let monaco: typeof Monaco | null = null
   let isUpdatingProgrammatically = false  // Flag to ignore programmatic changes
-  let lastKnownReportId = reportId  // Track the report ID when the value was set
-
-  // Debug: Track prop changes with $effect
-  $effect(() => {
-    console.log('🔶 MarkdownEditor $effect: Props changed')
-    console.log('  reportId prop:', reportId)
-    console.log('  value prop length:', value?.length || 0)
-    console.log('  value prop preview:', value?.substring(0, 80) || '(empty)')
-    console.log('  lastKnownReportId:', lastKnownReportId)
-    console.log('  editor exists:', !!editor)
-    if (editor) {
-      console.log('  editor.getValue() length:', editor.getValue()?.length || 0)
-      console.log('  editor.getValue() preview:', editor.getValue()?.substring(0, 80) || '(empty)')
-    }
-  })
+  let lastKnownReportId = ''  // Tracks which report is currently in editor
 
   onMount(async () => {
     if (!editorContainer) {
@@ -92,24 +72,17 @@
 
       // Listen to content changes
       editor.onDidChangeModelContent(() => {
-        // Ignore ALL changes while we're programmatically updating (e.g., switching reports)
-        if (isUpdatingProgrammatically) {
-          console.log('📝 Editor content changed (ignored - programmatic update)')
-          return
-        }
+        // Ignore changes while programmatically updating (e.g., switching reports)
+        if (isUpdatingProgrammatically) return
 
         const currentValue = editor?.getValue() || ''
-        console.log('📝 Editor content changed (user edit)')
-        console.log('  currentValue length:', currentValue.length)
-        console.log('  lastKnownReportId:', lastKnownReportId)
-
         if (onChange && lastKnownReportId) {
-          console.log('  📤 Calling onChange with reportId:', lastKnownReportId)
           onChange(currentValue, lastKnownReportId)
         }
       })
 
-      console.log('Markdown editor initialized')
+      // Track initial report
+      lastKnownReportId = reportId
     } catch (error) {
       console.error('Failed to initialize Markdown editor:', error)
     }
@@ -121,7 +94,6 @@
   })
 
   // Update editor value when prop changes (e.g., switching reports)
-  // CRITICAL: Must update when EITHER value OR reportId changes
   $effect(() => {
     if (!editor) return
 
@@ -131,40 +103,26 @@
 
     // Update if value changed OR if we switched to a different report
     if (valueChanged || reportChanged) {
-      console.log('🔄 MarkdownEditor $effect: updating editor')
-      console.log('  valueChanged:', valueChanged)
-      console.log('  reportChanged:', reportChanged)
-      console.log('  new value length:', value.length)
-      console.log('  editor current length:', editorValue.length)
-      console.log('  reportId prop:', reportId)
-      console.log('  lastKnownReportId:', lastKnownReportId)
-
       // Set flag BEFORE setValue to ignore all change events during update
       isUpdatingProgrammatically = true
-      console.log('  Set isUpdatingProgrammatically = true')
 
-      // CRITICAL: Update lastKnownReportId BEFORE setValue
-      // This ensures any subsequent user edits are attributed to the new report
+      // Update lastKnownReportId BEFORE setValue so user edits go to new report
       lastKnownReportId = reportId
-      console.log('  Updated lastKnownReportId to:', lastKnownReportId)
 
       // Only preserve position if we're editing the same report
       const position = reportChanged ? null : editor.getPosition()
 
       editor.setValue(value)
-      console.log('  Called editor.setValue()')
 
-      // Clear flag after a short delay to ensure all Monaco events have fired
+      // Clear flag after Monaco events have fired
       setTimeout(() => {
         isUpdatingProgrammatically = false
-        console.log('  Set isUpdatingProgrammatically = false')
       }, 50)
 
       // Restore position only if same report, otherwise go to top
       if (position) {
         editor.setPosition(position)
       } else if (reportChanged) {
-        // For new report, scroll to top
         editor.setPosition({ lineNumber: 1, column: 1 })
         editor.revealLine(1)
       }
