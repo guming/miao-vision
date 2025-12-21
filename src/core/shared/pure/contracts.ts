@@ -397,7 +397,7 @@ export function validateVariableName(name: string): ValidationResult {
     errors.push(`Variable name too long (max ${VARIABLE_NAME_RULES.maxLength})`)
   } else if (!VARIABLE_NAME_RULES.pattern.test(name)) {
     errors.push('Variable name must start with letter/underscore and contain only alphanumeric/underscore')
-  } else if (VARIABLE_NAME_RULES.reserved.includes(name.toLowerCase())) {
+  } else if ((VARIABLE_NAME_RULES.reserved as readonly string[]).includes(name.toLowerCase())) {
     errors.push(`"${name}" is a reserved word`)
   }
 

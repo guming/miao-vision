@@ -55,7 +55,7 @@ export function initializeInputDefaults(
 
     if (block.metadata && 'name' in block.metadata) {
       name = block.metadata.name as string
-      defaultValue = block.metadata.defaultValue as string
+      defaultValue = 'defaultValue' in block.metadata ? (block.metadata.defaultValue as string) : undefined
     } else {
       const config = parseInputConfig(block.content)
       name = config.name

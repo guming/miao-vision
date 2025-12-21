@@ -154,7 +154,7 @@ function evaluateCondition(
     // Pattern for ${query.column} or ${query.column[index]}
     const refPattern = /\$\{([a-zA-Z_][a-zA-Z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)(?:\[(\d+)\])?\}/g
 
-    evaluated = evaluated.replace(refPattern, (match, source, prop, index) => {
+    evaluated = evaluated.replace(refPattern, (_match, source, prop, index) => {
       const rowIndex = index ? parseInt(index, 10) : 0
 
       // Check if it's an input reference
@@ -190,7 +190,7 @@ function evaluateCondition(
 
     // Simple ${varname} pattern (for simple inputs)
     const simpleRefPattern = /\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g
-    evaluated = evaluated.replace(simpleRefPattern, (match, varname) => {
+    evaluated = evaluated.replace(simpleRefPattern, (_match, varname) => {
       // Check inputs first
       if (varname in context.inputs) {
         const value = context.inputs[varname]

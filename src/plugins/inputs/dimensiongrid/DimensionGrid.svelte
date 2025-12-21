@@ -36,7 +36,7 @@
 
   function isSelected(value: string): boolean {
     if (isMultiple && multiInput) {
-      return multiInput.value.includes(value)
+      return (multiInput.value ?? []).includes(value)
     } else if (singleInput) {
       return singleInput.value === value
     }
@@ -45,7 +45,7 @@
 
   function handleSelect(value: string) {
     if (isMultiple && multiInput) {
-      const current = multiInput.value
+      const current = multiInput.value ?? []
       if (current.includes(value)) {
         multiInput.setValue(current.filter(v => v !== value))
       } else {
@@ -72,7 +72,7 @@
   // Calculate selected count for header
   let selectedCount = $derived(() => {
     if (isMultiple && multiInput) {
-      return multiInput.value.length
+      return (multiInput.value ?? []).length
     } else if (singleInput && singleInput.value) {
       return 1
     }

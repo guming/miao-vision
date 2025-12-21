@@ -120,7 +120,7 @@ export async function exportToPDF(
   const html2pdfOptions = {
     margin: opts.margin,
     filename: filename,
-    image: { type: 'jpeg', quality: opts.imageQuality },
+    image: { type: 'jpeg' as const, quality: opts.imageQuality },
     html2canvas: {
       scale: opts.scale,
       useCORS: true,
@@ -130,7 +130,7 @@ export async function exportToPDF(
       scrollY: 0
     },
     jsPDF: {
-      unit: 'mm',
+      unit: 'mm' as const,
       format: opts.format,
       orientation: opts.orientation
     }

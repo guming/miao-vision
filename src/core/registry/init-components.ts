@@ -7,7 +7,7 @@
 
 import { componentRegistry } from './component-registry'
 import type { ParsedCodeBlock } from '@/types/report'
-import { mount } from 'svelte'
+import { mount, type SvelteComponent } from 'svelte'
 
 // Import chart metadata (charts use vgplot, not Svelte components)
 import {
@@ -40,7 +40,7 @@ import { buildChartFromBlock } from '@plugins/viz/chart-builder'
  * Charts use vgplot rendering which is different from Svelte components
  */
 function createChartRenderer(chartType: string) {
-  return async (container: HTMLElement, props: any, context: any) => {
+  return async (container: HTMLElement, props: any, context: any): Promise<SvelteComponent> => {
     // Check if we have a pre-built chartConfig (from Execute)
     let chartConfig = props.chartConfig
 
@@ -49,7 +49,7 @@ function createChartRenderer(chartType: string) {
       const tableMapping = context.tableMapping || new Map()
 
       // If tableMapping is empty, the report hasn't been executed yet
-      // Return null to show placeholder instead of throwing an error
+      // Return placeholder component instead of throwing an error
       if (tableMapping.size === 0) {
         console.log(`  ⏸️ ${chartType}: No tableMapping available - showing placeholder`)
         // Render placeholder directly
@@ -60,7 +60,8 @@ function createChartRenderer(chartType: string) {
             <div style="font-size: 0.875rem;">Click "Execute" to run the query and display the chart</div>
           </div>
         `
-        return null
+        // Return placeholder object satisfying SvelteComponent interface
+        return { $destroy: () => { container.innerHTML = '' } } as unknown as SvelteComponent
       }
 
       chartConfig = buildChartFromBlock(
@@ -91,7 +92,7 @@ function createChartRenderer(chartType: string) {
       props: { config: chartConfig }
     })
 
-    return chart
+    return chart as unknown as SvelteComponent
   }
 }
 

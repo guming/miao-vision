@@ -147,7 +147,6 @@ class FailingConnector implements Connector {
 
 describe('ConnectorManager', () => {
   let manager: ReturnType<typeof createConnectorManager>
-  let mockConnector: MockConnector
 
   beforeEach(() => {
     // Clear registry and mocks
@@ -155,7 +154,6 @@ describe('ConnectorManager', () => {
     vi.clearAllMocks()
 
     // Register mock connectors
-    mockConnector = new MockConnector()
     ConnectorRegistry.register('wasm', () => new MockConnector(), 'WASM')
     ConnectorRegistry.register('http', () => new FailingConnector(), 'HTTP')
     ConnectorRegistry.register('motherduck', () => new MockConnector(), 'MotherDuck')

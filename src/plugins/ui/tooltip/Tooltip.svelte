@@ -7,6 +7,7 @@
 
   let { data }: Props = $props()
 
+  // Config is captured at mount - component is recreated if data changes
   const config = data.config
   const position = config.position || 'top'
   const delay = config.delay || 200

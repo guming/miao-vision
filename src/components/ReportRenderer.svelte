@@ -1,13 +1,10 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { wasmConnector } from '@uwdata/mosaic-core'
-  import { coordinator } from '@core/database'
   import type { Report } from '@/types/report'
   import type { ParsedCodeBlock } from '@/types/report'
   import { parseMarkdown } from '@core/markdown/parser'
   import { blockRenderer } from '@core/engine/block-renderer'
   import type { InputStore } from '@app/stores/report-inputs'
-  import { databaseStore } from '@app/stores/database.svelte'
 
   interface Props {
     report: Report | null
@@ -24,99 +21,6 @@
   let isRendering = false  // Prevent concurrent rendering
   let parsedCodeBlocks: ParsedCodeBlock[] = []  // Store parsed code blocks for BigValue
   let lastRenderedReportId = $state<string | null>(null)  // Track report ID for change detection
-
-  /**
-   * Clear all chart elements and reset Mosaic coordinator
-   */
-  async function clearChartsAndCoordinator() {
-    // Remove all chart DOM elements
-    console.log(`  Removing ${chartElements.length} chart elements from DOM...`)
-    chartElements.forEach(el => {
-      if (el.parentNode) {
-        el.parentNode.removeChild(el)
-      }
-    })
-    chartElements = []
-
-    // Clear Mosaic coordinator state
-    const coord = coordinator()
-    if (coord) {
-      console.log('  Clearing Mosaic coordinator...')
-      try {
-        // Clear all clients and queries
-        coord.clear()
-        console.log('  ✅ Mosaic coordinator cleared')
-
-        // Wait longer for any pending queries to be cancelled
-        await new Promise(resolve => setTimeout(resolve, 100))
-
-        // Drop all old chart data tables from DuckDB
-        console.log('  Dropping old chart data tables...')
-        try {
-          // Get list of all tables using information_schema
-          const result = await coord.query(`
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'main'
-            AND table_name LIKE 'chart_data_block_%'
-          `)
-
-          console.log('  Query result:', result)
-
-          if (result && result.numRows > 0) {
-            const tables = result.toArray()
-            console.log(`  Found ${tables.length} chart tables to drop`)
-
-            for (const row of tables) {
-              const tableName = row.table_name
-              if (tableName) {
-                console.log(`    Dropping table: ${tableName}`)
-                await coord.exec(`DROP TABLE IF EXISTS "${tableName}"`)
-              }
-            }
-          } else {
-            console.log('  No chart tables found to drop')
-          }
-        } catch (err) {
-          console.warn('  Failed to drop old tables:', err)
-        }
-
-        // Wait a bit more after dropping tables
-        await new Promise(resolve => setTimeout(resolve, 50))
-
-        // Reconnect to DuckDB with fresh connector
-        const connector = wasmConnector()
-        coord.databaseConnector(connector)
-        console.log('  ✅ Mosaic reconnected to DuckDB')
-      } catch (err) {
-        console.warn('  Failed to clear Mosaic coordinator:', err)
-      }
-    }
-
-    // Wait for next tick to ensure cleanup is complete
-    await tick()
-    console.log('  ✅ Cleanup complete')
-  }
-
-  /**
-   * Check if a table exists in DuckDB
-   */
-  async function tableExists(tableName: string): Promise<boolean> {
-    try {
-      if (!databaseStore.state.initialized) {
-        console.log(`  ⚠️ Database not initialized yet`)
-        return false
-      }
-
-      const tables = await databaseStore.listTables()
-      const exists = tables.includes(tableName)
-      console.log(`  Table "${tableName}" exists: ${exists}`)
-      return exists
-    } catch (err) {
-      console.warn(`  Failed to check table existence for "${tableName}":`, err)
-      return false
-    }
-  }
 
   // Re-render when report changes or when blocks are updated
   // Wait for contentContainer to be bound before rendering

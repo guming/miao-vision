@@ -7,6 +7,7 @@
   import { databaseStore } from '@app/stores/database.svelte'
   import { connectionStore } from '@app/stores/connection.svelte'
   import { reportStore } from '@app/stores/report.svelte'
+  import { chartStore } from '@app/stores/chart.svelte'
   import ConnectionsPage from './components/connections/ConnectionsPage.svelte'
   import { getInputStore } from '@app/stores/report-inputs'
   import type { InputStore } from '@app/stores/report-inputs'
@@ -41,9 +42,9 @@
       if (reportStore.state.currentReport && reportStore.state.currentReport.blocks) {
         console.log('🧹 Clearing block statuses on app initialization...')
         reportStore.state.currentReport.blocks.forEach(block => {
-          delete block.status
-          delete block.chartConfig
-          delete block.sqlResult
+          block.status = 'pending'
+          block.chartConfig = undefined
+          block.sqlResult = undefined
         })
         // Trigger reactivity
         reportStore.state.currentReport = { ...reportStore.state.currentReport }

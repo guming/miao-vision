@@ -568,25 +568,29 @@
                 style:width={column.width ? (typeof column.width === 'number' ? `${column.width}px` : column.width) : 'auto'}
               >
                 <div class="header-content">
-                  <span
+                  <button
+                    type="button"
                     class="header-label"
                     class:clickable={data.config.sortable}
                     onclick={() => handleSort(column.name)}
+                    disabled={!data.config.sortable}
                   >
                     {column.label || column.name}
-                  </span>
+                  </button>
                   <div class="header-icons">
                     {#if data.config.sortable}
-                      <span class="sort-icon" onclick={() => handleSort(column.name)}>{getSortIcon(column.name, sortState)}</span>
+                      <button type="button" class="sort-icon" onclick={() => handleSort(column.name)} aria-label="Sort">{getSortIcon(column.name, sortState)}</button>
                     {/if}
                     {#if data.config.filterable}
-                      <span
+                      <button
+                        type="button"
                         class="filter-icon"
                         class:active={getActiveFilter(column.name)}
                         onclick={() => toggleFilterDropdown(column.name)}
+                        aria-label="Filter"
                       >
                         🔽
-                      </span>
+                      </button>
                     {/if}
                   </div>
                 </div>

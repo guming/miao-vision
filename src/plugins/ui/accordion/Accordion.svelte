@@ -7,6 +7,7 @@
 
   let { data }: Props = $props()
 
+  // Config is captured at mount - component is recreated if data changes
   const config = data.config
   const multiple = config.multiple ?? false
   const bordered = config.bordered !== false

@@ -10,8 +10,10 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Use the composable for reactive store binding
-  const input = useStringInput(inputStore, data.config.name, data.config.defaultValue)
+  // Config is captured at mount - this is intentional as config doesn't change
+  const config = data.config
+  const options = data.options
+  const input = useStringInput(inputStore, config.name, config.defaultValue ?? undefined)
 
   function handleChange(event: Event) {
     const select = event.target as HTMLSelectElement
@@ -21,27 +23,27 @@
 </script>
 
 <div class="dropdown-input">
-  {#if data.config.title}
-    <label class="dropdown-label" for={data.config.name}>
-      {data.config.title}
+  {#if config.title}
+    <label class="dropdown-label" for={config.name}>
+      {config.title}
     </label>
   {/if}
 
   <select
-    id={data.config.name}
-    name={data.config.name}
+    id={config.name}
+    name={config.name}
     class="dropdown-select"
     value={input.value || ''}
     onchange={handleChange}
-    multiple={data.config.multiple}
+    multiple={config.multiple}
   >
-    {#if !data.config.multiple}
+    {#if !config.multiple}
       <option value="">
-        {data.config.placeholder || 'Select...'}
+        {config.placeholder || 'Select...'}
       </option>
     {/if}
 
-    {#each data.options as option}
+    {#each options as option}
       <option value={option.value}>
         {option.label}
       </option>

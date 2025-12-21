@@ -86,11 +86,11 @@
   })
 </script>
 
-<div class="daterange-wrapper">
+<fieldset class="daterange-wrapper">
   {#if config.title}
-    <label class="daterange-label">
+    <legend class="daterange-label">
       {config.title}
-    </label>
+    </legend>
   {/if}
 
   <!-- Presets -->
@@ -137,11 +137,13 @@
       />
     </div>
   </div>
-</div>
+</fieldset>
 
 <style>
   .daterange-wrapper {
     margin: 1.5rem 0;
+    border: none;
+    padding: 0;
   }
 
   .daterange-label {
@@ -150,6 +152,7 @@
     font-weight: 500;
     color: #D1D5DB;
     margin-bottom: 0.75rem;
+    padding: 0;
   }
 
   .daterange-presets {

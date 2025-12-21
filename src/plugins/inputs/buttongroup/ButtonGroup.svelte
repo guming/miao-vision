@@ -10,22 +10,23 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Use the composable for reactive store binding
-  const input = useStringInput(inputStore, data.config.name, data.config.defaultValue)
+  // Config is captured at mount - this is intentional as config doesn't change
+  const config = data.config
+  const input = useStringInput(inputStore, config.name, config.defaultValue)
 
   function handleClick(value: string) {
     input.setValue(value)
   }
 </script>
 
-<div class="buttongroup-input">
-  {#if data.config.title}
-    <label class="buttongroup-label">
-      {data.config.title}
-    </label>
+<fieldset class="buttongroup-input">
+  {#if config.title}
+    <legend class="buttongroup-label">
+      {config.title}
+    </legend>
   {/if}
 
-  <div class="button-group">
+  <div class="button-group" role="radiogroup" aria-label={config.title || 'Button group'}>
     {#each data.options as option}
       <button
         type="button"
@@ -37,11 +38,13 @@
       </button>
     {/each}
   </div>
-</div>
+</fieldset>
 
 <style>
   .buttongroup-input {
     margin: 1.5rem 0;
+    border: none;
+    padding: 0;
   }
 
   .buttongroup-label {
@@ -50,6 +53,7 @@
     font-weight: 500;
     color: #D1D5DB;
     margin-bottom: 0.5rem;
+    padding: 0;
   }
 
   .button-group {

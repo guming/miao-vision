@@ -10,16 +10,17 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Use the composable for reactive store binding
-  const input = useStringInput(inputStore, data.config.name, data.config.defaultValue || '')
+  // Config is captured at mount - this is intentional as config doesn't change
+  const config = data.config
+  const input = useStringInput(inputStore, config.name, config.defaultValue || '')
 
   // Local state for debouncing - track user input separately
-  let localValue = $state(data.config.defaultValue || '')
+  let localValue = $state(config.defaultValue || '')
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let isUserTyping = $state(false)
 
-  const debounceMs = data.config.debounce ?? 300
-  const minLength = data.config.minLength ?? 0
+  const debounceMs = config.debounce ?? 300
+  const minLength = config.minLength ?? 0
 
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement
@@ -72,22 +73,22 @@
 </script>
 
 <div class="textinput-wrapper">
-  {#if data.config.title}
-    <label class="textinput-label" for={data.config.name}>
-      {data.config.title}
+  {#if config.title}
+    <label class="textinput-label" for={config.name}>
+      {config.title}
     </label>
   {/if}
 
   <div class="textinput-container">
     <input
-      id={data.config.name}
-      name={data.config.name}
-      type={data.config.inputType || 'text'}
+      id={config.name}
+      name={config.name}
+      type={config.inputType || 'text'}
       class="textinput-field"
-      placeholder={data.config.placeholder || 'Enter text...'}
+      placeholder={config.placeholder || 'Enter text...'}
       value={localValue}
-      maxlength={data.config.maxLength}
-      pattern={data.config.pattern}
+      maxlength={config.maxLength}
+      pattern={config.pattern}
       oninput={handleInput}
       onkeydown={handleKeyDown}
     />

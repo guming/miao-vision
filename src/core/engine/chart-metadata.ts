@@ -387,7 +387,7 @@ export const PieChartMetadata = createMetadata({
       required: false,
       default: 0,
       description: 'Inner radius for donut chart (0 = pie, >0 = donut)',
-      examples: [0, 50, 80]
+      examples: ['0', '50', '80']
     },
     {
       name: 'showLabels',

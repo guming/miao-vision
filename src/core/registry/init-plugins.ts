@@ -6,7 +6,7 @@
  */
 
 import { componentRegistry } from './component-registry'
-import { mount } from 'svelte'
+import { mount, type SvelteComponent } from 'svelte'
 
 // Import plugin registrations
 import { registerAllPlugins } from '@plugins/index'
@@ -30,7 +30,7 @@ import { buildChartFromBlock } from '@plugins/viz'
  * Charts use vgplot rendering which is different from Svelte components
  */
 function createChartRenderer(chartType: string) {
-  return async (container: HTMLElement, props: any, context: any) => {
+  return async (container: HTMLElement, props: any, context: any): Promise<SvelteComponent> => {
     let chartConfig = props.chartConfig
 
     if (!chartConfig) {
@@ -45,7 +45,7 @@ function createChartRenderer(chartType: string) {
             <div style="font-size: 0.875rem;">Click "Execute" to run the query and display the chart</div>
           </div>
         `
-        return null
+        return { $destroy: () => { container.innerHTML = '' } } as unknown as SvelteComponent
       }
 
       chartConfig = buildChartFromBlock(
@@ -67,7 +67,7 @@ function createChartRenderer(chartType: string) {
       props: { config: chartConfig }
     })
 
-    return chart
+    return chart as unknown as SvelteComponent
   }
 }
 

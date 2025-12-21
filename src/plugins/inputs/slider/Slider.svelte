@@ -11,14 +11,13 @@
 
   let { data, inputStore }: Props = $props()
 
+  // Config is captured at mount - this is intentional as config doesn't change
   const config = data.config
   const min = config.min ?? 0
   const max = config.max ?? 100
   const step = config.step ?? 1
   const showValue = config.showValue ?? true
   const showMinMax = config.showMinMax ?? true
-
-  // Use the composable for reactive store binding
   const input = useNumberInput(inputStore, config.name, config.defaultValue ?? min)
 
   // Calculate fill percentage for styling

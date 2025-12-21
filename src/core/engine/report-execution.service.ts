@@ -401,7 +401,7 @@ export class ReportExecutionService {
     // Find chart blocks that reference the affected SQL blocks
     const affectedChartBlocks = allChartBlocks.filter(chartBlock => {
       // Try to get data source from metadata first
-      let dataSource = chartBlock.metadata?.data
+      let dataSource = (chartBlock.metadata as Record<string, unknown> | undefined)?.data as string | undefined
 
       // If not in metadata, parse from content
       if (!dataSource) {
@@ -479,7 +479,7 @@ export class ReportExecutionService {
    */
   cleanup() {
     console.log('🧹 Cleaning up all reactive subscriptions')
-    for (const [reportId, unsubscribe] of this.reactiveUnsubscribers.entries()) {
+    for (const [_reportId, unsubscribe] of this.reactiveUnsubscribers.entries()) {
       unsubscribe()
     }
     this.reactiveUnsubscribers.clear()

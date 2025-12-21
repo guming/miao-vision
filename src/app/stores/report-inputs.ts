@@ -6,7 +6,7 @@
  * SQL queries and charts subscribe to changes
  */
 
-import { writable, derived, get } from 'svelte/store'
+import { writable, get } from 'svelte/store'
 
 /**
  * Input value types

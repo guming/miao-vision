@@ -12,8 +12,7 @@ import type { SQLTemplateContext } from '@core/database/template'
 import {
   findAffectedBlocks as pureFindAffectedBlocks,
   getChangedInputs as pureGetChangedInputs,
-  type BlockWithDependencies,
-  type InputState
+  type BlockWithDependencies
 } from '@core/shared/pure'
 
 /**
