@@ -1,6 +1,7 @@
 <script lang="ts">
   import { databaseStore } from '@app/stores/database.svelte'
   import { queryWorkspaceStore } from '@app/stores/query-workspace.svelte'
+  import ConnectionSelector from '@/components/connections/ConnectionSelector.svelte'
 
   interface TableColumn {
     column_name: string
@@ -213,9 +214,19 @@
     }
     return '?'
   }
+
+  // Handle connection change - refresh tables
+  function handleConnectionChange() {
+    loadTables()
+  }
 </script>
 
 <div class="data-explorer">
+  <!-- Connection Selector -->
+  <div class="connection-section">
+    <ConnectionSelector onConnectionChange={handleConnectionChange} />
+  </div>
+
   <!-- Import Section -->
   <div class="import-section">
     <div
@@ -348,6 +359,12 @@
     height: 100%;
     background: #111827;
     border-right: 1px solid #1F2937;
+  }
+
+  /* Connection Section */
+  .connection-section {
+    padding: 0.75rem;
+    border-bottom: 1px solid #1F2937;
   }
 
   /* Import Section */
