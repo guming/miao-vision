@@ -10,28 +10,9 @@
 
   let { data, inputStore }: Props = $props()
 
-  const config = data.config
-  const presets = data.presets
-
-  // Create two inputs: one for start, one for end
-  const startInput = useStringInput(
-    inputStore,
-    `${config.name}_start`,
-    config.startDefault || getDefaultStart()
-  )
-
-  const endInput = useStringInput(
-    inputStore,
-    `${config.name}_end`,
-    config.endDefault || getDefaultEnd()
-  )
-
-  // Also store the combined value for convenience
-  const combinedInput = useStringInput(
-    inputStore,
-    config.name,
-    `${config.startDefault || getDefaultStart()}:${config.endDefault || getDefaultEnd()}`
-  )
+  // Extract config reactively
+  const config = $derived(data.config)
+  const presets = $derived(data.presets)
 
   function getDefaultStart(): string {
     // Default to 30 days ago
@@ -43,6 +24,26 @@
   function getDefaultEnd(): string {
     return new Date().toISOString().split('T')[0]
   }
+
+  // Create inputs using $derived.by to read config in reactive context
+  const startInput = $derived.by(() => useStringInput(
+    inputStore,
+    `${config.name}_start`,
+    config.startDefault || getDefaultStart()
+  ))
+
+  const endInput = $derived.by(() => useStringInput(
+    inputStore,
+    `${config.name}_end`,
+    config.endDefault || getDefaultEnd()
+  ))
+
+  // Also store the combined value for convenience
+  const combinedInput = $derived.by(() => useStringInput(
+    inputStore,
+    config.name,
+    `${config.startDefault || getDefaultStart()}:${config.endDefault || getDefaultEnd()}`
+  ))
 
   function handleStartChange(event: Event) {
     const target = event.target as HTMLInputElement

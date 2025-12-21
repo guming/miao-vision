@@ -7,10 +7,10 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const columns = config.columns || 0
-  const gap = config.gap || '1rem'
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const columns = $derived(config.columns || 0)
+  const gap = $derived(config.gap || '1rem')
 
   function getTrendIcon(direction: 'up' | 'down' | 'neutral'): string {
     switch (direction) {

@@ -9,12 +9,12 @@
 
   let { data, children }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const columns = config.columns || 12
-  const gap = config.gap || '1rem'
-  const rowHeight = config.rowHeight || 'auto'
-  const minRowHeight = config.minRowHeight || '100px'
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const columns = $derived(config.columns || 12)
+  const gap = $derived(config.gap || '1rem')
+  const rowHeight = $derived(config.rowHeight || 'auto')
+  const minRowHeight = $derived(config.minRowHeight || '100px')
 </script>
 
 <div

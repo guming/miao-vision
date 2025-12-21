@@ -7,11 +7,19 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const bordered = config.bordered !== false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const bordered = $derived(config.bordered !== false)
 
-  let isOpen = $state(config.defaultOpen ?? false)
+  let isOpen = $state(false)
+  let initialized = $state(false)
+
+  $effect.pre(() => {
+    if (!initialized) {
+      isOpen = data.config.defaultOpen ?? false
+      initialized = true
+    }
+  })
 
   function toggle() {
     isOpen = !isOpen

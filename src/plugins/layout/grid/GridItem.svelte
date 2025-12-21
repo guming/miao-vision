@@ -9,13 +9,13 @@
 
   let { config, children }: Props = $props()
 
-  // Config is captured at mount - component is recreated if config changes
-  const col = config.col || 'auto'
-  const row = config.row || 'auto'
-  const colSpan = config.colSpan || 1
-  const rowSpan = config.rowSpan || 1
-  const title = config.title
-  const padding = config.padding !== false
+  // Extract config values reactively
+  const col = $derived(config.col || 'auto')
+  const row = $derived(config.row || 'auto')
+  const colSpan = $derived(config.colSpan || 1)
+  const rowSpan = $derived(config.rowSpan || 1)
+  const title = $derived(config.title)
+  const padding = $derived(config.padding !== false)
 </script>
 
 <div

@@ -11,14 +11,14 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Config is captured at mount - this is intentional as config doesn't change
-  const config = data.config
-  const min = config.min ?? 0
-  const max = config.max ?? 100
-  const step = config.step ?? 1
-  const showValue = config.showValue ?? true
-  const showMinMax = config.showMinMax ?? true
-  const input = useNumberInput(inputStore, config.name, config.defaultValue ?? min)
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const min = $derived(config.min ?? 0)
+  const max = $derived(config.max ?? 100)
+  const step = $derived(config.step ?? 1)
+  const showValue = $derived(config.showValue ?? true)
+  const showMinMax = $derived(config.showMinMax ?? true)
+  const input = $derived.by(() => useNumberInput(inputStore, config.name, config.defaultValue ?? min))
 
   // Calculate fill percentage for styling
   let fillPercent = $derived(

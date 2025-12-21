@@ -10,10 +10,10 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Config is captured at mount - this is intentional as config doesn't change
-  const config = data.config
-  const options = data.options
-  const input = useStringInput(inputStore, config.name, config.defaultValue ?? undefined)
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const options = $derived(data.options)
+  const input = $derived.by(() => useStringInput(inputStore, config.name, config.defaultValue ?? undefined))
 
   function handleChange(event: Event) {
     const select = event.target as HTMLSelectElement

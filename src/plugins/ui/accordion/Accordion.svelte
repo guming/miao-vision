@@ -7,23 +7,32 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const multiple = config.multiple ?? false
-  const bordered = config.bordered !== false
-  const compact = config.compact ?? false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const multiple = $derived(config.multiple ?? false)
+  const bordered = $derived(config.bordered !== false)
+  const compact = $derived(config.compact ?? false)
 
   // Track expanded state for each item
-  let expandedItems = $state<Set<number>>(new Set(
-    data.items
-      .map((item, idx) => item.expanded ? idx : -1)
-      .filter(idx => idx >= 0)
-  ))
+  let expandedItems = $state<Set<number>>(new Set())
+  let initialized = $state(false)
 
-  // If defaultExpanded is set and no items are expanded, expand that one
-  if (expandedItems.size === 0 && config.defaultExpanded !== undefined) {
-    expandedItems.add(config.defaultExpanded)
-  }
+  // Initialize expanded items on first render
+  $effect.pre(() => {
+    if (!initialized) {
+      const initialExpanded = new Set(
+        data.items
+          .map((item, idx) => item.expanded ? idx : -1)
+          .filter(idx => idx >= 0)
+      )
+      // If defaultExpanded is set and no items are expanded, expand that one
+      if (initialExpanded.size === 0 && data.config.defaultExpanded !== undefined) {
+        initialExpanded.add(data.config.defaultExpanded)
+      }
+      expandedItems = initialExpanded
+      initialized = true
+    }
+  })
 
   function toggleItem(index: number) {
     const newExpanded = new Set(expandedItems)

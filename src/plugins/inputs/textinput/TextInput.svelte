@@ -10,17 +10,26 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Config is captured at mount - this is intentional as config doesn't change
-  const config = data.config
-  const input = useStringInput(inputStore, config.name, config.defaultValue || '')
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const input = $derived.by(() => useStringInput(inputStore, config.name, config.defaultValue || ''))
 
   // Local state for debouncing - track user input separately
-  let localValue = $state(config.defaultValue || '')
+  let localValue = $state('')
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let isUserTyping = $state(false)
+  let initialized = $state(false)
 
-  const debounceMs = config.debounce ?? 300
-  const minLength = config.minLength ?? 0
+  const debounceMs = $derived(config.debounce ?? 300)
+  const minLength = $derived(config.minLength ?? 0)
+
+  // Initialize local value on first render
+  $effect.pre(() => {
+    if (!initialized) {
+      localValue = data.config.defaultValue || ''
+      initialized = true
+    }
+  })
 
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement

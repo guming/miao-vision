@@ -10,11 +10,9 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Extract config like Slider does
-  const config = data.config
-
-  // Use the composable for reactive store binding (same pattern as Slider/ButtonGroup)
-  const input = useBooleanInput(inputStore, config.name, config.defaultValue ?? false)
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const input = $derived.by(() => useBooleanInput(inputStore, config.name, config.defaultValue ?? false))
 
   function handleClick() {
     input.setValue(!input.value)

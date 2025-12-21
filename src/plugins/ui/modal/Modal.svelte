@@ -7,13 +7,13 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const buttonText = config.buttonText ?? 'Open'
-  const size = config.size ?? 'md'
-  const closeOnOverlay = config.closeOnOverlay !== false
-  const closeOnEscape = config.closeOnEscape !== false
-  const showClose = config.showClose !== false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const buttonText = $derived(config.buttonText ?? 'Open')
+  const size = $derived(config.size ?? 'md')
+  const closeOnOverlay = $derived(config.closeOnOverlay !== false)
+  const closeOnEscape = $derived(config.closeOnEscape !== false)
+  const showClose = $derived(config.showClose !== false)
 
   let isOpen = $state(false)
 

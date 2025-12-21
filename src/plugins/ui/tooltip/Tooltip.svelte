@@ -7,10 +7,10 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const position = config.position || 'top'
-  const delay = config.delay || 200
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const position = $derived(config.position || 'top')
+  const delay = $derived(config.delay || 200)
 
   let visible = $state(false)
   let timeoutId: ReturnType<typeof setTimeout> | null = null

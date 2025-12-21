@@ -7,14 +7,23 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const tabs = data.tabs
-  const contents = data.contents
-  const variant = config.variant ?? 'default'
-  const fullWidth = config.fullWidth ?? false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const tabs = $derived(data.tabs)
+  const contents = $derived(data.contents)
+  const variant = $derived(config.variant ?? 'default')
+  const fullWidth = $derived(config.fullWidth ?? false)
 
-  let activeTab = $state(config.defaultTab ?? 0)
+  // Initialize active tab
+  let activeTab = $state(0)
+  let initialized = $state(false)
+
+  $effect.pre(() => {
+    if (!initialized) {
+      activeTab = data.config.defaultTab ?? 0
+      initialized = true
+    }
+  })
 
   function selectTab(index: number) {
     const tab = tabs[index]

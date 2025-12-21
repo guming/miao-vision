@@ -7,13 +7,20 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const type = config.type ?? 'note'
-  const collapsible = config.collapsible ?? false
-  const defaultOpen = config.defaultOpen !== false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const type = $derived(config.type ?? 'note')
+  const collapsible = $derived(config.collapsible ?? false)
 
-  let isOpen = $state(defaultOpen)
+  let isOpen = $state(true)
+  let initialized = $state(false)
+
+  $effect.pre(() => {
+    if (!initialized) {
+      isOpen = data.config.defaultOpen !== false
+      initialized = true
+    }
+  })
 
   // Type configurations
   const typeConfig: Record<NoteType, { icon: string; label: string }> = {
@@ -24,8 +31,9 @@
     caution: { icon: '🔴', label: 'Caution' }
   }
 
-  const { icon, label } = typeConfig[type]
-  const title = config.title ?? label
+  const icon = $derived(typeConfig[type].icon)
+  const label = $derived(typeConfig[type].label)
+  const title = $derived(config.title ?? label)
 
   function toggle() {
     if (collapsible) {

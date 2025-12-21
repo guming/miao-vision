@@ -7,24 +7,24 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const values = data.values
-  const height = config.height ?? 32
-  const width = config.width ?? 100
-  const color = config.color ?? '#667eea'
-  const positiveColor = config.positiveColor ?? '#10B981'
-  const negativeColor = config.negativeColor ?? '#EF4444'
-  const type = config.type ?? 'line'
-  const showDots = config.showDots ?? false
-  const showMinMax = config.showMinMax ?? false
-  const showLast = config.showLast ?? false
-  const referenceColor = config.referenceColor ?? '#6B7280'
-  const bandColor = config.bandColor ?? 'rgba(107, 114, 128, 0.2)'
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const values = $derived(data.values)
+  const height = $derived(config.height ?? 32)
+  const width = $derived(config.width ?? 100)
+  const color = $derived(config.color ?? '#667eea')
+  const positiveColor = $derived(config.positiveColor ?? '#10B981')
+  const negativeColor = $derived(config.negativeColor ?? '#EF4444')
+  const type = $derived(config.type ?? 'line')
+  const showDots = $derived(config.showDots ?? false)
+  const showMinMax = $derived(config.showMinMax ?? false)
+  const showLast = $derived(config.showLast ?? false)
+  const referenceColor = $derived(config.referenceColor ?? '#6B7280')
+  const bandColor = $derived(config.bandColor ?? 'rgba(107, 114, 128, 0.2)')
 
   const padding = 2
-  const chartWidth = width - padding * 2
-  const chartHeight = height - padding * 2
+  const chartWidth = $derived(width - padding * 2)
+  const chartHeight = $derived(height - padding * 2)
 
   // Calculate reference line value
   const referenceValue = $derived(() => {

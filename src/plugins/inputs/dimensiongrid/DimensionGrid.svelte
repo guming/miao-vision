@@ -9,30 +9,26 @@
   }
 
   let { data, inputStore }: Props = $props()
-  const config = data.config
 
-  // Determine if multiple selection is allowed
-  const isMultiple = config.multiple ?? false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const isMultiple = $derived(config.multiple ?? false)
+  const columns = $derived(config.columns || 4)
+  const gap = $derived(config.gap || '0.75rem')
+  const items = $derived<DimensionGridItem[]>(config.items || [])
 
   // Use appropriate input type based on multiple selection
-  const singleInput = isMultiple ? null : useStringInput(
+  const singleInput = $derived.by(() => isMultiple ? null : useStringInput(
     inputStore,
     config.name,
     typeof config.defaultValue === 'string' ? config.defaultValue : ''
-  )
+  ))
 
-  const multiInput = isMultiple ? useArrayInput(
+  const multiInput = $derived.by(() => isMultiple ? useArrayInput(
     inputStore,
     config.name,
     Array.isArray(config.defaultValue) ? config.defaultValue : []
-  ) : null
-
-  // Get items from static config
-  let items = $state<DimensionGridItem[]>(config.items || [])
-
-  // Grid columns
-  const columns = config.columns || 4
-  const gap = config.gap || '0.75rem'
+  ) : null)
 
   function isSelected(value: string): boolean {
     if (isMultiple && multiInput) {

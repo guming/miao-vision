@@ -7,16 +7,16 @@
 
   let { data }: Props = $props()
 
-  // Config is captured at mount - component is recreated if data changes
-  const config = data.config
-  const color = config.color || 'blue'
-  const size = config.size || 'md'
-  const showValue = config.showValue !== false
-  const showPercent = config.showPercent !== false
-  const animated = config.animated !== false
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const color = $derived(config.color || 'blue')
+  const size = $derived(config.size || 'md')
+  const showValue = $derived(config.showValue !== false)
+  const showPercent = $derived(config.showPercent !== false)
+  const animated = $derived(config.animated !== false)
 
   // Clamp percent between 0 and 100
-  const displayPercent = Math.min(100, Math.max(0, data.percent))
+  const displayPercent = $derived(Math.min(100, Math.max(0, data.percent)))
 </script>
 
 <div class="progress-container size-{size}">

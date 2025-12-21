@@ -10,9 +10,9 @@
 
   let { data, inputStore }: Props = $props()
 
-  // Config is captured at mount - this is intentional as config doesn't change
-  const config = data.config
-  const input = useStringInput(inputStore, config.name, config.defaultValue)
+  // Extract config values reactively
+  const config = $derived(data.config)
+  const input = $derived.by(() => useStringInput(inputStore, config.name, config.defaultValue))
 
   function handleClick(value: string) {
     input.setValue(value)

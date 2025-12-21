@@ -29,12 +29,18 @@
   let selectedRows = $state<Set<number>>(new Set())
 
   // Column visibility state
-  let columnVisibility = $state(
-    data.columns.reduce((acc, col) => {
-      acc[col.name] = col.visible !== false
-      return acc
-    }, {} as Record<string, boolean>)
-  )
+  let columnVisibility = $state<Record<string, boolean>>({})
+  let columnVisibilityInitialized = $state(false)
+
+  $effect.pre(() => {
+    if (!columnVisibilityInitialized) {
+      columnVisibility = data.columns.reduce((acc, col) => {
+        acc[col.name] = col.visible !== false
+        return acc
+      }, {} as Record<string, boolean>)
+      columnVisibilityInitialized = true
+    }
+  })
 
   // Export menu state
   let showExportMenu = $state(false)
@@ -124,8 +130,9 @@
   })
 
   // Virtual scrolling config
-  const rowHeight = data.config.rowHeight || 36
-  const maxHeight = data.config.maxHeight || 600
+  const config = $derived(data.config)
+  const rowHeight = $derived(config.rowHeight || 36)
+  const maxHeight = $derived(config.maxHeight || 600)
   const overscan = 5
 
   let visibleRange = $derived.by(() => {
