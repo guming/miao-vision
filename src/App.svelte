@@ -439,10 +439,6 @@
         </div>
       {/if}
     </div>
-
-    <footer>
-      <p>Built with Vite + Svelte 5 + DuckDB-WASM + Mosaic + Monaco Editor</p>
-    </footer>
   </div>
 </main>
 
@@ -849,19 +845,6 @@
     border-radius: 12px;
     color: #FCA5A5;
     margin-bottom: 1.5rem;
-  }
-
-  footer {
-    padding: 1.5rem 2rem;
-    border-top: 1px solid #1F2937;
-    background-color: #030712;
-    text-align: center;
-    font-size: 0.75rem;
-    color: #6B7280;
-  }
-
-  footer p {
-    margin: 0;
   }
 
   /* ========================================
