@@ -46,6 +46,8 @@ export interface ConnectionData {
   scope: 'wasm' | 'http' | 'motherduck'
   host: string
   database: string
+  /** For WASM: enable OPFS persistence */
+  persist?: boolean
 }
 
 /**
@@ -77,8 +79,8 @@ function buildConnectorConfig(
 
   switch (type) {
     case 'wasm':
-      options.persist = true
-      options.dbPath = connection.database === 'memory' ? undefined : connection.database
+      options.persist = connection.persist ?? false
+      options.dbPath = connection.persist ? (connection.database || 'opfs://miao.db') : undefined
       break
 
     case 'http':

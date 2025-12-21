@@ -218,7 +218,8 @@ export function createConnectionStore() {
           name: connection.name,
           scope: connection.scope,
           host: connection.host,
-          database: connection.database
+          database: connection.database,
+          persist: connection.persist
         },
         secrets
       )

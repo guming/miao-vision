@@ -19,6 +19,7 @@
   let database = $state('')
   let endpoint = $state('')
   let apiKey = $state('')
+  let persist = $state(true) // Default to persist for WASM
 
   // Test state
   let isTesting = $state(false)
@@ -70,10 +71,11 @@
       name,
       scope: selectedType,
       host: selectedType === 'http' ? endpoint : 'localhost',
-      database: database || 'default',
+      database: database || (selectedType === 'wasm' ? (persist ? 'opfs://miao.db' : 'memory') : 'default'),
       environment: 'DEV',
       token,
-      apiKey
+      apiKey,
+      persist: selectedType === 'wasm' ? persist : undefined
     }
 
     try {
@@ -99,8 +101,9 @@
         name: name.trim(),
         scope: selectedType,
         host: selectedType === 'http' ? endpoint : 'localhost',
-        database: database || 'default',
-        environment: 'DEV'
+        database: database || (selectedType === 'wasm' ? (persist ? 'opfs://miao.db' : 'memory') : 'default'),
+        environment: 'DEV',
+        persist: selectedType === 'wasm' ? persist : undefined
       }
 
       const connection = connectionStore.addConnection(formData)
@@ -204,6 +207,21 @@
               placeholder="My Connection"
             />
           </div>
+
+          {#if selectedType === 'wasm'}
+            <div class="form-group">
+              <label class="toggle-label">
+                <input
+                  type="checkbox"
+                  bind:checked={persist}
+                />
+                <span class="toggle-text">Persist data (OPFS)</span>
+              </label>
+              <span class="field-hint">
+                {persist ? 'Data will be saved to browser storage' : 'Data will be lost when page closes'}
+              </span>
+            </div>
+          {/if}
 
           {#if selectedType === 'motherduck'}
             <div class="form-group">
@@ -508,6 +526,31 @@
 
   .btn-primary:hover:not(:disabled) {
     opacity: 0.9;
+  }
+
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  .toggle-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4285F4;
+    cursor: pointer;
+  }
+
+  .toggle-text {
+    font-size: 0.875rem;
+    color: #E5E7EB;
+  }
+
+  .field-hint {
+    font-size: 0.6875rem;
+    color: #6B7280;
+    margin-top: 2px;
   }
 
   @media (max-width: 480px) {

@@ -47,6 +47,8 @@ export interface DatabaseConnection {
   createdAt: string
   /** Last connection attempt timestamp */
   lastConnectedAt?: string
+  /** For WASM: enable OPFS persistence */
+  persist?: boolean
 }
 
 /**
@@ -62,6 +64,8 @@ export interface ConnectionFormData {
   token?: string
   /** For MotherDuck: API key */
   apiKey?: string
+  /** For WASM: enable OPFS persistence */
+  persist?: boolean
 }
 
 /**
@@ -156,6 +160,7 @@ export function createConnection(data: ConnectionFormData): DatabaseConnection {
     environment: data.environment,
     status: 'disconnected',
     isActive: false,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    persist: data.persist
   }
 }
