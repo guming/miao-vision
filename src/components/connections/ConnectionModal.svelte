@@ -22,16 +22,31 @@
 
   let { connection = null, onClose }: Props = $props()
 
-  const isEditing = !!connection
+  // Derive stable values from connection prop (modal is recreated on each open)
+  const connectionId = $derived(connection?.id)
+  const isEditing = $derived(!!connection)
 
-  // Form state
-  let name = $state(connection?.name || '')
-  let scope = $state<ConnectionScope>(connection?.scope || 'http')
-  let host = $state(connection?.host || '')
-  let database = $state(connection?.database || '')
-  let environment = $state<ConnectionEnvironment>(connection?.environment || 'DEV')
+  // Form state - initialized with defaults, then set in $effect.pre on first render
+  let name = $state('')
+  let scope = $state<ConnectionScope>('http')
+  let host = $state('')
+  let database = $state('')
+  let environment = $state<ConnectionEnvironment>('DEV')
   let token = $state('')
   let rememberSecret = $state(true)
+  let initialized = $state(false)
+
+  // Initialize form with connection values on first render (before DOM update)
+  $effect.pre(() => {
+    if (!initialized) {
+      name = connection?.name || ''
+      scope = connection?.scope || 'http'
+      host = connection?.host || ''
+      database = connection?.database || ''
+      environment = connection?.environment || 'DEV'
+      initialized = true
+    }
+  })
 
   let testing = $state(false)
   let testResult = $state<{ success: boolean; message: string } | null>(null)
@@ -87,14 +102,14 @@
         token: token || undefined
       }
 
-      let connectionId: string
+      let savedConnectionId: string
 
-      if (isEditing && connection) {
-        connectionStore.updateConnection(connection.id, formData)
-        connectionId = connection.id
+      if (isEditing && connectionId) {
+        connectionStore.updateConnection(connectionId, formData)
+        savedConnectionId = connectionId
       } else {
         const newConnection = connectionStore.addConnection(formData)
-        connectionId = newConnection.id
+        savedConnectionId = newConnection.id
       }
 
       // Save secrets if token provided and user wants to remember
@@ -102,7 +117,7 @@
         const secrets = scope === 'motherduck'
           ? { apiKey: token }
           : { token }
-        connectionStore.saveSecrets(connectionId, secrets)
+        connectionStore.saveSecrets(savedConnectionId, secrets)
       }
 
       onClose()
