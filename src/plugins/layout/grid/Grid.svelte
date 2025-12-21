@@ -9,6 +9,7 @@
 
   let { data, children }: Props = $props()
 
+  // Config is captured at mount - component is recreated if data changes
   const config = data.config
   const columns = config.columns || 12
   const gap = config.gap || '1rem'

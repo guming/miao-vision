@@ -9,6 +9,7 @@
 
   let { config, children }: Props = $props()
 
+  // Config is captured at mount - component is recreated if config changes
   const col = config.col || 'auto'
   const row = config.row || 'auto'
   const colSpan = config.colSpan || 1

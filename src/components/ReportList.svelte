@@ -89,6 +89,7 @@
     {:else}
       <ul class="reports">
         {#each reportStore.state.reports as report (report.id)}
+          <!-- svelte-ignore a11y_no_noninteractive_element_to_interactive_role -->
           <li
             class="report-item"
             class:active={reportStore.state.currentReport?.id === report.id}

@@ -304,34 +304,40 @@
           </button>
         </div>
 
-        <div class="report-list">
+        <div class="report-list" role="listbox" aria-label="Reports">
           {#each reportStore.state.reports as report}
-            <button
+            <div
               class="report-item"
               class:active={activeTab === 'report' && reportStore.state.currentReport?.id === report.id}
-              onclick={() => {
-                // IMPORTANT: Must call loadReport first to clone the report
-                reportStore.loadReport(report.id)
-                handleSelectReport(report)
-                setTab('report')
-              }}
+              role="option"
+              aria-selected={activeTab === 'report' && reportStore.state.currentReport?.id === report.id}
             >
-              <span class="report-name">{report.name}</span>
-              <span
+              <button
+                type="button"
+                class="report-select-btn"
+                onclick={() => {
+                  // IMPORTANT: Must call loadReport first to clone the report
+                  reportStore.loadReport(report.id)
+                  handleSelectReport(report)
+                  setTab('report')
+                }}
+              >
+                <span class="report-name">{report.name}</span>
+              </button>
+              <button
+                type="button"
                 class="btn-delete-report"
-                onclick={(e) => {
-                  e.stopPropagation()
+                onclick={() => {
                   if (confirm('Delete this report?')) {
                     reportStore.deleteReport(report.id)
                   }
                 }}
-                role="button"
-                tabindex="0"
                 title="Delete"
+                aria-label="Delete report"
               >
                 ×
-              </span>
-            </button>
+              </button>
+            </div>
           {/each}
         </div>
       </div>
@@ -640,16 +646,28 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 1.5rem;
+    padding: 0 1.5rem 0 0;
     background: none;
     border: none;
     border-left: 3px solid transparent;
     color: #9CA3AF;
     font-size: 0.875rem;
     text-align: left;
-    cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     gap: 0.5rem;
+  }
+
+  .report-select-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
   .report-item:hover:not(.active) {
@@ -683,13 +701,14 @@
     display: none;
     align-items: center;
     justify-content: center;
+    padding: 0;
     background: none;
     border: none;
     border-radius: 0.25rem;
     color: #6B7280;
     font-size: 1.25rem;
-    line-height: 1;
     cursor: pointer;
+    line-height: 1;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -969,10 +988,6 @@
       box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
     }
 
-    .sidebar.open {
-      transform: translateX(0);
-    }
-
     .main-wrapper {
       margin-left: 0;
     }
@@ -1010,10 +1025,6 @@
       font-size: 1.25rem;
     }
 
-    .content-wrapper {
-      padding: 1rem;
-    }
-
     .report-workspace {
       gap: 0;
     }
@@ -1021,16 +1032,6 @@
     .editor-pane,
     .preview-pane {
       min-height: 300px;
-    }
-
-    /* Reduce padding in cards */
-    .evidence-card {
-      padding: 1rem;
-    }
-
-    /* Stack buttons vertically on mobile */
-    .btn-lg {
-      width: 100%;
     }
   }
 
@@ -1044,10 +1045,6 @@
       font-size: 1.125rem;
     }
 
-    .content-wrapper {
-      padding: 0.75rem;
-    }
-
     .sidebar {
       width: 100%;
     }
@@ -1055,10 +1052,6 @@
     .nav-item,
     .report-item {
       padding: 0.625rem 1rem;
-    }
-
-    .btn-md {
-      width: 100%;
     }
   }
 </style>

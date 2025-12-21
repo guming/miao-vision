@@ -35,6 +35,7 @@
 </script>
 
 <div class="note note-{type}" class:collapsible>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     class="note-header"
     class:clickable={collapsible}

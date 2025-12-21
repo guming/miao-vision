@@ -596,7 +596,14 @@
                 </div>
 
                 {#if data.config.filterable && activeFilterColumn === column.name}
-                  <div class="filter-dropdown" onclick={(e) => e.stopPropagation()}>
+                  <div
+                    class="filter-dropdown"
+                    onclick={(e) => e.stopPropagation()}
+                    onkeydown={(e) => e.stopPropagation()}
+                    role="dialog"
+                    aria-label="Filter options"
+                    tabindex="-1"
+                  >
                     {#if column.format === 'number' || column.format === 'currency' || column.format === 'percent'}
                       <div class="filter-content">
                         <div class="filter-header">Filter: {column.label || column.name}</div>
