@@ -21,13 +21,12 @@ import {
   buildLoopContext,
   hasLoopBlocks
 } from '@core/markdown/loop-processor'
-import { initializeInputDefaults } from '@plugins/inputs/initialize-defaults'
 import {
   findAffectedBlocks,
   reExecuteAffectedBlocks,
   getChangedInputs
 } from '@core/engine/reactive-executor'
-import { buildChartFromBlock } from '@plugins/viz/chart-builder'
+import { getInputInitializer, buildChartFromBlock } from '@core/services'
 import { coordinator, duckDBManager } from '@core/database'
 import type { DependencyAnalysis } from '@core/engine/dependency-graph'
 
@@ -90,7 +89,7 @@ export class ReportExecutionService {
       console.log(`Executing report with ${sqlBlocks.length} SQL blocks, ${parsed.codeBlocks.length} total blocks`)
 
       // Initialize input defaults BEFORE executing SQL
-      initializeInputDefaults(parsed.codeBlocks, inputStore)
+      getInputInitializer().initializeDefaults(parsed.codeBlocks, inputStore)
 
       const inputValues = get(inputStore)
       console.log('Input values after initialization:', inputValues)

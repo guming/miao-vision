@@ -13,9 +13,10 @@
  *                       ↘ core/
  */
 
-import { componentRegistry } from '@core/registry'
-import { registerVgplotCharts } from './init-charts'
-import { registerPlugins } from './init-plugins'
+import { componentRegistry } from "@core/registry";
+import { registerServices } from "./init-services";
+import { registerVgplotCharts } from "./init-charts";
+import { registerPlugins } from "./init-plugins";
 
 /**
  * Initialize the application
@@ -23,13 +24,16 @@ import { registerPlugins } from './init-plugins'
  * Call this once at application startup in main.ts
  */
 export function initializeApp(): void {
-  console.log('🚀 Bootstrapping application...')
+  console.log("🚀 Bootstrapping application...");
 
-  // 1. Register vgplot charts first (chart, line, area, scatter)
-  registerVgplotCharts()
+  // 1. Register core services first (DI for chart builder, input initializer)
+  registerServices();
 
-  // 2. Register all plugin components
-  registerPlugins()
+  // 2. Register vgplot charts (chart, line, area, scatter)
+  registerVgplotCharts();
+
+  // 3. Register all plugin components
+  registerPlugins();
 
   console.log(`\n✅ Bootstrap complete: ${componentRegistry.getAllLanguages().length} components registered`)
   console.log('   Languages:', componentRegistry.getAllLanguages().join(', '))
@@ -62,5 +66,6 @@ export function getComponentDocumentation() {
 }
 
 // Re-export for convenience
-export { registerVgplotCharts } from './init-charts'
-export { registerPlugins } from './init-plugins'
+export { registerServices } from "./init-services";
+export { registerVgplotCharts } from "./init-charts";
+export { registerPlugins } from "./init-plugins";

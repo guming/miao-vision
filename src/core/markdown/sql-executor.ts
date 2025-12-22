@@ -10,7 +10,7 @@
 
 import { databaseStore } from '@app/stores/database.svelte'
 import { loadDataIntoTable } from '@core/database'
-import { buildChartsFromBlocks } from '@plugins/viz/chart-builder'
+import { buildChartsFromBlocks } from '@core/services'
 import type { ReportBlock, Report, ReportExecutionResult } from '@/types/report'
 import type { ParsedCodeBlock } from '@/types/report'
 import { extractSQLBlocks } from './parser'
