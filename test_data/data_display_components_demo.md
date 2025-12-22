@@ -8,121 +8,147 @@ This demo showcases all 18 data display components available in Miaoshou Vision.
 
 ---
 
-## 1. BigValue & Value
+## 1. BigValue
 
-Display single key metrics prominently.
+Display a single large metric value prominently.
 
 ```sql revenue_metric
-SELECT 1250000 as value, 125000 as comparison
+SELECT 1250000 as revenue, 125000 as last_month
 ```
 
 ```bigvalue
-data: revenue_metric
-value: value
+query: revenue_metric
+value: revenue
 title: Total Revenue
 format: currency
-comparison: comparison
-comparisonLabel: vs Last Month
 ```
+
+---
+
+## 2. Value
+
+Display a single value inline.
 
 ```sql growth_rate
 SELECT 23.5 as rate
 ```
 
-```value
+The current growth rate is ```value
 data: growth_rate
-value: rate
-title: Growth Rate
+column: rate
 format: percent
-```
+``` this quarter.
 
 ---
 
-## 2. Delta
+## 3. Delta
 
 Show value changes with directional indicators.
 
-```sql monthly_change
-SELECT 15.8 as change, 'increase' as direction
+```sql monthly_comparison
+SELECT 150000 as current, 130000 as previous
 ```
 
-```delta
-data: monthly_change
-value: change
-direction: direction
-title: Monthly Change
+Revenue change: ```delta
+data: monthly_comparison
+column: current
+comparison: previous
 format: percent
 ```
 
 ---
 
-## 3. Sparkline
+## 4. Sparkline
 
-Compact trend visualization.
-
-```sql daily_sales
-SELECT * FROM (VALUES
-  (1, 120), (2, 145), (3, 132), (4, 167), (5, 155),
-  (6, 178), (7, 165), (8, 189), (9, 201), (10, 195),
-  (11, 210), (12, 225)
-) AS t(day, sales)
-```
+Compact trend visualization with static values.
 
 ```sparkline
-data: daily_sales
-valueColumn: sales
-title: Daily Sales Trend
-color: #3b82f6
-showArea: true
+values: 120, 145, 132, 167, 155, 178, 165, 189, 201, 195, 210, 225
+type: line
+showLast: true
+```
+
+### Area Sparkline
+
+```sparkline
+values: 50, 65, 72, 68, 85, 92, 88, 105, 98, 112
+type: area
+```
+
+### Win/Loss Sparkline
+
+```sparkline
+values: 1, -1, 1, 1, -1, 1, -1, 1, 1, 1
+type: winloss
 ```
 
 ---
 
-## 4. Progress
+## 5. Progress
 
 Display completion status.
 
-```sql project_progress
-SELECT 'Project Alpha' as project, 75 as progress
+```sql project_data
+SELECT 75 as progress, 100 as target
 ```
 
 ```progress
-data: project_progress
+query: project_data
 value: progress
-title: Project Alpha
-max: 100
-showLabel: true
-color: #22c55e
+maxValue: 100
+label: Project Alpha
+color: green
+```
+
+### Static Progress
+
+```progress
+value: 65
+maxValue: 100
+label: Task Completion
+color: blue
+size: lg
 ```
 
 ---
 
-## 5. KPIGrid
+## 6. KPIGrid
 
 Dashboard-style KPI cards.
 
-```sql kpi_data
-SELECT * FROM (VALUES
-  ('Revenue', 1250000, 'currency', 12.5, 'up'),
-  ('Users', 45678, 'number', 8.3, 'up'),
-  ('Conversion', 3.45, 'percent', -2.1, 'down'),
-  ('Orders', 12543, 'number', 15.7, 'up')
-) AS t(metric, value, format, change, trend)
+```sql kpi_metrics
+SELECT 1250000 as revenue, 45678 as users, 3.45 as conversion, 12543 as orders
 ```
 
 ```kpigrid
-data: kpi_data
-labelColumn: metric
-valueColumn: value
-formatColumn: format
-changeColumn: change
-trendColumn: trend
+query: kpi_metrics
 columns: 4
+cards:
+  - label: Revenue
+    value: revenue
+    format: currency
+    icon: 💰
+    color: green
+  - label: Users
+    value: users
+    format: number
+    icon: 👥
+    color: blue
+  - label: Conversion
+    value: conversion
+    format: percent
+    icon: 📈
+    color: purple
+  - label: Orders
+    value: orders
+    format: number
+    icon: 📦
+    color: orange
 ```
 
 ---
 
-## 6. DataTable
+## 7. DataTable
 
 Full-featured data table with sorting, filtering, and export.
 
@@ -145,7 +171,7 @@ exportable: true
 
 ---
 
-## 7. Funnel
+## 8. Funnel
 
 Visualize conversion stages.
 
@@ -161,15 +187,15 @@ SELECT * FROM (VALUES
 
 ```funnel
 data: conversion_funnel
-labelColumn: stage
+nameColumn: stage
 valueColumn: count
 title: Conversion Funnel
-showPercentage: true
+showPercent: true
 ```
 
 ---
 
-## 8. Calendar Heatmap
+## 9. Calendar Heatmap
 
 Activity over time visualization.
 
@@ -193,7 +219,7 @@ title: Activity Heatmap
 
 ---
 
-## 9. Sankey
+## 10. Sankey
 
 Flow and relationship visualization.
 
@@ -220,7 +246,7 @@ title: User Flow
 
 ---
 
-## 10. Treemap
+## 11. Treemap
 
 Hierarchical data as nested rectangles.
 
@@ -248,7 +274,7 @@ valueFormat: currency
 
 ---
 
-## 11. Histogram
+## 12. Histogram
 
 Distribution visualization.
 
@@ -270,7 +296,7 @@ color: #8b5cf6
 
 ---
 
-## 12. BoxPlot
+## 13. BoxPlot
 
 Statistical distribution with quartiles.
 
@@ -295,7 +321,7 @@ valueFormat: currency
 
 ---
 
-## 13. Gauge
+## 14. Gauge
 
 Single value on a radial scale.
 
@@ -305,32 +331,26 @@ SELECT 78 as score
 
 ```gauge
 data: performance_score
-value: score
+valueColumn: score
 title: Performance Score
 min: 0
 max: 100
-thresholds:
-  - value: 40
-    color: "#ef4444"
-  - value: 70
-    color: "#f59e0b"
-  - value: 100
-    color: "#22c55e"
+color: #10B981
 ```
 
 ---
 
-## 14. Bullet Chart
+## 15. Bullet Chart
 
 Compare actual vs target values.
 
 ```sql quarterly_targets
 SELECT * FROM (VALUES
-  ('Q1 Revenue', 850000, 1000000, 750000),
-  ('Q2 Revenue', 920000, 1000000, 800000),
-  ('Q3 Revenue', 1050000, 1000000, 900000),
-  ('Q4 Revenue', 780000, 1200000, 850000)
-) AS t(metric, actual, target, baseline)
+  ('Q1 Revenue', 850000, 1000000),
+  ('Q2 Revenue', 920000, 1000000),
+  ('Q3 Revenue', 1050000, 1000000),
+  ('Q4 Revenue', 780000, 1200000)
+) AS t(metric, actual, target)
 ```
 
 ```bullet
@@ -344,7 +364,7 @@ valueFormat: currency
 
 ---
 
-## 15. Waterfall
+## 16. Waterfall
 
 Incremental changes visualization.
 
@@ -374,7 +394,7 @@ totalColor: #3b82f6
 
 ---
 
-## 16. Radar Chart
+## 17. Radar Chart
 
 Multi-dimensional comparison.
 
@@ -426,7 +446,7 @@ colors: ["#3b82f6", "#ef4444"]
 
 ---
 
-## 17. Heatmap (Matrix)
+## 18. Heatmap (Matrix)
 
 2D data visualization with color intensity.
 
@@ -513,20 +533,3 @@ cellHeight: 50
 | Waterfall | Cumulative changes |
 | Radar | Multi-dimensional comparison |
 | Heatmap | 2D matrix visualization |
-
----
-
-## Configuration Tips
-
-### Value Formatting
-- `number`: Plain number with locale formatting
-- `currency`: With currency symbol ($, €, etc.)
-- `percent`: As percentage with % suffix
-
-### Colors
-- Use hex colors: `#3b82f6`
-- Common palette: blue `#3b82f6`, green `#22c55e`, red `#ef4444`, amber `#f59e0b`
-
-### Interactivity
-- Most charts support tooltips on hover
-- DataTable supports sorting, filtering, search, export
