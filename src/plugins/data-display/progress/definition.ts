@@ -102,48 +102,69 @@ export const progressRegistration = defineComponent<ProgressConfig, ProgressProp
 
   // No dataBinding - handle both static and SQL modes in buildProps
   buildProps: (config, _extractedData, context) => {
-    const block = (context as any).block
+    try {
+      const block = (context as any).block
 
-    // Parse content to get config values
-    let parsedConfig: Partial<ProgressConfig> & { _staticValue?: boolean; _staticMax?: boolean } = {}
-    if (block?.content) {
-      parsedConfig = parseProgressContent(block.content)
-    }
-
-    // Merge configs
-    const finalConfig = { ...config, ...parsedConfig }
-
-    // Static mode: value is a number directly
-    const isStaticMode = parsedConfig._staticValue || !finalConfig.query
-
-    let value: number
-    let max: number
-
-    if (isStaticMode) {
-      // Static mode - value and max are numbers
-      value = typeof parsedConfig.value === 'number' ? parsedConfig.value : parseFloat(String(finalConfig.value)) || 0
-      max = typeof parsedConfig.max === 'number' ? parsedConfig.max : (finalConfig.maxValue || 100)
-    } else {
-      // Data-bound mode would need SQL result - for now return placeholder
-      // TODO: Add SQL data binding support
-      return null
-    }
-
-    // Calculate percentage
-    const percent = max > 0 ? (value / max) * 100 : 0
-
-    // Format the value
-    const formatted = fmt(value, finalConfig.format || 'number')
-
-    return {
-      data: {
-        config: finalConfig as ProgressConfig,
-        value,
-        max,
-        percent,
-        formatted,
-        label: finalConfig.label
+      // Parse content to get config values
+      let parsedConfig: Partial<ProgressConfig> & { _staticValue?: boolean; _staticMax?: boolean } = {}
+      if (block?.content) {
+        parsedConfig = parseProgressContent(block.content)
       }
+
+      // Merge configs - parsedConfig values override schema-parsed config
+      const finalConfig = { ...config, ...parsedConfig }
+
+      // Determine if we have a static value
+      // Static mode if: _staticValue flag is set, OR no query is specified
+      const hasStaticValue = parsedConfig._staticValue === true
+      const hasQuery = Boolean(finalConfig.query)
+      const isStaticMode = hasStaticValue || !hasQuery
+
+      let value: number
+      let max: number
+
+      if (isStaticMode) {
+        // Static mode - extract value from parsed config or schema config
+        if (typeof parsedConfig.value === 'number') {
+          value = parsedConfig.value
+        } else if (finalConfig.value !== undefined) {
+          value = parseFloat(String(finalConfig.value)) || 0
+        } else {
+          value = 0
+        }
+
+        // Extract max from parsed config or use maxValue/default
+        if (typeof parsedConfig.max === 'number') {
+          max = parsedConfig.max
+        } else {
+          max = finalConfig.maxValue || 100
+        }
+      } else {
+        // Data-bound mode would need SQL result - for now return placeholder
+        // TODO: Add SQL data binding support
+        console.log('[progress] Data-bound mode not yet supported, returning null')
+        return null
+      }
+
+      // Calculate percentage
+      const percent = max > 0 ? (value / max) * 100 : 0
+
+      // Format the value
+      const formatted = fmt(value, finalConfig.format || 'number')
+
+      return {
+        data: {
+          config: finalConfig as ProgressConfig,
+          value,
+          max,
+          percent,
+          formatted,
+          label: finalConfig.label
+        }
+      }
+    } catch (error) {
+      console.error('[progress] buildProps error:', error)
+      return null
     }
   }
 })
