@@ -1,7 +1,7 @@
 /**
  * Data Display Plugin
  *
- * Components for displaying data: BigValue, DataTable, Value, Delta, Sparkline, KPIGrid, Funnel, CalendarHeatmap, Sankey, Treemap, Histogram, BoxPlot, Gauge
+ * Components for displaying data: BigValue, DataTable, Value, Delta, Sparkline, KPIGrid, Funnel, CalendarHeatmap, Sankey, Treemap, Histogram, BoxPlot, Gauge, BulletChart
  */
 
 import type { ComponentRegistry } from '@core/registry'
@@ -21,9 +21,10 @@ import { treemapRegistration } from './treemap'
 import { histogramRegistration } from './histogram'
 import { boxPlotRegistration } from './boxplot'
 import { gaugeRegistration } from './gauge'
+import { bulletChartRegistration } from './bullet-chart'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
@@ -40,6 +41,7 @@ export { default as Treemap } from './treemap/Treemap.svelte'
 export { default as Histogram } from './histogram/Histogram.svelte'
 export { default as BoxPlot } from './boxplot/BoxPlot.svelte'
 export { default as Gauge } from './gauge/Gauge.svelte'
+export { default as BulletChart } from './bullet-chart/BulletChart.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
@@ -56,6 +58,7 @@ export type { TreemapConfig, TreemapData, TreemapTile } from './treemap/types'
 export type { HistogramConfig, HistogramData, HistogramBin } from './histogram/types'
 export type { BoxPlotConfig, BoxPlotData, BoxPlotStats } from './boxplot/types'
 export type { GaugeConfig, GaugeData, GaugeThreshold } from './gauge/types'
+export type { BulletChartConfig, BulletChartData, BulletItem } from './bullet-chart/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -80,8 +83,9 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(histogramRegistration)
   registry.register(boxPlotRegistration)
   registry.register(gaugeRegistration)
+  registry.register(bulletChartRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet')
 }
 
 /**
@@ -101,5 +105,6 @@ export const dataDisplayPlugins = [
   treemapRegistration,
   histogramRegistration,
   boxPlotRegistration,
-  gaugeRegistration
+  gaugeRegistration,
+  bulletChartRegistration
 ]
