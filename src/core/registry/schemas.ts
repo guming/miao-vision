@@ -364,6 +364,37 @@ export const DimensionGridSchema: ConfigSchema = {
 }
 
 /**
+ * Delta component schema
+ *
+ * Example:
+ * ```delta
+ * data: revenue_comparison
+ * column: current
+ * comparison: previous
+ * format: percent
+ * positiveIsGood: true
+ * ```
+ */
+export const DeltaSchema: ConfigSchema = {
+  fields: [
+    { name: 'data', type: 'string', required: true },
+    { name: 'column', type: 'string', required: true },
+    { name: 'comparison', type: 'string' },
+    { name: 'row', type: 'number', default: 0 },
+    { name: 'comparisonRow', type: 'number' },
+    { name: 'format', type: 'enum', enum: ['absolute', 'percent'], default: 'percent' },
+    { name: 'decimals', type: 'number', default: 1 },
+    { name: 'showSymbol', type: 'boolean', default: true },
+    { name: 'showArrow', type: 'boolean', default: true },
+    { name: 'positiveIsGood', type: 'boolean', default: true },
+    { name: 'chip', type: 'boolean', default: false },
+    { name: 'prefix', type: 'string' },
+    { name: 'suffix', type: 'string' },
+    { name: 'neutralText', type: 'string', default: '—' }
+  ]
+}
+
+/**
  * Schema registry - maps component types to their schemas
  */
 export const SchemaRegistry: Record<string, ConfigSchema> = {
@@ -371,6 +402,7 @@ export const SchemaRegistry: Record<string, ConfigSchema> = {
   buttongroup: ButtonGroupSchema,
   bigvalue: BigValueSchema,
   value: ValueSchema,
+  delta: DeltaSchema,
   datatable: DataTableSchema,
   alert: AlertSchema,
   slider: SliderSchema,
