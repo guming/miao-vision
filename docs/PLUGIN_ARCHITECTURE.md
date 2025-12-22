@@ -119,6 +119,103 @@ Markdown 解析和 SQL 执行。
 export { parseMarkdown, extractSQLBlocks } from './parser'
 export { executeReport, executeSQLBlock } from './sql-executor'
 export { processConditionals } from './conditional-processor'
+export { processLoops } from './loop-processor'
+```
+
+## 模板语法 (Templating)
+
+Miaoshou Vision 支持类似 Svelte 的模板语法，用于在报告中实现动态内容。
+
+### 变量插值
+
+使用 `${expression}` 语法插入动态值：
+
+```markdown
+# Report for ${metadata.company}
+
+Total sales: $${sales_data.total}
+```
+
+### 条件渲染 {#if}
+
+根据条件显示不同内容：
+
+```markdown
+{#if ${revenue.value} > 1000000}
+## Great Performance! 🎉
+Revenue exceeded $1M this quarter.
+{:else}
+## Room for Improvement
+Consider strategies to boost revenue.
+{/if}
+```
+
+**支持的操作符**: `>`, `<`, `>=`, `<=`, `===`, `!==`, `&&`, `||`
+
+### 循环渲染 {#each}
+
+遍历查询结果生成重复内容：
+
+```markdown
+## Top Products
+
+{#each top_products as product}
+- **${product.name}**: $${product.revenue} (${product.units} units)
+{/each}
+```
+
+**带索引的循环**:
+
+```markdown
+{#each customers as customer, index}
+${index + 1}. ${customer.name} - ${customer.email}
+{/each}
+```
+
+**空数据处理**:
+
+```markdown
+{#each orders as order}
+- Order #${order.id}: $${order.total}
+{:else}
+No orders found for this period.
+{/each}
+```
+
+### 完整示例
+
+```markdown
+# Sales Report for ${inputs.region}
+
+```sql name=summary
+SELECT
+  SUM(revenue) as total_revenue,
+  COUNT(*) as order_count
+FROM sales
+WHERE region = '${inputs.region}'
+```
+
+{#if ${summary.total_revenue} > 100000}
+## 🎉 Target Achieved!
+{:else}
+## 📊 Progress Report
+{/if}
+
+Total Revenue: $${summary.total_revenue}
+
+## Top Sellers
+
+```sql name=top_sellers
+SELECT product_name, revenue
+FROM sales
+WHERE region = '${inputs.region}'
+ORDER BY revenue DESC
+LIMIT 5
+```
+
+{#each top_sellers as item, i}
+${i + 1}. **${item.product_name}**: $${item.revenue}
+{/each}
 ```
 
 ## 插件系统 (plugins/)

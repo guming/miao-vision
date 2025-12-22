@@ -16,6 +16,11 @@ import {
   buildConditionalContext,
   hasConditionalBlocks
 } from '@core/markdown/conditional-processor'
+import {
+  processLoops,
+  buildLoopContext,
+  hasLoopBlocks
+} from '@core/markdown/loop-processor'
 import { initializeInputDefaults } from '@plugins/inputs/initialize-defaults'
 import {
   findAffectedBlocks,
@@ -110,26 +115,53 @@ export class ReportExecutionService {
       if (result.success) {
         console.log('✅ Report executed successfully')
 
-        // Process conditional blocks if present
+        // Process loop and conditional blocks if present
         let finalParsedBlocks = parsed.codeBlocks
-        if (hasConditionalBlocks(report.content)) {
+        let contentToProcess = report.content
+        let contentChanged = false
+
+        // Step 1: Process {#each} loops first (they may generate conditional content)
+        if (hasLoopBlocks(contentToProcess)) {
+          console.log('🔄 Processing {#each} loop blocks...')
+          const loopContext = buildLoopContext(
+            report.blocks,
+            inputValues,
+            report.metadata
+          )
+          const loopProcessedContent = processLoops(contentToProcess, loopContext)
+
+          if (loopProcessedContent !== contentToProcess) {
+            console.log('  Content changed after loop processing')
+            contentToProcess = loopProcessedContent
+            contentChanged = true
+          }
+        }
+
+        // Step 2: Process {#if} conditionals
+        if (hasConditionalBlocks(contentToProcess)) {
           console.log('🔀 Processing conditional blocks...')
           const conditionalContext = buildConditionalContext(
             report.blocks,
             inputValues,
             report.metadata
           )
-          const processedContent = processConditionals(report.content, conditionalContext)
+          const conditionalProcessedContent = processConditionals(contentToProcess, conditionalContext)
 
-          // If content changed, re-parse to get updated HTML and blocks
-          if (processedContent !== report.content) {
-            console.log('  Content changed after conditional processing, re-parsing...')
-            const reParsed = await parseMarkdown(processedContent)
-            finalParsedBlocks = reParsed.codeBlocks
-            // Update report's processed content for rendering
-            // Note: We don't modify report.content directly to preserve original
-            report.metadata = { ...report.metadata, _processedContent: processedContent }
+          if (conditionalProcessedContent !== contentToProcess) {
+            console.log('  Content changed after conditional processing')
+            contentToProcess = conditionalProcessedContent
+            contentChanged = true
           }
+        }
+
+        // If content changed, re-parse to get updated HTML and blocks
+        if (contentChanged) {
+          console.log('  Re-parsing processed content...')
+          const reParsed = await parseMarkdown(contentToProcess)
+          finalParsedBlocks = reParsed.codeBlocks
+          // Update report's processed content for rendering
+          // Note: We don't modify report.content directly to preserve original
+          report.metadata = { ...report.metadata, _processedContent: contentToProcess }
         }
 
         // Save execution state for reactive updates
