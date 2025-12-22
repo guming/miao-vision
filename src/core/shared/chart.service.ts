@@ -143,7 +143,7 @@ export class ChartService {
     // Required fields
     if (!config.type) {
       errors.push('Chart type is required')
-    } else if (!['bar', 'line', 'scatter', 'histogram', 'area', 'pie', 'boxplot', 'heatmap', 'funnel'].includes(config.type)) {
+    } else if (!['bar', 'line', 'scatter', 'area', 'pie'].includes(config.type)) {
       errors.push(`Invalid chart type: ${config.type}`)
     }
 
@@ -205,7 +205,8 @@ export class ChartService {
       console.log('  Block language:', chartBlock.language)
 
       // Determine chart type from language (for specific chart types like ```pie, ```bar, etc.)
-      const specificChartTypes = ['line', 'area', 'bar', 'scatter', 'histogram', 'pie', 'boxplot', 'heatmap', 'funnel'] as const
+      // Note: histogram, boxplot, heatmap, funnel are now handled by the plugin system
+      const specificChartTypes = ['line', 'area', 'bar', 'scatter', 'pie'] as const
       type ChartTypeFromLanguage = typeof specificChartTypes[number]
       const inferredType: ChartTypeFromLanguage | null = specificChartTypes.includes(chartBlock.language as ChartTypeFromLanguage)
         ? chartBlock.language as ChartTypeFromLanguage
@@ -330,12 +331,12 @@ export class ChartService {
     console.log(`  Total blocks: ${blocks.length}`)
     console.log(`  Table mapping size: ${tableMapping.size}`)
 
-    // Filter chart blocks
+    // Filter chart blocks (Mosaic/vgplot charts only)
+    // Note: histogram, boxplot, heatmap, funnel are now handled by the plugin system
     const chartBlocks = blocks.filter(
-      b => b.language === 'chart' || b.language === 'histogram' || b.language === 'area' ||
+      b => b.language === 'chart' || b.language === 'area' ||
            b.language === 'line' || b.language === 'bar' || b.language === 'scatter' ||
-           b.language === 'pie' || b.language === 'boxplot' || b.language === 'heatmap' ||
-           b.language === 'funnel'
+           b.language === 'pie'
     )
 
     console.log(`  Found ${chartBlocks.length} chart blocks`)
