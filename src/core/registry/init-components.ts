@@ -10,12 +10,11 @@ import type { ParsedCodeBlock } from '@/types/report'
 import { mount, type SvelteComponent } from 'svelte'
 
 // Import chart metadata (charts use vgplot, not Svelte components)
-// Note: histogram is now a plugin component, not a vgplot chart
+// Note: histogram and bar are now plugin components, not vgplot charts
 import {
   ChartMetadata,
   LineChartMetadata,
   AreaChartMetadata,
-  BarChartMetadata,
   ScatterChartMetadata,
   PieChartMetadata
 } from '@core/engine/chart-metadata'
@@ -28,7 +27,7 @@ import {
   sliderRegistration,
   dateRangeRegistration
 } from '@plugins/inputs'
-import { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration } from '@plugins/data-display'
+import { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, barChartRegistration } from '@plugins/data-display'
 import { alertRegistration, tabsRegistration, accordionRegistration, tooltipRegistration } from '@plugins/ui'
 import { gridRegistration } from '@plugins/layout'
 
@@ -124,11 +123,10 @@ export function initializeComponents(): void {
   })
 
   // Register specific chart types
-  // Note: histogram is now a plugin component (in data-display), not a vgplot chart
+  // Note: histogram and bar are now plugin components (in data-display), not vgplot charts
   const charts = [
     { metadata: LineChartMetadata, type: 'line' },
     { metadata: AreaChartMetadata, type: 'area' },
-    { metadata: BarChartMetadata, type: 'bar' },
     { metadata: ScatterChartMetadata, type: 'scatter' },
     { metadata: PieChartMetadata, type: 'pie' }
   ]
@@ -155,6 +153,7 @@ export function initializeComponents(): void {
     sparklineRegistration,
     kpiGridRegistration,
     progressRegistration,
+    barChartRegistration,
     alertRegistration,
     tabsRegistration,
     accordionRegistration,

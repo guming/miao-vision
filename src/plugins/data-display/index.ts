@@ -2,7 +2,8 @@
  * Data Display Plugin
  *
  * Components for displaying data: BigValue, DataTable, Value, Delta, Sparkline, KPIGrid,
- * Progress, Funnel, CalendarHeatmap, Sankey, Treemap, Histogram, BoxPlot, Gauge, BulletChart, Waterfall, Radar, Heatmap
+ * Progress, Funnel, CalendarHeatmap, Sankey, Treemap, Histogram, BoxPlot, Gauge, BulletChart,
+ * Waterfall, Radar, Heatmap, BarChart
  */
 
 import type { ComponentRegistry } from '@core/registry'
@@ -26,9 +27,10 @@ import { bulletChartRegistration } from './bullet-chart'
 import { waterfallRegistration } from './waterfall'
 import { radarRegistration } from './radar'
 import { heatmapRegistration } from './heatmap'
+import { barChartRegistration } from './bar-chart'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
@@ -49,6 +51,7 @@ export { default as BulletChart } from './bullet-chart/BulletChart.svelte'
 export { default as Waterfall } from './waterfall/Waterfall.svelte'
 export { default as Radar } from './radar/Radar.svelte'
 export { default as Heatmap } from './heatmap/Heatmap.svelte'
+export { default as BarChart } from './bar-chart/BarChart.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
@@ -69,6 +72,7 @@ export type { BulletChartConfig, BulletChartData, BulletItem } from './bullet-ch
 export type { WaterfallConfig, WaterfallData, WaterfallBar, WaterfallBarType } from './waterfall/types'
 export type { RadarConfig, RadarData, RadarAxis, RadarSeries, RadarPoint, RadarGridLevel } from './radar/types'
 export type { HeatmapConfig, HeatmapData, HeatmapCell } from './heatmap/types'
+export type { BarChartConfig, BarChartData, BarItem } from './bar-chart/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -97,8 +101,9 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(waterfallRegistration)
   registry.register(radarRegistration)
   registry.register(heatmapRegistration)
+  registry.register(barChartRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar')
 }
 
 /**
@@ -122,5 +127,6 @@ export const dataDisplayPlugins = [
   bulletChartRegistration,
   waterfallRegistration,
   radarRegistration,
-  heatmapRegistration
+  heatmapRegistration,
+  barChartRegistration
 ]
