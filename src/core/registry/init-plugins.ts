@@ -12,14 +12,12 @@ import { mount, type SvelteComponent } from 'svelte'
 import { registerAllPlugins } from '@plugins/index'
 
 // Import chart metadata (charts use vgplot, not Svelte components)
-// Note: histogram is now a plugin component, not a vgplot chart
+// Note: histogram, bar, pie are now plugin components, not vgplot charts
 import {
   ChartMetadata,
   LineChartMetadata,
   AreaChartMetadata,
-  BarChartMetadata,
-  ScatterChartMetadata,
-  PieChartMetadata
+  ScatterChartMetadata
 } from '@core/engine/chart-metadata'
 
 // Import chart builder
@@ -93,13 +91,11 @@ export function initializePlugins(): void {
     renderer: createChartRenderer('chart')
   })
 
-  // Note: histogram is now a plugin component (in data-display), not a vgplot chart
+  // Note: histogram, bar, pie are now plugin components (in data-display), not vgplot charts
   const charts = [
     { metadata: LineChartMetadata, type: 'line' },
     { metadata: AreaChartMetadata, type: 'area' },
-    { metadata: BarChartMetadata, type: 'bar' },
-    { metadata: ScatterChartMetadata, type: 'scatter' },
-    { metadata: PieChartMetadata, type: 'pie' }
+    { metadata: ScatterChartMetadata, type: 'scatter' }
   ]
 
   for (const { metadata, type } of charts) {
