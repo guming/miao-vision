@@ -1,7 +1,7 @@
 /**
  * Data Display Plugin
  *
- * Components for displaying data: BigValue, DataTable, Value, Delta, Sparkline, KPIGrid, Funnel, CalendarHeatmap, Sankey, Treemap
+ * Components for displaying data: BigValue, DataTable, Value, Delta, Sparkline, KPIGrid, Funnel, CalendarHeatmap, Sankey, Treemap, Histogram
  */
 
 import type { ComponentRegistry } from '@core/registry'
@@ -18,9 +18,10 @@ import { funnelRegistration } from './funnel'
 import { calendarHeatmapRegistration } from './calendar-heatmap'
 import { sankeyRegistration } from './sankey'
 import { treemapRegistration } from './treemap'
+import { histogramRegistration } from './histogram'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
@@ -34,6 +35,7 @@ export { default as Funnel } from './funnel/Funnel.svelte'
 export { default as CalendarHeatmap } from './calendar-heatmap/CalendarHeatmap.svelte'
 export { default as Sankey } from './sankey/Sankey.svelte'
 export { default as Treemap } from './treemap/Treemap.svelte'
+export { default as Histogram } from './histogram/Histogram.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
@@ -47,6 +49,7 @@ export type { FunnelConfig, FunnelData, FunnelStage } from './funnel/types'
 export type { CalendarHeatmapConfig, CalendarHeatmapData, CalendarDay, CalendarWeek } from './calendar-heatmap/types'
 export type { SankeyConfig, SankeyData, SankeyNode, SankeyLink } from './sankey/types'
 export type { TreemapConfig, TreemapData, TreemapTile } from './treemap/types'
+export type { HistogramConfig, HistogramData, HistogramBin } from './histogram/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -68,8 +71,9 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(calendarHeatmapRegistration)
   registry.register(sankeyRegistration)
   registry.register(treemapRegistration)
+  registry.register(histogramRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram')
 }
 
 /**
@@ -86,5 +90,6 @@ export const dataDisplayPlugins = [
   funnelRegistration,
   calendarHeatmapRegistration,
   sankeyRegistration,
-  treemapRegistration
+  treemapRegistration,
+  histogramRegistration
 ]

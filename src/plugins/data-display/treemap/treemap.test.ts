@@ -241,7 +241,7 @@ describe('Treemap Component', () => {
     })
 
     it('should have examples', () => {
-      expect(TreemapMetadata.examples.length).toBeGreaterThan(0)
+      expect(TreemapMetadata.examples?.length).toBeGreaterThan(0)
     })
 
     it('should have category as chart', () => {
