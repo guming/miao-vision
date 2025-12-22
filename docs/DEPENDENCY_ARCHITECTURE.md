@@ -174,6 +174,17 @@ export const eventBus = createEventBus<{
 | Priority | Task | Status |
 |----------|------|--------|
 | P0 | Bootstrap layer | ✅ Completed |
-| P1 | IChartBuilder interface | 🔄 In Progress |
-| P2 | Store interfaces | 📋 Planned |
+| P1 | IChartBuilder interface | ✅ Completed |
+| P2 | Store interfaces | ✅ Completed |
 | P3 | Event bus | 📋 Future |
+
+## Verification
+
+```bash
+# Verify core/ has no external dependencies
+$ grep -r "from '@app" src/core/
+# No matches found
+
+$ grep -r "from '@plugins" src/core/
+# No matches found
+```
