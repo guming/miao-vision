@@ -86,21 +86,16 @@ type: winloss
 
 ## 5. Progress
 
-Display completion status.
-
-```sql project_data
-SELECT 75 as progress, 100 as target
-```
+Display completion status with static values.
 
 ```progress
-query: project_data
-value: progress
+value: 75
 maxValue: 100
 label: Project Alpha
 color: green
 ```
 
-### Static Progress
+### Task Completion Progress
 
 ```progress
 value: 65
