@@ -36,7 +36,7 @@ SELECT 23.5 as rate
 The current growth rate is
 
 ```value
-data: growth_rate
+query: growth_rate
 column: rate
 format: percent
 ```

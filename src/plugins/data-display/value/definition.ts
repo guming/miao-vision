@@ -27,7 +27,7 @@ export const valueRegistration = defineComponent<ValueConfig, ValueProps>({
 
   // Data binding: extract single value from SQL query result
   dataBinding: {
-    sourceField: 'data',
+    sourceField: 'query',
     transform: (queryResult, config) => {
       const rowIndex = config.row || 0
 
