@@ -28,9 +28,10 @@ import { waterfallRegistration } from './waterfall'
 import { radarRegistration } from './radar'
 import { heatmapRegistration } from './heatmap'
 import { barChartRegistration } from './bar-chart'
+import { pieChartRegistration } from './pie-chart'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration, pieChartRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
@@ -52,6 +53,7 @@ export { default as Waterfall } from './waterfall/Waterfall.svelte'
 export { default as Radar } from './radar/Radar.svelte'
 export { default as Heatmap } from './heatmap/Heatmap.svelte'
 export { default as BarChart } from './bar-chart/BarChart.svelte'
+export { default as PieChart } from './pie-chart/PieChart.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
@@ -73,6 +75,7 @@ export type { WaterfallConfig, WaterfallData, WaterfallBar, WaterfallBarType } f
 export type { RadarConfig, RadarData, RadarAxis, RadarSeries, RadarPoint, RadarGridLevel } from './radar/types'
 export type { HeatmapConfig, HeatmapData, HeatmapCell } from './heatmap/types'
 export type { BarChartConfig, BarChartData, BarItem } from './bar-chart/types'
+export type { PieChartConfig, PieChartData, PieSlice } from './pie-chart/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -102,8 +105,9 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(radarRegistration)
   registry.register(heatmapRegistration)
   registry.register(barChartRegistration)
+  registry.register(pieChartRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar, pie')
 }
 
 /**
@@ -128,5 +132,6 @@ export const dataDisplayPlugins = [
   waterfallRegistration,
   radarRegistration,
   heatmapRegistration,
-  barChartRegistration
+  barChartRegistration,
+  pieChartRegistration
 ]

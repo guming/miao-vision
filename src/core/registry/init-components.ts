@@ -10,13 +10,12 @@ import type { ParsedCodeBlock } from '@/types/report'
 import { mount, type SvelteComponent } from 'svelte'
 
 // Import chart metadata (charts use vgplot, not Svelte components)
-// Note: histogram and bar are now plugin components, not vgplot charts
+// Note: histogram, bar, and pie are now plugin components, not vgplot charts
 import {
   ChartMetadata,
   LineChartMetadata,
   AreaChartMetadata,
-  ScatterChartMetadata,
-  PieChartMetadata
+  ScatterChartMetadata
 } from '@core/engine/chart-metadata'
 
 // Import component registrations from plugins
@@ -27,7 +26,7 @@ import {
   sliderRegistration,
   dateRangeRegistration
 } from '@plugins/inputs'
-import { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, barChartRegistration } from '@plugins/data-display'
+import { bigValueRegistration, dataTableRegistration, valueRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, barChartRegistration, pieChartRegistration } from '@plugins/data-display'
 import { alertRegistration, tabsRegistration, accordionRegistration, tooltipRegistration } from '@plugins/ui'
 import { gridRegistration } from '@plugins/layout'
 
@@ -123,12 +122,11 @@ export function initializeComponents(): void {
   })
 
   // Register specific chart types
-  // Note: histogram and bar are now plugin components (in data-display), not vgplot charts
+  // Note: histogram, bar, and pie are now plugin components (in data-display), not vgplot charts
   const charts = [
     { metadata: LineChartMetadata, type: 'line' },
     { metadata: AreaChartMetadata, type: 'area' },
-    { metadata: ScatterChartMetadata, type: 'scatter' },
-    { metadata: PieChartMetadata, type: 'pie' }
+    { metadata: ScatterChartMetadata, type: 'scatter' }
   ]
 
   for (const { metadata, type } of charts) {
@@ -154,6 +152,7 @@ export function initializeComponents(): void {
     kpiGridRegistration,
     progressRegistration,
     barChartRegistration,
+    pieChartRegistration,
     alertRegistration,
     tabsRegistration,
     accordionRegistration,
