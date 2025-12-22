@@ -106,12 +106,55 @@ export class BlockRenderer {
       placeholder.outerHTML = tableHTML
       console.log(`  ✅ SQL table mounted with ${block.sqlResult.rowCount} rows`)
     } else if (block.status === 'executing') {
-      if (placeholder instanceof HTMLElement) {
-        placeholder.innerHTML = '<span>⏳ Executing query...</span>'
-      }
+      // Show skeleton loading state
+      const skeletonHTML = this.generateSkeletonHTML(block.metadata?.name || 'Query')
+      placeholder.outerHTML = skeletonHTML
     } else {
       console.log(`  SQL block has no result yet`)
     }
+  }
+
+  /**
+   * Generate skeleton loading HTML
+   */
+  private generateSkeletonHTML(name: string): string {
+    const skeletonRows = Array(5).fill(null).map(() => `
+      <tr>
+        <td><div class="skeleton-cell"></div></td>
+        <td><div class="skeleton-cell"></div></td>
+        <td><div class="skeleton-cell"></div></td>
+        <td><div class="skeleton-cell"></div></td>
+      </tr>
+    `).join('')
+
+    return `
+      <div class="sql-result-block loading" id="skeleton-${Date.now()}">
+        <div class="sql-result-header">
+          <span class="header-left">
+            <span class="loading-spinner"></span>
+            <span class="block-label">${name}</span>
+            <span class="row-count">Loading...</span>
+          </span>
+        </div>
+        <div class="result-table-wrapper">
+          <div class="table-scroll">
+            <table class="result-table skeleton-table">
+              <thead>
+                <tr>
+                  <th><div class="skeleton-header"></div></th>
+                  <th><div class="skeleton-header"></div></th>
+                  <th><div class="skeleton-header"></div></th>
+                  <th><div class="skeleton-header"></div></th>
+                </tr>
+              </thead>
+              <tbody>
+                ${skeletonRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `
   }
 
   /**
@@ -241,43 +284,136 @@ export class BlockRenderer {
   }
 
   /**
-   * Generate HTML for SQL result table
+   * Generate HTML for SQL result table with collapsible wrapper
    */
   private generateSQLResultHTML(block: ReportBlock): string {
     if (!block.sqlResult) return ''
 
     const { columns, data, rowCount } = block.sqlResult
-    const displayRows = data.slice(0, 100)
+    const blockId = `result-${block.id}`
+    const blockName = block.metadata?.name || 'Query Result'
 
-    const headerRow = columns.map(col => `<th>${col}</th>`).join('')
-    const bodyRows = displayRows.map(row => {
-      const cells = columns.map(col => `<td>${row[col] ?? ''}</td>`).join('')
-      return `<tr>${cells}</tr>`
+    // Empty state
+    if (rowCount === 0) {
+      return `
+        <div class="sql-result-block" id="${blockId}">
+          <button class="sql-result-header" onclick="this.parentElement.classList.toggle('collapsed')" type="button">
+            <span class="header-left">
+              <span class="collapse-icon">▶</span>
+              <span class="block-label">${blockName}</span>
+              <span class="row-count">0 rows</span>
+            </span>
+            <span class="header-right">
+              ${block.executionTime ? `<span class="execution-time">${block.executionTime.toFixed(1)}ms</span>` : ''}
+            </span>
+          </button>
+          <div class="result-table-wrapper">
+            <div class="empty-state">
+              <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+              </svg>
+              <p class="empty-title">No results</p>
+              <p class="empty-description">The query returned no data</p>
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    const displayRows = data.slice(0, 100)
+    const showingAll = rowCount <= 100
+
+    const headerRow = columns.map(col => `<th><span class="th-content">${col}</span></th>`).join('')
+    const bodyRows = displayRows.map((row, idx) => {
+      const cells = columns.map(col => {
+        const value = row[col]
+        if (value === null || value === undefined) {
+          return `<td class="null-cell">—</td>`
+        }
+        // Right-align numbers
+        const isNumber = typeof value === 'number'
+        const formattedValue = isNumber ? value.toLocaleString() : String(value)
+        return `<td${isNumber ? ' class="number-cell"' : ''}>${this.escapeHtml(formattedValue)}</td>`
+      }).join('')
+      return `<tr data-row="${idx}">${cells}</tr>`
     }).join('')
 
-    const footerText = rowCount > 100
-      ? `Showing 100 of ${rowCount} rows`
-      : `${rowCount} rows`
-
-    return `
-      <div class="sql-result-block" id="result-${block.id}">
-        <div class="block-header">
-          <span class="block-label">📊 Query Result</span>
-          ${block.executionTime ? `<span class="execution-time">${block.executionTime}ms</span>` : ''}
+    // Toolbar with copy and density buttons
+    const toolbar = `
+      <div class="result-toolbar">
+        <div class="toolbar-group">
+          <button class="toolbar-btn density-btn" onclick="const block=this.closest('.sql-result-block');const modes=['compact','normal','relaxed'];const current=modes.find(m=>block.classList.contains(m))||'normal';const next=modes[(modes.indexOf(current)+1)%3];modes.forEach(m=>block.classList.remove(m));block.classList.add(next);this.querySelector('.density-label').textContent=next.charAt(0).toUpperCase()+next.slice(1)" title="Toggle row density">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+            <span class="density-label">Normal</span>
+          </button>
         </div>
-        <div class="result-table-wrapper">
-          <table class="result-table">
-            <thead>
-              <tr>${headerRow}</tr>
-            </thead>
-            <tbody>
-              ${bodyRows}
-            </tbody>
-          </table>
-          <p class="table-footer">${footerText}</p>
+        <div class="toolbar-group">
+          <button class="toolbar-btn" onclick="navigator.clipboard.writeText(this.closest('.sql-result-block').querySelector('table').innerText).then(() => { this.classList.add('copied'); setTimeout(() => this.classList.remove('copied'), 1500) })" title="Copy to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            </svg>
+            <span class="btn-label">Copy</span>
+            <span class="btn-copied">Copied!</span>
+          </button>
         </div>
       </div>
     `
+
+    // Footer with pagination info
+    const footerContent = showingAll
+      ? `<span class="page-info">${rowCount.toLocaleString()} row${rowCount !== 1 ? 's' : ''}</span>`
+      : `<span class="page-info">Showing 1-100 of ${rowCount.toLocaleString()} rows</span>`
+
+    return `
+      <div class="sql-result-block collapsed" id="${blockId}">
+        <button class="sql-result-header" onclick="this.parentElement.classList.toggle('collapsed')" type="button">
+          <span class="header-left">
+            <span class="collapse-icon">▶</span>
+            <span class="block-label">${blockName}</span>
+            <span class="row-count">${rowCount.toLocaleString()} rows</span>
+          </span>
+          <span class="header-right">
+            ${block.executionTime ? `<span class="execution-time">${block.executionTime.toFixed(1)}ms</span>` : ''}
+            <span class="columns-count">${columns.length} cols</span>
+          </span>
+        </button>
+        <div class="result-table-wrapper">
+          ${toolbar}
+          <div class="table-scroll">
+            <table class="result-table">
+              <thead>
+                <tr>${headerRow}</tr>
+              </thead>
+              <tbody>
+                ${bodyRows}
+              </tbody>
+            </table>
+          </div>
+          <div class="table-footer">
+            ${footerContent}
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  /**
+   * Escape HTML special characters
+   */
+  private escapeHtml(str: string): string {
+    const htmlEscapes: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }
+    return str.replace(/[&<>"']/g, char => htmlEscapes[char])
   }
 }
 

@@ -6,7 +6,7 @@ import { defineComponent } from '@core/registry'
 import { KPIGridMetadata } from './metadata'
 import KPIGrid from './KPIGrid.svelte'
 import { fmt } from '@core/shared/format'
-import type { KPIGridConfig, KPIGridData, KPICardData, KPICardConfig } from './types'
+import type { KPIGridConfig, KPIGridData, KPICardData, KPICardConfig, TrendType } from './types'
 
 // Schema for KPI Grid config
 const KPIGridSchema = {
@@ -115,14 +115,14 @@ function buildDataBoundCards(
     const formatted = fmt(numValue, cardConfig.format || 'number')
 
     // Handle comparison value if provided
-    let trend = undefined
+    let trend: { direction: TrendType; percent: number; label: string } | undefined = undefined
     if (cardConfig.compareValue && queryData[cardConfig.compareValue] !== undefined) {
       const compareVal = parseFloat(String(queryData[cardConfig.compareValue])) || 0
       const diff = numValue - compareVal
       const percent = compareVal !== 0 ? (diff / compareVal) * 100 : 0
 
       trend = {
-        direction: diff >= 0 ? 'up' : 'down',
+        direction: (diff >= 0 ? 'up' : 'down') as TrendType,
         percent: Math.abs(percent),
         label: cardConfig.compareLabel || ''
       }
