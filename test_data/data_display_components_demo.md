@@ -33,11 +33,15 @@ Display a single value inline.
 SELECT 23.5 as rate
 ```
 
-The current growth rate is ```value
+The current growth rate is
+
+```value
 data: growth_rate
 column: rate
 format: percent
-``` this quarter.
+```
+
+this quarter.
 
 ---
 
@@ -54,7 +58,8 @@ data: monthly_comparison
 column: current
 comparison: previous
 format: percent
-```
+
+````
 
 ---
 
@@ -66,7 +71,7 @@ Compact trend visualization with static values.
 values: 120, 145, 132, 167, 155, 178, 165, 189, 201, 195, 210, 225
 type: line
 showLast: true
-```
+````
 
 ### Area Sparkline
 
@@ -86,19 +91,29 @@ type: winloss
 
 ## 5. Progress
 
-Display completion status with static values.
+Display completion status with SQL data binding.
+
+```sql project_progress
+SELECT 75 as progress, 100 as target
+```
 
 ```progress
-value: 75
-maxValue: 100
+query: project_progress
+value: progress
+max: target
 label: Project Alpha
 color: green
 ```
 
 ### Task Completion Progress
 
+```sql task_progress
+SELECT 65 as completed
+```
+
 ```progress
-value: 65
+query: task_progress
+value: completed
 maxValue: 100
 label: Task Completion
 color: blue
@@ -508,23 +523,23 @@ cellHeight: 50
 
 ## Component Summary
 
-| Component | Use Case |
-|-----------|----------|
-| BigValue | Hero metrics, KPIs |
-| Value | Inline single values |
-| Delta | Change indicators |
-| Sparkline | Compact trends |
-| Progress | Completion status |
-| KPIGrid | Dashboard summaries |
-| DataTable | Tabular data with features |
-| Funnel | Conversion stages |
-| CalendarHeatmap | Activity over time |
-| Sankey | Flow relationships |
-| Treemap | Hierarchical proportions |
-| Histogram | Value distribution |
-| BoxPlot | Statistical summaries |
-| Gauge | Single value on scale |
-| BulletChart | Actual vs target |
-| Waterfall | Cumulative changes |
-| Radar | Multi-dimensional comparison |
-| Heatmap | 2D matrix visualization |
+| Component       | Use Case                     |
+| --------------- | ---------------------------- |
+| BigValue        | Hero metrics, KPIs           |
+| Value           | Inline single values         |
+| Delta           | Change indicators            |
+| Sparkline       | Compact trends               |
+| Progress        | Completion status            |
+| KPIGrid         | Dashboard summaries          |
+| DataTable       | Tabular data with features   |
+| Funnel          | Conversion stages            |
+| CalendarHeatmap | Activity over time           |
+| Sankey          | Flow relationships           |
+| Treemap         | Hierarchical proportions     |
+| Histogram       | Value distribution           |
+| BoxPlot         | Statistical summaries        |
+| Gauge           | Single value on scale        |
+| BulletChart     | Actual vs target             |
+| Waterfall       | Cumulative changes           |
+| Radar           | Multi-dimensional comparison |
+| Heatmap         | 2D matrix visualization      |
