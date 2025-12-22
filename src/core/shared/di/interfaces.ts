@@ -165,7 +165,7 @@ export interface IChartService {
 // Report Execution Service Interface
 // ============================================================================
 
-import type { InputStore } from '@app/stores/report-inputs'
+import type { IInputStore } from '@/types/interfaces'
 import type { DependencyAnalysis } from '@core/engine/dependency-graph'
 
 /**
@@ -219,7 +219,7 @@ export interface IReportExecutionService {
    */
   executeReport(
     report: Report,
-    inputStore: InputStore,
+    inputStore: IInputStore,
     onProgress?: ProgressCallback,
     onBlockUpdate?: BlockUpdateCallback
   ): Promise<ExecutionResult>
@@ -230,7 +230,7 @@ export interface IReportExecutionService {
   handleReactiveExecution(
     reportId: string,
     report: Report,
-    inputStore: InputStore,
+    inputStore: IInputStore,
     onBlockUpdate?: BlockUpdateCallback
   ): Promise<void>
 
@@ -240,7 +240,7 @@ export interface IReportExecutionService {
   setupReactiveSubscription(
     reportId: string,
     report: Report,
-    inputStore: InputStore,
+    inputStore: IInputStore,
     onBlockUpdate?: BlockUpdateCallback
   ): void
 

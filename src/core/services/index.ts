@@ -9,7 +9,8 @@
 import type {
   IChartBuilder,
   IInputInitializer,
-  ISQLTemplateContext
+  ISQLTemplateContext,
+  IDatabaseStore
 } from '@/types/interfaces'
 import type { ParsedCodeBlock } from '@/types/report'
 import type { ChartConfig } from '@/types/chart'
@@ -20,11 +21,13 @@ import type { ChartConfig } from '@/types/chart'
 interface ServiceRegistry {
   chartBuilder: IChartBuilder | null
   inputInitializer: IInputInitializer | null
+  databaseStore: IDatabaseStore | null
 }
 
 const registry: ServiceRegistry = {
   chartBuilder: null,
-  inputInitializer: null
+  inputInitializer: null,
+  databaseStore: null
 }
 
 /**
@@ -41,6 +44,14 @@ export function registerChartBuilder(builder: IChartBuilder): void {
 export function registerInputInitializer(initializer: IInputInitializer): void {
   registry.inputInitializer = initializer
   console.log('✅ InputInitializer service registered')
+}
+
+/**
+ * Register the database store service
+ */
+export function registerDatabaseStore(store: IDatabaseStore): void {
+  registry.databaseStore = store
+  console.log('✅ DatabaseStore service registered')
 }
 
 /**
@@ -66,10 +77,25 @@ export function getInputInitializer(): IInputInitializer {
 }
 
 /**
+ * Get the database store service
+ * @throws Error if not registered
+ */
+export function getDatabaseStore(): IDatabaseStore {
+  if (!registry.databaseStore) {
+    throw new Error('DatabaseStore service not registered. Call registerDatabaseStore() during bootstrap.')
+  }
+  return registry.databaseStore
+}
+
+/**
  * Check if services are registered
  */
 export function isServicesReady(): boolean {
-  return registry.chartBuilder !== null && registry.inputInitializer !== null
+  return (
+    registry.chartBuilder !== null &&
+    registry.inputInitializer !== null &&
+    registry.databaseStore !== null
+  )
 }
 
 /**

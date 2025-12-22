@@ -6,7 +6,7 @@
  */
 
 import type { Report, ReportBlock, ParsedCodeBlock } from '@/types/report'
-import type { InputStore } from '@app/stores/report-inputs'
+import type { IInputStore } from '@/types/interfaces'
 import { get } from 'svelte/store'
 import { componentRegistry } from '@core/registry'
 import { placeholderFactory } from '@core/registry'
@@ -17,7 +17,7 @@ import { placeholderFactory } from '@core/registry'
 export interface BlockRenderContext {
   report: Report
   parsedBlocks: ParsedCodeBlock[]
-  inputStore: InputStore | null
+  inputStore: IInputStore | null
   chartElements: HTMLElement[]
   tableMapping?: Map<string, string>
 }

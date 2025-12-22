@@ -8,7 +8,7 @@
  * - Dependency-aware execution order
  */
 
-import { databaseStore } from '@app/stores/database.svelte'
+import { getDatabaseStore } from '@core/services'
 import { loadDataIntoTable } from '@core/database'
 import { buildChartsFromBlocks } from '@core/services'
 import type { ReportBlock, Report, ReportExecutionResult } from '@/types/report'
@@ -41,7 +41,8 @@ export async function executeSQLBlock(
   const startTime = Date.now()
 
   try {
-    if (!databaseStore.state.initialized) {
+    const dbStore = getDatabaseStore()
+    if (!dbStore.state.initialized) {
       throw new Error('Database not initialized')
     }
 
@@ -70,7 +71,7 @@ export async function executeSQLBlock(
     }
 
     // Execute the query
-    const result = await databaseStore.executeQuery(sql)
+    const result = await dbStore.executeQuery(sql)
 
     // Generate table name for this result
     const tableName = `chart_data_${block.id}`

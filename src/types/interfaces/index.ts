@@ -5,9 +5,14 @@
  * These allow core/ to depend on abstractions rather than implementations.
  */
 
+// Chart builder interfaces
+export type { IChartBuilder, IInputInitializer } from './chart-builder'
+
+// Store interfaces
 export type {
-  IChartBuilder,
+  IInputValue,
+  IInputState,
   IInputStore,
-  IInputInitializer,
+  IDatabaseStore,
   ISQLTemplateContext
-} from './chart-builder'
+} from './stores'

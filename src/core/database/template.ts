@@ -9,7 +9,7 @@
  * See App.svelte reactive execution logic for cache clearing implementation.
  */
 
-import type { InputState } from '@app/stores/report-inputs'
+import type { IInputState } from '@/types/interfaces'
 import {
   interpolateSQL as pureInterpolateSQL,
   extractVariables,
@@ -23,7 +23,7 @@ import {
  * Re-exported for backward compatibility
  */
 export interface SQLTemplateContext {
-  inputs: InputState
+  inputs: IInputState
   metadata: Record<string, any>
 }
 

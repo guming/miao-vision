@@ -6,7 +6,7 @@
  */
 
 import type { ReportBlock, ParsedCodeBlock } from '@/types/report'
-import type { InputState as StoreInputState } from '@app/stores/report-inputs'
+import type { IInputState } from '@/types/interfaces'
 import { executeSQLBlock } from '@core/markdown/sql-executor'
 import type { SQLTemplateContext } from '@core/database/template'
 import {
@@ -106,8 +106,8 @@ export async function reExecuteAffectedBlocks(
  * Re-exported from pure layer with type compatibility.
  */
 export function getChangedInputs(
-  newInputs: StoreInputState,
-  oldInputs: StoreInputState
+  newInputs: IInputState,
+  oldInputs: IInputState
 ): string[] {
   return pureGetChangedInputs(newInputs, oldInputs)
 }

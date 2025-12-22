@@ -7,7 +7,7 @@
 
 import { get, type Unsubscriber } from 'svelte/store'
 import type { Report, ParsedCodeBlock, ReportBlock } from '@/types/report'
-import type { InputStore } from '@app/stores/report-inputs'
+import type { IInputStore } from '@/types/interfaces'
 import type { SQLTemplateContext } from '@core/database/template'
 import { parseMarkdown, extractSQLBlocks } from '@core/markdown/parser'
 import { executeReport as executeReportSQL } from '@core/markdown/sql-executor'
@@ -74,7 +74,7 @@ export class ReportExecutionService {
    */
   async executeReport(
     report: Report,
-    inputStore: InputStore,
+    inputStore: IInputStore,
     onProgress?: ProgressCallback,
     onBlockUpdate?: BlockUpdateCallback
   ): Promise<ExecutionResult> {
@@ -201,7 +201,7 @@ export class ReportExecutionService {
    */
   setupReactiveExecution(
     report: Report,
-    inputStore: InputStore,
+    inputStore: IInputStore,
     onBlockUpdate: BlockUpdateCallback
   ): Unsubscriber {
     console.log('🔄 Setting up reactive execution for report:', report.id)

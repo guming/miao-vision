@@ -5,8 +5,12 @@
  * This allows core/ to use plugin functionality without direct imports.
  */
 
-import { registerChartBuilder, registerInputInitializer } from '@core/services'
-import type { IChartBuilder, IInputInitializer, IInputStore } from '@/types/interfaces'
+import {
+  registerChartBuilder,
+  registerInputInitializer,
+  registerDatabaseStore
+} from '@core/services'
+import type { IChartBuilder, IInputInitializer, IInputStore, IDatabaseStore } from '@/types/interfaces'
 import type { ParsedCodeBlock } from '@/types/report'
 import type { ChartConfig } from '@/types/chart'
 
@@ -16,6 +20,9 @@ import {
   buildChartsFromBlocks as pluginBuildCharts
 } from '@plugins/viz/chart-builder'
 import { initializeInputDefaults } from '@plugins/inputs/initialize-defaults'
+
+// Import database store from app
+import { databaseStore } from '@app/stores/database.svelte'
 
 /**
  * Chart builder adapter
@@ -46,6 +53,24 @@ const inputInitializerAdapter: IInputInitializer = {
 }
 
 /**
+ * Database store adapter
+ * Wraps app database store to match IDatabaseStore interface
+ */
+const databaseStoreAdapter: IDatabaseStore = {
+  get state() {
+    return {
+      initialized: databaseStore.state.initialized,
+      loading: databaseStore.state.loading,
+      error: databaseStore.state.error
+    }
+  },
+
+  executeQuery(sql: string) {
+    return databaseStore.executeQuery(sql)
+  }
+}
+
+/**
  * Register all services with the core service registry
  */
 export function registerServices(): void {
@@ -53,6 +78,7 @@ export function registerServices(): void {
 
   registerChartBuilder(chartBuilderAdapter)
   registerInputInitializer(inputInitializerAdapter)
+  registerDatabaseStore(databaseStoreAdapter)
 
   console.log('✅ Services registered')
 }
