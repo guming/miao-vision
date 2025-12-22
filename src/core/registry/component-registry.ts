@@ -279,9 +279,10 @@ export function createMetadata(config: ComponentMetadata): ComponentMetadata {
 }
 
 /**
- * Chart block types that need placeholders
+ * Chart block types that need placeholders (vgplot charts only)
+ * Note: histogram is now a plugin component, not a vgplot chart
  */
-const CHART_TYPES = ['chart', 'line', 'area', 'bar', 'scatter', 'histogram', 'pie']
+const CHART_TYPES = ['chart', 'line', 'area', 'bar', 'scatter', 'pie']
 
 /**
  * Check if a code block language should have a placeholder in markdown

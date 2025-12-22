@@ -10,13 +10,13 @@ import type { ParsedCodeBlock } from '@/types/report'
 import { mount, type SvelteComponent } from 'svelte'
 
 // Import chart metadata (charts use vgplot, not Svelte components)
+// Note: histogram is now a plugin component, not a vgplot chart
 import {
   ChartMetadata,
   LineChartMetadata,
   AreaChartMetadata,
   BarChartMetadata,
   ScatterChartMetadata,
-  HistogramMetadata,
   PieChartMetadata
 } from '@core/engine/chart-metadata'
 
@@ -124,12 +124,12 @@ export function initializeComponents(): void {
   })
 
   // Register specific chart types
+  // Note: histogram is now a plugin component (in data-display), not a vgplot chart
   const charts = [
     { metadata: LineChartMetadata, type: 'line' },
     { metadata: AreaChartMetadata, type: 'area' },
     { metadata: BarChartMetadata, type: 'bar' },
     { metadata: ScatterChartMetadata, type: 'scatter' },
-    { metadata: HistogramMetadata, type: 'histogram' },
     { metadata: PieChartMetadata, type: 'pie' }
   ]
 
