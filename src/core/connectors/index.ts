@@ -89,7 +89,8 @@ export {
 
 // Registry
 export type { ConnectorFactory } from './registry'
-export { ConnectorRegistry } from './registry'
+import { ConnectorRegistry } from './registry'
+export { ConnectorRegistry }
 
 // WASM Connector
 export { WasmConnector, createWasmConnector, isOPFSSupported } from './wasm'
@@ -133,3 +134,18 @@ export {
   createLegacyManager,
   type LegacyDuckDBManager
 } from './compat'
+
+// =============================================================================
+// Auto-register connectors
+// =============================================================================
+// This ensures connectors are available when the module is imported.
+// Registration happens once when the module is first loaded.
+
+import { createWasmConnector } from './wasm'
+import { createMotherDuckConnector } from './motherduck'
+import { createHttpConnector } from './http'
+
+// Register all built-in connectors
+ConnectorRegistry.register('wasm', createWasmConnector, 'DuckDB-WASM (Browser)')
+ConnectorRegistry.register('motherduck', createMotherDuckConnector, 'MotherDuck Cloud')
+ConnectorRegistry.register('http', createHttpConnector, 'HTTP API')
