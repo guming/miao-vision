@@ -1,18 +1,15 @@
 /**
- * Plugin Initialization
+ * Chart Initialization (Bootstrap Layer)
  *
- * Registers all plugins with the ComponentRegistry.
- * This is the main entry point for plugin registration.
+ * Registers vgplot-based charts with the ComponentRegistry.
+ * This file lives in bootstrap/ to avoid core → plugins dependency.
  */
 
-import { componentRegistry } from './component-registry'
+import { componentRegistry } from '@core/registry'
+import type { ParsedCodeBlock } from '@/types/report'
 import { mount, type SvelteComponent } from 'svelte'
 
-// Import plugin registrations
-import { registerAllPlugins } from '@plugins/index'
-
-// Import chart metadata (charts use vgplot, not Svelte components)
-// Note: histogram, bar, pie are now plugin components, not vgplot charts
+// Import chart metadata from core (these are just data, no plugin dependency)
 import {
   ChartMetadata,
   LineChartMetadata,
@@ -20,8 +17,8 @@ import {
   ScatterChartMetadata
 } from '@core/engine/chart-metadata'
 
-// Import chart builder
-import { buildChartFromBlock } from '@plugins/viz'
+// Import chart builder from plugins (this is the key dependency)
+import { buildChartFromBlock } from '@plugins/viz/chart-builder'
 
 /**
  * Chart renderer factory
@@ -73,25 +70,33 @@ function createChartRenderer(chartType: string) {
  * Chart parser factory
  */
 function createChartParser() {
-  return (block: any, context: any) => {
+  return (block: ParsedCodeBlock, context: any) => {
     return { block, ...context }
   }
 }
 
 /**
- * Initialize and register all plugins
+ * Register vgplot-based charts
+ *
+ * Only charts that need vgplot features (crossfilter, brush, large data):
+ * - chart (generic)
+ * - line
+ * - area
+ * - scatter
+ *
+ * Note: bar, pie, histogram are now plugin components (in data-display)
  */
-export function initializePlugins(): void {
-  console.log('🚀 Initializing plugin system...')
+export function registerVgplotCharts(): void {
+  console.log('📊 Registering vgplot charts...')
 
-  // Register chart components (special handling - use vgplot)
+  // Register generic Chart first (for ```chart code blocks)
   componentRegistry.register({
     metadata: ChartMetadata,
     parser: createChartParser(),
     renderer: createChartRenderer('chart')
   })
 
-  // Note: histogram, bar, pie are now plugin components (in data-display), not vgplot charts
+  // Register specific chart types that benefit from vgplot
   const charts = [
     { metadata: LineChartMetadata, type: 'line' },
     { metadata: AreaChartMetadata, type: 'area' },
@@ -106,35 +111,5 @@ export function initializePlugins(): void {
     })
   }
 
-  // Register all other plugins (inputs, data-display, ui)
-  registerAllPlugins(componentRegistry)
-
-  console.log(`✅ Registered ${componentRegistry.getAllLanguages().length} components`)
-  console.log('   Components:', componentRegistry.getAllLanguages().join(', '))
-}
-
-/**
- * Get plugin documentation
- */
-export function getPluginDocumentation() {
-  const allMetadata = componentRegistry.getAllMetadata()
-
-  return {
-    total: allMetadata.length,
-    byCategory: {
-      chart: componentRegistry.getByCategory('chart').length,
-      input: componentRegistry.getByCategory('input').length,
-      dataViz: componentRegistry.getByCategory('data-viz').length,
-      ui: componentRegistry.getByCategory('ui').length,
-      layout: componentRegistry.getByCategory('layout').length
-    },
-    components: allMetadata.map(m => ({
-      language: m.language,
-      displayName: m.displayName,
-      type: m.type,
-      description: m.description,
-      propsCount: m.props.length,
-      requiredProps: m.props.filter(p => p.required).map(p => p.name)
-    }))
-  }
+  console.log('✅ vgplot charts registered: chart, line, area, scatter')
 }
