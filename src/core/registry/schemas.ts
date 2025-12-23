@@ -452,6 +452,54 @@ export const AreaMapSchema: ConfigSchema = {
 }
 
 /**
+ * PointMap component schema
+ *
+ * Example:
+ * ```pointmap
+ * query: store_locations
+ * latitude: lat
+ * longitude: lon
+ * name: store_name
+ * title: Store Locations
+ * markerColor: blue
+ * height: 600
+ * ```
+ */
+export const PointMapSchema: ConfigSchema = {
+  fields: [
+    { name: 'query', type: 'string', required: true },
+    { name: 'latitude', type: 'string', required: true },
+    { name: 'longitude', type: 'string', required: true },
+    { name: 'name', type: 'string' },
+    { name: 'value', type: 'string' },
+    { name: 'title', type: 'string' },
+    { name: 'color', type: 'string' },
+    { name: 'icon', type: 'string' },
+    {
+      name: 'markerColor',
+      type: 'enum',
+      enum: ['blue', 'red', 'green', 'orange', 'yellow', 'violet', 'grey', 'black'],
+      default: 'blue'
+    },
+    {
+      name: 'markerSize',
+      type: 'enum',
+      enum: ['small', 'medium', 'large'],
+      default: 'medium'
+    },
+    { name: 'height', type: 'number', default: 500 },
+    { name: 'zoom', type: 'number', default: 10 },
+    { name: 'center', type: 'array' },
+    { name: 'cluster', type: 'boolean', default: false },
+    { name: 'clusterRadius', type: 'number', default: 80 },
+    { name: 'showTooltip', type: 'boolean', default: true },
+    { name: 'tooltipTemplate', type: 'string' },
+    { name: 'tilesUrl', type: 'string' },
+    { name: 'attribution', type: 'string' }
+  ]
+}
+
+/**
  * Schema registry - maps component types to their schemas
  */
 export const SchemaRegistry: Record<string, ConfigSchema> = {
@@ -468,7 +516,8 @@ export const SchemaRegistry: Record<string, ConfigSchema> = {
   daterange: DateRangeSchema,
   chart: ChartSchema,
   dimensiongrid: DimensionGridSchema,
-  areamap: AreaMapSchema
+  areamap: AreaMapSchema,
+  pointmap: PointMapSchema
 }
 
 /**
