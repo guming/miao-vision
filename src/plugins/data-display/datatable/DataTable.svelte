@@ -180,7 +180,7 @@
     return 36 // Default row height
   })
   const maxHeight = $derived(config.maxHeight || 600)
-  const overscan = 5
+  const overscan = 10  // Increased for smoother scrolling with images
 
   let visibleRange = $derived.by(() => {
     const start = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)

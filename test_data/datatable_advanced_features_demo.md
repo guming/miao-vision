@@ -55,6 +55,7 @@ columns:
     format: number
 searchable: true
 sortable: true
+rowHeight: 80
 ```
 
 ---
@@ -150,6 +151,7 @@ columns:
 searchable: true
 sortable: true
 resizableColumns: true
+rowHeight: 70
 ```
 
 ---
@@ -203,6 +205,7 @@ resizableColumns: true
 summaryRow: true
 columnSelector: true
 filterable: true
+rowHeight: 70
 ```
 
 ---
