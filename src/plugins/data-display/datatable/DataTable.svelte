@@ -158,7 +158,7 @@
   const config = $derived(data.config)
 
   // Auto-calculate row height based on content
-  const rowHeight = $derived(() => {
+  const rowHeight = $derived.by(() => {
     if (config.rowHeight) return config.rowHeight
 
     // Check if any column has images
