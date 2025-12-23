@@ -395,6 +395,63 @@ export const DeltaSchema: ConfigSchema = {
 }
 
 /**
+ * AreaMap (Choropleth) component schema
+ *
+ * Example:
+ * ```areamap
+ * query: sales_by_state
+ * areaId: state_code
+ * value: total_sales
+ * areaName: state_name
+ * geoJson: /data/us-states.geojson
+ * geoJsonKey: STATE
+ * title: Sales by State
+ * colorScheme: Blues
+ * colorBuckets: 5
+ * format: currency
+ * height: 500
+ * ```
+ */
+export const AreaMapSchema: ConfigSchema = {
+  fields: [
+    { name: 'query', type: 'string', required: true },
+    { name: 'areaId', type: 'string', required: true },
+    { name: 'value', type: 'string', required: true },
+    { name: 'geoJson', type: 'string', required: true },
+    { name: 'areaName', type: 'string' },
+    { name: 'title', type: 'string' },
+    { name: 'geoJsonKey', type: 'string', default: 'id' },
+    {
+      name: 'colorScale',
+      type: 'enum',
+      enum: ['sequential', 'diverging', 'categorical'],
+      default: 'sequential'
+    },
+    { name: 'colorScheme', type: 'string', default: 'Blues' },
+    { name: 'colorBuckets', type: 'number', default: 5 },
+    { name: 'colors', type: 'array' },
+    {
+      name: 'format',
+      type: 'enum',
+      enum: ['number', 'currency', 'percent', 'compact'],
+      default: 'number'
+    },
+    { name: 'height', type: 'number', default: 500 },
+    { name: 'showLegend', type: 'boolean', default: true },
+    {
+      name: 'legendPosition',
+      type: 'enum',
+      enum: ['topright', 'topleft', 'bottomright', 'bottomleft'],
+      default: 'topright'
+    },
+    { name: 'showTooltip', type: 'boolean', default: true },
+    { name: 'tooltipTemplate', type: 'string', default: '{areaName}: {formatted}' },
+    { name: 'tilesUrl', type: 'string' },
+    { name: 'attribution', type: 'string' }
+  ]
+}
+
+/**
  * Schema registry - maps component types to their schemas
  */
 export const SchemaRegistry: Record<string, ConfigSchema> = {
@@ -410,7 +467,8 @@ export const SchemaRegistry: Record<string, ConfigSchema> = {
   textinput: TextInputSchema,
   daterange: DateRangeSchema,
   chart: ChartSchema,
-  dimensiongrid: DimensionGridSchema
+  dimensiongrid: DimensionGridSchema,
+  areamap: AreaMapSchema
 }
 
 /**

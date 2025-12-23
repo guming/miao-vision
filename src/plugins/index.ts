@@ -11,12 +11,14 @@ import type { ComponentRegistry } from '@core/registry'
 import { registerInputPlugins, inputPlugins } from './inputs'
 import { registerDataDisplayPlugins, dataDisplayPlugins } from './data-display'
 import { registerUIPlugins, uiPlugins } from './ui'
+import { registerMapPlugins, mapPlugins } from './maps'
 
 // Re-export all plugins
 export * from './inputs'
 export * from './data-display'
 export * from './ui'
 export * from './viz'
+export * from './maps'
 
 /**
  * Register all plugins with the component registry
@@ -37,6 +39,7 @@ export function registerAllPlugins(registry: ComponentRegistry): void {
   registerInputPlugins(registry)
   registerDataDisplayPlugins(registry)
   registerUIPlugins(registry)
+  registerMapPlugins(registry)
   // Note: Viz plugins (charts) are registered separately with custom renderers
 
   console.log('✅ All plugins registered!')
@@ -48,5 +51,6 @@ export function registerAllPlugins(registry: ComponentRegistry): void {
 export const allPlugins = [
   ...inputPlugins,
   ...dataDisplayPlugins,
-  ...uiPlugins
+  ...uiPlugins,
+  ...mapPlugins
 ]
