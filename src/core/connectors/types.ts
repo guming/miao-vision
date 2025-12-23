@@ -11,7 +11,7 @@ import type { Result } from './result'
 import type { ConnectorError, QueryError } from './errors'
 
 /** Supported connector types */
-export type ConnectorType = 'wasm' | 'motherduck' | 'http' | 'postgres' | 'mysql' | 'csv' | 'parquet'
+export type ConnectorType = 'wasm' | 'motherduck' | 'http' | 'rest' | 'postgres' | 'mysql' | 'csv' | 'parquet'
 
 /** Connection status */
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'

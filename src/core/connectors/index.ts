@@ -114,6 +114,17 @@ export type {
   HttpQueryResponse
 } from './http'
 
+// REST API Connector
+export { RestApiConnector, createRestApiConnector } from './rest'
+export type {
+  RestApiConnectorOptions,
+  RestApiConnectorDeps,
+  RestApiEndpoint,
+  RestApiResponse,
+  AuthMethod,
+  HttpMethod
+} from './rest'
+
 // Secrets Manager
 export {
   secretsManager,
