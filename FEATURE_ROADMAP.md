@@ -1,6 +1,6 @@
 # Feature Roadmap - Miao Vision
 
-**Current Version**: v1.0 (Bootstrap + 43 Components)
+**Current Version**: v0.2.0 (Alpha - Bootstrap + 43 Components)
 **Last Updated**: 2024-12-23
 
 ---

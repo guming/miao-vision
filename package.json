@@ -1,8 +1,31 @@
 {
   "name": "miao-vision",
-  "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "Local-First Data Analytics Framework - Privacy-focused data analytics powered by DuckDB-WASM",
+  "author": "Miao Vision Team",
+  "license": "MIT",
+  "private": false,
   "type": "module",
+  "keywords": [
+    "data-analytics",
+    "business-intelligence",
+    "duckdb",
+    "wasm",
+    "local-first",
+    "privacy",
+    "markdown",
+    "sql",
+    "visualization",
+    "svelte"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guming/miao-vision.git"
+  },
+  "bugs": {
+    "url": "https://github.com/guming/miao-vision/issues"
+  },
+  "homepage": "https://github.com/guming/miao-vision#readme",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

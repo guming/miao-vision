@@ -1,7 +1,7 @@
 # Miao Vision vs Evidence.dev 功能对比
 
 **基于**: [SF311 Demo](https://sf311.evidence.app/) 和 [Evidence.dev 文档](https://docs.evidence.dev/)
-**当前版本**: v1.0 (Bootstrap + 43 Components)
+**当前版本**: v0.2.0 (Alpha - Bootstrap + 43 Components)
 **最后更新**: 2024-12-23
 
 ---

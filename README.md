@@ -255,5 +255,5 @@ MIT License - 详见 [LICENSE](./LICENSE)
 ---
 
 **维护者**: Miao Vision Team
-**当前版本**: v1.0 (Bootstrap + 43 Components)
+**当前版本**: v0.2.0 (Alpha - Bootstrap + 43 Components)
 **最后更新**: 2024-12-23

@@ -2,7 +2,7 @@
 
 > Local-First Data Analytics Framework - 为注重隐私和自主权的数据分析师打造
 
-**当前版本**: v1.0 (Bootstrap + 43 Components)
+**当前版本**: v0.2.0 (Alpha - Bootstrap + 43 Components)
 **最后更新**: 2024-12-23
 
 ---
