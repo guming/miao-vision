@@ -156,7 +156,29 @@
 
   // Virtual scrolling config
   const config = $derived(data.config)
-  const rowHeight = $derived(config.rowHeight || 36)
+
+  // Auto-calculate row height based on content
+  const rowHeight = $derived(() => {
+    if (config.rowHeight) return config.rowHeight
+
+    // Check if any column has images
+    const hasImageColumn = visibleColumns.some(col => col.contentType === 'image')
+    if (hasImageColumn) {
+      // Find max image height
+      const maxImageHeight = Math.max(
+        ...visibleColumns
+          .filter(col => col.contentType === 'image')
+          .map(col => {
+            const height = col.imageConfig?.height || 50
+            return typeof height === 'number' ? height : 50
+          })
+      )
+      // Add padding (8px top + 8px bottom)
+      return maxImageHeight + 16
+    }
+
+    return 36 // Default row height
+  })
   const maxHeight = $derived(config.maxHeight || 600)
   const overscan = 5
 
