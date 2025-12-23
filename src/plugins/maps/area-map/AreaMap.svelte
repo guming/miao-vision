@@ -300,9 +300,18 @@ function cleanup() {
 
 // Lifecycle
 onMount(() => {
+  console.log('[AreaMap] Component mounted')
   processData()
   if (!error) {
-    initMap()
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      if (mapContainer) {
+        initMap()
+      } else {
+        console.error('[AreaMap] Container not available')
+        error = 'Map container element not found'
+      }
+    }, 0)
   }
 })
 

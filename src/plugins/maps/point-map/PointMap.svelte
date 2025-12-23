@@ -54,6 +54,7 @@ let error = $state<string | null>(null)
  */
 function processData() {
   try {
+    console.log('[PointMap] Processing data:', { dataLength: data.length, latitude, longitude })
     const processedPoints: PointData[] = []
 
     data.forEach((row) => {
@@ -86,15 +87,18 @@ function processData() {
       }
     })
 
+    console.log('[PointMap] Processed points:', processedPoints.length)
+
     if (processedPoints.length === 0) {
       error = 'No valid coordinate data found'
+      console.error('[PointMap] No valid points found')
       return
     }
 
     points = processedPoints
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to process data'
-    console.error('PointMap data processing error:', err)
+    console.error('[PointMap] Data processing error:', err)
   }
 }
 
@@ -103,13 +107,17 @@ function processData() {
  */
 async function initMap() {
   try {
+    console.log('[PointMap] Starting map initialization')
     if (!mapContainer) {
       error = 'Map container not available'
+      console.error('[PointMap] Map container not found')
       return
     }
 
+    console.log('[PointMap] Loading Leaflet library')
     // Dynamic import Leaflet to avoid SSR issues
     const L = (await import('leaflet')).default
+    console.log('[PointMap] Leaflet loaded successfully')
 
     // Import Leaflet CSS
     if (typeof document !== 'undefined') {
@@ -117,6 +125,7 @@ async function initMap() {
       link.rel = 'stylesheet'
       link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
       document.head.appendChild(link)
+      console.log('[PointMap] Leaflet CSS loaded')
     }
 
     // Calculate center if not provided
@@ -227,9 +236,21 @@ function cleanup() {
 
 // Lifecycle
 onMount(() => {
+  console.log('[PointMap] Component mounted, data:', data)
   processData()
   if (!error) {
-    initMap()
+    console.log('[PointMap] No errors, waiting for container then initializing map')
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      if (mapContainer) {
+        initMap()
+      } else {
+        console.error('[PointMap] Container still not available after timeout')
+        error = 'Map container element not found'
+      }
+    }, 0)
+  } else {
+    console.error('[PointMap] Error after processData:', error)
   }
 })
 

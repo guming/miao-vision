@@ -243,9 +243,18 @@ function cleanup() {
 
 // Lifecycle
 onMount(() => {
+  console.log('[BubbleMap] Component mounted')
   processData()
   if (!error) {
-    initMap()
+    // Use setTimeout to ensure DOM is ready
+    setTimeout(() => {
+      if (mapContainer) {
+        initMap()
+      } else {
+        console.error('[BubbleMap] Container not available')
+        error = 'Map container element not found'
+      }
+    }, 0)
   }
 })
 
