@@ -147,11 +147,10 @@ async function initMap() {
     // Load and add GeoJSON
     await loadGeoJSON(L)
 
-    loading = false
+    console.log('[AreaMap] Map initialized successfully')
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to initialize map'
-    loading = false
-    console.error('AreaMap initialization error:', err)
+    console.error('[AreaMap] Map initialization error:', err)
   }
 }
 
@@ -298,21 +297,19 @@ function cleanup() {
   geoJsonLayer = null
 }
 
-// Lifecycle
+// Initialize map when container becomes available
+$effect(() => {
+  if (mapContainer && !map && !error && areaDataMap.size > 0) {
+    console.log('[AreaMap] Container available, initializing map')
+    initMap()
+  }
+})
+
+// Process data on mount
 onMount(() => {
   console.log('[AreaMap] Component mounted')
   processData()
-  if (!error) {
-    // Use setTimeout to ensure DOM is ready
-    setTimeout(() => {
-      if (mapContainer) {
-        initMap()
-      } else {
-        console.error('[AreaMap] Container not available')
-        error = 'Map container element not found'
-      }
-    }, 0)
-  }
+  loading = false
 })
 
 onDestroy(cleanup)

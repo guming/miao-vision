@@ -156,11 +156,10 @@ async function initMap() {
     // Add markers
     addMarkers(L)
 
-    loading = false
+    console.log('[PointMap] Map initialized successfully')
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to initialize map'
-    loading = false
-    console.error('PointMap initialization error:', err)
+    console.error('[PointMap] Map initialization error:', err)
   }
 }
 
@@ -234,24 +233,20 @@ function cleanup() {
   }
 }
 
-// Lifecycle
+// Initialize map when container becomes available
+$effect(() => {
+  if (mapContainer && !map && !error && points.length > 0) {
+    console.log('[PointMap] Container available, initializing map')
+    initMap()
+  }
+})
+
+// Process data on mount
 onMount(() => {
   console.log('[PointMap] Component mounted, data:', data)
   processData()
-  if (!error) {
-    console.log('[PointMap] No errors, waiting for container then initializing map')
-    // Use setTimeout to ensure DOM is ready
-    setTimeout(() => {
-      if (mapContainer) {
-        initMap()
-      } else {
-        console.error('[PointMap] Container still not available after timeout')
-        error = 'Map container element not found'
-      }
-    }, 0)
-  } else {
-    console.error('[PointMap] Error after processData:', error)
-  }
+  // Set loading to false so container can render
+  loading = false
 })
 
 onDestroy(cleanup)

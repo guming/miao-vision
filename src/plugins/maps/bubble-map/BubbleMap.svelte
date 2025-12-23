@@ -162,11 +162,10 @@ async function initMap() {
     // Add bubbles
     addBubbles(L)
 
-    loading = false
+    console.log('[BubbleMap] Map initialized successfully')
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to initialize map'
-    loading = false
-    console.error('BubbleMap initialization error:', err)
+    console.error('[BubbleMap] Map initialization error:', err)
   }
 }
 
@@ -241,21 +240,19 @@ function cleanup() {
   }
 }
 
-// Lifecycle
+// Initialize map when container becomes available
+$effect(() => {
+  if (mapContainer && !map && !error && bubbles.length > 0) {
+    console.log('[BubbleMap] Container available, initializing map')
+    initMap()
+  }
+})
+
+// Process data on mount
 onMount(() => {
   console.log('[BubbleMap] Component mounted')
   processData()
-  if (!error) {
-    // Use setTimeout to ensure DOM is ready
-    setTimeout(() => {
-      if (mapContainer) {
-        initMap()
-      } else {
-        console.error('[BubbleMap] Container not available')
-        error = 'Map container element not found'
-      }
-    }, 0)
-  }
+  loading = false
 })
 
 onDestroy(cleanup)
