@@ -186,17 +186,8 @@ export const DataTableSchema: ConfigSchema = {
         { name: 'summary', type: 'enum', enum: ['sum', 'avg', 'count', 'min', 'max', 'none'], default: 'none' },
         // NEW: Advanced column features
         { name: 'contentType', type: 'enum', enum: ['text', 'image', 'html'], default: 'text' },
-        { name: 'frozen', type: 'enum', enum: ['left', 'right', 'false'], default: 'false' }
-      ]
-    },
-    {
-      name: 'imageConfig',
-      parent: 'columns',
-      itemFields: [
-        { name: 'width', type: 'number' },
-        { name: 'height', type: 'number' },
-        { name: 'rounded', type: 'boolean', default: false },
-        { name: 'fit', type: 'enum', enum: ['contain', 'cover', 'fill'], default: 'contain' }
+        { name: 'frozen', type: 'string' }
+        // Note: imageConfig is a nested object handled by YAML parser, not declared here
       ]
     }
   ]

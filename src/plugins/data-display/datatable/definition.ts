@@ -182,7 +182,11 @@ function mergeColumnConfig(
       conditionalFormat: userCol?.conditionalFormat,
       showDataBar: userCol?.showDataBar,
       colorScale: userCol?.colorScale,
-      iconSet: userCol?.iconSet
+      iconSet: userCol?.iconSet,
+      // NEW: Advanced column features
+      contentType: userCol?.contentType,
+      imageConfig: userCol?.imageConfig,
+      frozen: userCol?.frozen
     }
   })
 }
