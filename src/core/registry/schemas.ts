@@ -500,6 +500,44 @@ export const PointMapSchema: ConfigSchema = {
 }
 
 /**
+ * BubbleMap component schema
+ *
+ * Example:
+ * ```bubblemap
+ * query: sales_by_city
+ * latitude: lat
+ * longitude: lon
+ * size: total_sales
+ * name: city_name
+ * title: Sales by City
+ * ```
+ */
+export const BubbleMapSchema: ConfigSchema = {
+  fields: [
+    { name: 'query', type: 'string', required: true },
+    { name: 'latitude', type: 'string', required: true },
+    { name: 'longitude', type: 'string', required: true },
+    { name: 'size', type: 'string', required: true },
+    { name: 'name', type: 'string' },
+    { name: 'color', type: 'string' },
+    { name: 'title', type: 'string' },
+    { name: 'minSize', type: 'number', default: 5 },
+    { name: 'maxSize', type: 'number', default: 30 },
+    { name: 'fillOpacity', type: 'number', default: 0.6 },
+    { name: 'strokeColor', type: 'string', default: '#ffffff' },
+    { name: 'strokeWidth', type: 'number', default: 2 },
+    { name: 'colorScheme', type: 'string', default: '#4287f5' },
+    { name: 'height', type: 'number', default: 500 },
+    { name: 'zoom', type: 'number', default: 10 },
+    { name: 'center', type: 'array' },
+    { name: 'showTooltip', type: 'boolean', default: true },
+    { name: 'tooltipTemplate', type: 'string' },
+    { name: 'tilesUrl', type: 'string' },
+    { name: 'attribution', type: 'string' }
+  ]
+}
+
+/**
  * Schema registry - maps component types to their schemas
  */
 export const SchemaRegistry: Record<string, ConfigSchema> = {
@@ -517,7 +555,8 @@ export const SchemaRegistry: Record<string, ConfigSchema> = {
   chart: ChartSchema,
   dimensiongrid: DimensionGridSchema,
   areamap: AreaMapSchema,
-  pointmap: PointMapSchema
+  pointmap: PointMapSchema,
+  bubblemap: BubbleMapSchema
 }
 
 /**

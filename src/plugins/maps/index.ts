@@ -7,6 +7,7 @@
 import type { ComponentRegistry } from '@core/registry'
 import { areaMapRegistration } from './area-map'
 import { pointMapRegistration } from './point-map'
+import { bubbleMapRegistration } from './bubble-map'
 
 // AreaMap (Choropleth)
 export {
@@ -26,8 +27,14 @@ export {
 } from './point-map'
 export type { PointMapConfig, PointData, MarkerSize, MarkerColor } from './point-map'
 
+// BubbleMap
+export {
+  bubbleMapRegistration,
+  BubbleMapMetadata
+} from './bubble-map'
+export type { BubbleMapConfig, BubbleData } from './bubble-map'
+
 // TODO: Add other map components
-// - BubbleMap
 // - USMap
 
 /**
@@ -38,11 +45,12 @@ export function registerMapPlugins(registry: ComponentRegistry): void {
 
   registry.register(areaMapRegistration)
   registry.register(pointMapRegistration)
+  registry.register(bubbleMapRegistration)
 
-  console.log('✅ Map plugins registered: areamap, pointmap')
+  console.log('✅ Map plugins registered: areamap, pointmap, bubblemap')
 }
 
 /**
  * All map plugin registrations
  */
-export const mapPlugins = [areaMapRegistration, pointMapRegistration]
+export const mapPlugins = [areaMapRegistration, pointMapRegistration, bubbleMapRegistration]
