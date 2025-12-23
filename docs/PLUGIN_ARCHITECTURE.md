@@ -1,6 +1,6 @@
 # Plugin Architecture
 
-> Miaoshou Vision 采用 Evidence.dev 风格的插件架构，实现核心引擎与可插拔组件的分离。
+> Miao Vision 采用 Evidence.dev 风格的插件架构，实现核心引擎与可插拔组件的分离。
 
 ## 架构概览
 
@@ -124,7 +124,7 @@ export { processLoops } from './loop-processor'
 
 ## 模板语法 (Templating)
 
-Miaoshou Vision 支持类似 Svelte 的模板语法，用于在报告中实现动态内容。
+Miao Vision 支持类似 Svelte 的模板语法，用于在报告中实现动态内容。
 
 ### 变量插值
 

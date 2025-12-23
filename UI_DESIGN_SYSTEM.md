@@ -1053,5 +1053,5 @@ For component development, see: [PLUGIN_ARCHITECTURE.md](./docs/PLUGIN_ARCHITECT
 
 ---
 
-**Maintained by**: Miaoshou Vision Team
+**Maintained by**: Miao Vision Team
 **Last Updated**: December 23, 2024

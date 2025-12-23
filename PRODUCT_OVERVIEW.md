@@ -1,4 +1,4 @@
-# Miaoshou Vision 产品概述
+# Miao Vision 产品概述
 
 > Local-First Data Analytics Framework - 为注重隐私和自主权的数据分析师打造
 
@@ -7,13 +7,13 @@
 
 ---
 
-## 💡 为什么选择 Miaoshou Vision
+## 💡 为什么选择 Miao Vision
 
 ### 🔒 您的数据，您掌控
 
 **问题**：传统 BI 工具需要上传数据到云端，敏感数据（财务、客户信息、HR 数据）的安全性令人担忧。
 
-**解决方案**：Miaoshou Vision 所有数据处理都在您的浏览器中完成，**数据永不离开本地**。
+**解决方案**：Miao Vision 所有数据处理都在您的浏览器中完成，**数据永不离开本地**。
 
 **用户价值**：
 - ✅ **绝对隐私** - 财务报表、客户数据、敏感信息 100% 安全
@@ -93,7 +93,7 @@ y: total_revenue
 - ✅ **标准 SQL** - 完整的 PostgreSQL 兼容 SQL 语法
 
 **性能对比**：
-| 操作 | Excel | Miaoshou Vision |
+| 操作 | Excel | Miao Vision |
 |------|-------|-----------------|
 | 加载 1M 行 CSV | 30-60s | < 5s |
 | 聚合查询 | 卡顿 | < 1s |
@@ -196,7 +196,7 @@ data: filtered_sales
 
 ### 功能对比表
 
-| 特性 | Miaoshou Vision | Tableau | Power BI | Google Sheets | Evidence.dev |
+| 特性 | Miao Vision | Tableau | Power BI | Google Sheets | Evidence.dev |
 |------|-----------------|---------|----------|---------------|--------------|
 | **成本** | 免费 | $70/月 | $10-20/月 | 免费 | $20/月 |
 | **隐私** | 完全本地 | 云端 | 云端 | 云端 | 云端 |
@@ -209,7 +209,7 @@ data: filtered_sales
 
 ### 选择建议
 
-**选择 Miaoshou Vision**：
+**选择 Miao Vision**：
 - ✅ 隐私敏感场景（医疗、金融、HR 数据）
 - ✅ 成本敏感（创业公司、个人用户）
 - ✅ 小团队快速原型
@@ -320,6 +320,6 @@ data: filtered_sales
 
 ---
 
-**维护者**: Miaoshou Vision Team
+**维护者**: Miao Vision Team
 **许可证**: MIT
 **最后更新**: 2024-12-23

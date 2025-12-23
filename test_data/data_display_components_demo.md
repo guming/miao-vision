@@ -4,7 +4,7 @@ title: Data Display Components Demo
 
 # Data Display Components Demo
 
-This demo showcases all 18 data display components available in Miaoshou Vision.
+This demo showcases all 18 data display components available in Miao Vision.
 
 ---
 

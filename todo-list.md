@@ -1,4 +1,4 @@
-# Miaoshou Vision - Development Roadmap & TODO List
+# Miao Vision - Development Roadmap & TODO List
 
 > 基于Evidence.dev的数据可视化平台开发计划
 

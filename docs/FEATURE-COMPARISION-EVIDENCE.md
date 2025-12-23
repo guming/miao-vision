@@ -1,4 +1,4 @@
-# Miaoshou Vision vs Evidence.dev 功能对比
+# Miao Vision vs Evidence.dev 功能对比
 
 **基于**: [SF311 Demo](https://sf311.evidence.app/) 和 [Evidence.dev 文档](https://docs.evidence.dev/)
 **当前版本**: v1.0 (Bootstrap + 43 Components)
@@ -210,7 +210,7 @@
 
 ## 💡 独特优势对比
 
-### Miaoshou Vision 独特优势
+### Miao Vision 独特优势
 
 | 特性 | Miaoshou | Evidence.dev | 优势 |
 |------|---------|--------------|------|
@@ -238,7 +238,7 @@
 
 ## 🎯 技术栈对比
 
-| 技术领域 | Evidence.dev | Miaoshou Vision | 备注 |
+| 技术领域 | Evidence.dev | Miao Vision | 备注 |
 |---------|-------------|-----------------|------|
 | **框架** | SvelteKit | Svelte 5 (SPA) | Evidence 用 SSR |
 | **状态管理** | Stores | Runes | Svelte 5 新特性 |
@@ -282,7 +282,7 @@ UI组件:    6/6   (100%) ✅
 
 ## 🚀 发展路线对比
 
-### Miaoshou Vision 路线图
+### Miao Vision 路线图
 
 - **v1.0** (2024-12) ✅ - 43 组件，Bootstrap 架构
 - **v1.1** (2025-02) - PostgreSQL, MySQL, REST API
@@ -305,7 +305,7 @@ UI组件:    6/6   (100%) ✅
 
 ## 💭 使用场景对比
 
-### Miaoshou Vision 最适合
+### Miao Vision 最适合
 
 - 📊 **个人数据分析** - 本地 CSV/Parquet 分析
 - 🔒 **敏感数据** - 金融、医疗、隐私数据
@@ -373,7 +373,7 @@ UI组件:    6/6   (100%) ✅
 
 ### 战略定位
 
-**Miaoshou Vision = 隐私优先的本地分析工具**
+**Miao Vision = 隐私优先的本地分析工具**
 - 定位：个人、教育、敏感数据
 - 优势：隐私、离线、零成本
 - 差异：本地优先 vs 云端优先
@@ -383,7 +383,7 @@ UI组件:    6/6   (100%) ✅
 - 优势：协作、数据源、成熟度
 - 差异：SaaS 服务 vs 开源工具
 
-**结论**: 两者互补，适用不同场景。Miaoshou Vision 在隐私、离线、架构清晰度上有独特优势。
+**结论**: 两者互补，适用不同场景。Miao Vision 在隐私、离线、架构清晰度上有独特优势。
 
 ---
 

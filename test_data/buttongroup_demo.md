@@ -1,6 +1,6 @@
 ---
 title: ButtonGroup Demo
-author: Miaoshou Vision
+author: Miao Vision
 date: 2024-12-11
 description: Demonstration of ButtonGroup input component
 ---

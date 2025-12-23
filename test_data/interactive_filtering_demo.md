@@ -1,6 +1,6 @@
 ---
 title: Interactive Filtering Demo
-author: Miaoshou Vision
+author: Miao Vision
 date: 2024-12-10
 description: Demonstration of interactive dropdown inputs and SQL template variables
 ---

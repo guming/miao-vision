@@ -1,6 +1,6 @@
 ---
 title: Pie Chart Demo
-author: Miaoshou Vision
+author: Miao Vision
 date: 2024-12-15
 description: Demonstration of Pie Chart and Donut Chart
 ---

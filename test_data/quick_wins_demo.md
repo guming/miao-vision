@@ -90,7 +90,7 @@ title: 产品 FAQ
 multiple: false
 defaultOpen: [0]
 items:
-  - title: 如何开始使用 Miaoshou Vision？
+  - title: 如何开始使用 Miao Vision？
     content: 只需上传您的数据文件（CSV、Parquet、JSON），然后使用 SQL 查询进行分析。所有处理都在浏览器本地完成，无需服务器。
   - title: 支持哪些数据格式？
     content: 目前支持 CSV、Parquet、JSON 格式的数据文件。DuckDB-WASM 引擎提供高性能的本地数据处理能力。
@@ -122,7 +122,7 @@ items:
 ## Tooltip - 信息提示
 
 这是一个 ```tooltip
-text: Miaoshou Vision 是本地优先的数据分析框架
+text: Miao Vision 是本地优先的数据分析框架
 trigger: 产品介绍
 position: top
 ``` 的示例。
@@ -418,7 +418,7 @@ buttonText: 查看产品详情
 title: 产品信息
 size: md
 ---
-**产品名称**: Miaoshou Vision
+**产品名称**: Miao Vision
 
 这是一个本地优先的数据分析框架，具有以下特点：
 

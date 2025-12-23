@@ -347,7 +347,7 @@ function generateHTMLDocument(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="Miaoshou Vision">
+  <meta name="generator" content="Miao Vision">
   <meta name="exported-at" content="${new Date().toISOString()}">
   <title>${escapeHtml(options.title)}</title>
   <style>
@@ -363,7 +363,7 @@ ${customCSS}
 ${content}
   </article>
   <footer class="export-footer">
-    <p>Exported from Miaoshou Vision on ${timestamp}</p>
+    <p>Exported from Miao Vision on ${timestamp}</p>
   </footer>
 </body>
 </html>`

@@ -1,8 +1,8 @@
-# Miaoshou Vision - 快速启动指南
+# Miao Vision - 快速启动指南
 
 ## ✨ 项目概述
 
-Miaoshou Vision 是一个**浏览器原生的 Evidence 类数据分析框架**，实现了完全的 Local-First 架构：
+Miao Vision 是一个**浏览器原生的 Evidence 类数据分析框架**，实现了完全的 Local-First 架构：
 
 - 🔒 **隐私优先**：所有数据处理都在浏览器端完成
 - ⚡ **高性能**：DuckDB-WASM 提供接近原生的 SQL 分析能力

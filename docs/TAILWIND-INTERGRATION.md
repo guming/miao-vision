@@ -1,6 +1,6 @@
 # Tailwind CSS 集成计划
 
-> 为 Miaoshou Vision 集成 Tailwind CSS，保持 Evidence.dev 的设计风格
+> 为 Miao Vision 集成 Tailwind CSS，保持 Evidence.dev 的设计风格
 
 ## 📋 目录
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Miaoshou Vision** is a local-first data analytics framework that runs entirely in the browser. It combines:
+**Miao Vision** is a local-first data analytics framework that runs entirely in the browser. It combines:
 
 - **DuckDB-WASM v1.29** - Browser-based SQL engine with OPFS persistence
 - **Mosaic vgplot** - Declarative visualization integrated with DuckDB

@@ -1,6 +1,6 @@
 ---
 title: Reference SQL Demo
-author: Miaoshou Vision
+author: Miao Vision
 date: 2024-12-15
 ---
 

@@ -1,4 +1,4 @@
-# Feature Roadmap - Miaoshou Vision
+# Feature Roadmap - Miao Vision
 
 **Current Version**: v1.0 (Bootstrap + 43 Components)
 **Last Updated**: 2024-12-23
@@ -490,6 +490,6 @@ A: See [PLUGIN_ARCHITECTURE.md](./docs/PLUGIN_ARCHITECTURE.md)
 
 ---
 
-**Maintained by**: Miaoshou Vision Team
+**Maintained by**: Miao Vision Team
 **Last Updated**: December 23, 2024
 **Version**: 1.0.0

@@ -1,4 +1,4 @@
-# 完整用户问题记录 - Miaoshou Vision 项目
+# 完整用户问题记录 - Miao Vision 项目
 
 **项目**: miaoshou-vision (Evidence.dev 风格的 Markdown 报告系统)
 **技术栈**: Svelte 5, DuckDB-WASM, Mosaic vgplot, Monaco Editor

@@ -1,5 +1,5 @@
 /**
- * Core Module - Miaoshou Vision Engine
+ * Core Module - Miao Vision Engine
  *
  * Central export point for core framework functionality.
  * Plugins should import from @core instead of individual files.

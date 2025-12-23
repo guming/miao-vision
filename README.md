@@ -1,4 +1,4 @@
-# Miaoshou Vision
+# Miao Vision
 
 > 🔒 Local-First Data Analytics Framework - 在浏览器中进行数据分析，数据永不离开本地
 
@@ -201,7 +201,7 @@ src/
 
 ## 📦 部署
 
-Miaoshou Vision 是纯静态网站，可部署到任何静态托管平台：
+Miao Vision 是纯静态网站，可部署到任何静态托管平台：
 
 ### 推荐平台
 
@@ -254,6 +254,6 @@ MIT License - 详见 [LICENSE](./LICENSE)
 
 ---
 
-**维护者**: Miaoshou Vision Team
+**维护者**: Miao Vision Team
 **当前版本**: v1.0 (Bootstrap + 43 Components)
 **最后更新**: 2024-12-23
