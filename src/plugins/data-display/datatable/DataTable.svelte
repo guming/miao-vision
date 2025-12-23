@@ -931,7 +931,10 @@
                             {@const imgHeight = column.imageConfig?.height || 50}
                             {@const imgFit = column.imageConfig?.fit || 'contain'}
                             {@const imgRounded = column.imageConfig?.rounded || false}
-                            <div class="cell-image-wrapper">
+                            <div
+                              class="cell-image-wrapper"
+                              style="min-height: {typeof imgHeight === 'number' ? `${imgHeight}px` : imgHeight};"
+                            >
                               <img
                                 src={imageUrl}
                                 alt=""
