@@ -19,6 +19,22 @@
     }
   })
 
+  // Setup mouse event listeners for column resizing
+  $effect(() => {
+    if (typeof document === 'undefined') return
+
+    const handleMouseMove = (e: MouseEvent) => onResize(e)
+    const handleMouseUp = () => stopResize()
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  })
+
   // Local state
   let searchQuery = $state('')
   let sortState = $state<SortState | null>(null)
@@ -44,6 +60,15 @@
 
   // Export menu state
   let showExportMenu = $state(false)
+
+  // Column resizing state
+  let columnWidths = $state<Record<string, number>>({})
+  let resizingColumn = $state<string | null>(null)
+  let resizeStartX = $state(0)
+  let resizeStartWidth = $state(0)
+
+  // Row grouping state
+  let collapsedGroups = $state<Set<string>>(new Set())
 
   let visibleColumns = $derived(
     data.columns.filter(col => columnVisibility[col.name] !== false)
@@ -294,6 +319,134 @@
 
   function toggleExportMenu() {
     showExportMenu = !showExportMenu
+  }
+
+  // Column resizing functions
+  function startResize(columnName: string, event: MouseEvent) {
+    if (!data.config.resizableColumns) return
+    resizingColumn = columnName
+    resizeStartX = event.clientX
+    const column = data.columns.find(c => c.name === columnName)
+    if (column) {
+      const currentWidth = columnWidths[columnName] || (typeof column.width === 'number' ? column.width : 150)
+      resizeStartWidth = currentWidth
+    }
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  function onResize(event: MouseEvent) {
+    if (!resizingColumn) return
+    const diff = event.clientX - resizeStartX
+    const newWidth = Math.max(50, resizeStartWidth + diff) // Minimum width 50px
+    columnWidths = { ...columnWidths, [resizingColumn]: newWidth }
+  }
+
+  function stopResize() {
+    resizingColumn = null
+  }
+
+  // Get column width (from state or config)
+  function getColumnWidth(column: typeof data.columns[0]): string {
+    if (columnWidths[column.name]) {
+      return `${columnWidths[column.name]}px`
+    }
+    if (column.width) {
+      return typeof column.width === 'number' ? `${column.width}px` : column.width
+    }
+    return 'auto'
+  }
+
+  // Calculate frozen column offset
+  function getFrozenOffset(column: typeof data.columns[0]): number {
+    if (!column.frozen) return 0
+
+    const columnIndex = visibleColumns.findIndex(c => c.name === column.name)
+    let offset = 0
+
+    if (column.frozen === 'left') {
+      // Sum widths of all frozen columns to the left
+      for (let i = 0; i < columnIndex; i++) {
+        const col = visibleColumns[i]
+        if (col.frozen === 'left') {
+          const width = columnWidths[col.name] || (typeof col.width === 'number' ? col.width : 150)
+          offset += width
+        }
+      }
+      // Add select column width if present
+      if (data.config.selectable) {
+        offset += 50
+      }
+    } else if (column.frozen === 'right') {
+      // Sum widths of all frozen columns to the right
+      for (let i = columnIndex + 1; i < visibleColumns.length; i++) {
+        const col = visibleColumns[i]
+        if (col.frozen === 'right') {
+          const width = columnWidths[col.name] || (typeof col.width === 'number' ? col.width : 150)
+          offset += width
+        }
+      }
+    }
+
+    return offset
+  }
+
+  // Group data by specified column
+  interface GroupedData {
+    groupKey: string
+    groupValue: any
+    rows: any[]
+    subtotals?: Record<string, any>
+  }
+
+  function groupData(rows: any[]): GroupedData[] {
+    if (!data.config.groupBy) return []
+
+    const groups = new Map<string, any[]>()
+
+    rows.forEach(row => {
+      const groupValue = row[data.config.groupBy!]
+      const groupKey = String(groupValue)
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, [])
+      }
+      groups.get(groupKey)!.push(row)
+    })
+
+    const groupedData: GroupedData[] = []
+
+    groups.forEach((groupRows, groupKey) => {
+      const groupEntry: GroupedData = {
+        groupKey,
+        groupValue: groupRows[0][data.config.groupBy!],
+        rows: groupRows
+      }
+
+      // Calculate subtotals if enabled
+      if (data.config.showSubtotals) {
+        groupEntry.subtotals = {}
+        visibleColumns.forEach(column => {
+          if (column.summary && column.summary !== 'none') {
+            groupEntry.subtotals![column.name] = calculateSummary(groupRows, column)
+          }
+        })
+      }
+
+      groupedData.push(groupEntry)
+    })
+
+    return groupedData
+  }
+
+  function toggleGroup(groupKey: string) {
+    const newSet = new Set(collapsedGroups)
+    if (newSet.has(groupKey)) {
+      newSet.delete(groupKey)
+    } else {
+      newSet.add(groupKey)
+    }
+    collapsedGroups = newSet
   }
 
   function getCellValue(row: any, column: typeof data.columns[0]): string {
@@ -566,13 +719,19 @@
             {/if}
 
             {#each visibleColumns as column}
+              {@const frozenOffset = getFrozenOffset(column)}
               <th
                 class="header-cell"
                 class:sortable={data.config.sortable}
                 class:sorted={sortState?.column === column.name}
                 class:filtered={getActiveFilter(column.name)}
+                class:resizable={data.config.resizableColumns}
+                class:frozen-left={column.frozen === 'left'}
+                class:frozen-right={column.frozen === 'right'}
                 style:text-align={column.align || 'left'}
-                style:width={column.width ? (typeof column.width === 'number' ? `${column.width}px` : column.width) : 'auto'}
+                style:width={getColumnWidth(column)}
+                style:left={column.frozen === 'left' ? `${frozenOffset}px` : undefined}
+                style:right={column.frozen === 'right' ? `${frozenOffset}px` : undefined}
               >
                 <div class="header-content">
                   <button
@@ -695,6 +854,15 @@
                     {/if}
                   </div>
                 {/if}
+
+                {#if data.config.resizableColumns}
+                  <div
+                    class="resize-handle"
+                    onmousedown={(e) => startResize(column.name, e)}
+                    role="separator"
+                    aria-label="Resize column"
+                  ></div>
+                {/if}
               </th>
             {/each}
           </tr>
@@ -741,18 +909,40 @@
                       {#each visibleColumns as column}
                         {@const colorScaleBg = getColorScaleBackground(row, column)}
                         {@const iconInfo = getIconForValue(row, column)}
+                        {@const frozenOffset = getFrozenOffset(column)}
                         {@const cellStyle = [
                           getCellStyle(row, column),
-                          colorScaleBg ? `background-color: ${colorScaleBg}` : ''
+                          colorScaleBg ? `background-color: ${colorScaleBg}` : '',
+                          column.frozen === 'left' ? `left: ${frozenOffset}px` : '',
+                          column.frozen === 'right' ? `right: ${frozenOffset}px` : ''
                         ].filter(Boolean).join('; ')}
                         <td
                           class="data-cell"
                           class:has-data-bar={column.showDataBar}
                           class:has-color-scale={!!colorScaleBg}
+                          class:frozen-left={column.frozen === 'left'}
+                          class:frozen-right={column.frozen === 'right'}
                           style:text-align={column.align || 'left'}
                           style={cellStyle}
                         >
-                          {#if column.showDataBar}
+                          {#if column.contentType === 'image'}
+                            {@const imageUrl = row[column.name]}
+                            {@const imgWidth = column.imageConfig?.width || 50}
+                            {@const imgHeight = column.imageConfig?.height || 50}
+                            {@const imgFit = column.imageConfig?.fit || 'contain'}
+                            {@const imgRounded = column.imageConfig?.rounded || false}
+                            <div class="cell-image-wrapper">
+                              <img
+                                src={imageUrl}
+                                alt=""
+                                style="width: {typeof imgWidth === 'number' ? `${imgWidth}px` : imgWidth}; height: {typeof imgHeight === 'number' ? `${imgHeight}px` : imgHeight}; object-fit: {imgFit}; {imgRounded ? 'border-radius: 4px;' : ''}"
+                                onerror={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }}
+                              />
+                              <span class="image-error" style="display: none; font-size: 0.75rem; color: #9CA3AF;">❌</span>
+                            </div>
+                          {:else if column.contentType === 'html'}
+                            {@html row[column.name]}
+                          {:else if column.showDataBar}
                             <div class="cell-with-bar">
                               <div class="data-bar" style="width: {getDataBarWidth(row, column)}%"></div>
                               <span class="cell-value">{getCellValue(row, column)}</span>
@@ -1359,6 +1549,91 @@
   .empty-state p {
     margin: 0;
     font-size: 0.875rem;
+  }
+
+  /* Image column styles */
+  .cell-image-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 0;
+  }
+
+  .cell-image-wrapper img {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Column resizing styles */
+  .header-cell.resizable {
+    position: relative;
+  }
+
+  .resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 10;
+  }
+
+  .resize-handle:hover {
+    background: rgba(59, 130, 246, 0.3);
+  }
+
+  .resize-handle:active {
+    background: rgba(59, 130, 246, 0.5);
+  }
+
+  /* Frozen column styles */
+  .header-cell.frozen-left,
+  .data-cell.frozen-left,
+  .summary-cell.frozen-left {
+    position: sticky;
+    z-index: 5;
+    background: #1F2937;
+  }
+
+  .header-cell.frozen-left {
+    z-index: 15;
+  }
+
+  .header-cell.frozen-right,
+  .data-cell.frozen-right,
+  .summary-cell.frozen-right {
+    position: sticky;
+    z-index: 5;
+    background: #1F2937;
+  }
+
+  .header-cell.frozen-right {
+    z-index: 15;
+  }
+
+  /* Shadow effect for frozen columns */
+  .frozen-left::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 8px;
+    pointer-events: none;
+    box-shadow: inset -8px 0 8px -8px rgba(0, 0, 0, 0.3);
+  }
+
+  .frozen-right::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 8px;
+    pointer-events: none;
+    box-shadow: inset 8px 0 8px -8px rgba(0, 0, 0, 0.3);
   }
 
   @media (max-width: 640px) {

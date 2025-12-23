@@ -33,6 +33,14 @@ export interface IconSet {
   showValue?: boolean  // Show value alongside icon (default: true)
 }
 
+// Image configuration for image columns
+export interface ImageConfig {
+  width?: number | string  // Image width (px or %)
+  height?: number | string  // Image height (px or %)
+  rounded?: boolean  // Rounded corners (default: false)
+  fit?: 'contain' | 'cover' | 'fill'  // Object fit (default: 'contain')
+}
+
 export interface ColumnConfig {
   name: string               // Column name (from SQL result)
   label?: string             // Display label (default: name)
@@ -46,6 +54,11 @@ export interface ColumnConfig {
   showDataBar?: boolean      // Show data bar in cells (default: false)
   colorScale?: ColorScale    // Color scale gradient
   iconSet?: IconSet          // Icon set for value indicators
+
+  // NEW: Advanced column features
+  contentType?: 'text' | 'image' | 'html'  // Content type (default: 'text')
+  imageConfig?: ImageConfig  // Image configuration (when contentType='image')
+  frozen?: 'left' | 'right' | false  // Freeze column position (default: false)
 }
 
 /**
@@ -81,6 +94,12 @@ export interface DataTableConfig {
   rowHeight?: number         // Row height for virtual scrolling (default: 36)
   maxHeight?: number         // Max table height in pixels (default: 600)
   drilldown?: DrilldownConfig  // Drill-down configuration for row clicks
+
+  // NEW: Advanced table features
+  resizableColumns?: boolean // Enable column width resizing (default: false)
+  groupBy?: string           // Column name to group rows by
+  showSubtotals?: boolean    // Show subtotal rows for each group (default: false)
+  groupCollapsible?: boolean // Allow collapsing/expanding groups (default: true)
 }
 
 export interface ColumnMeta {
