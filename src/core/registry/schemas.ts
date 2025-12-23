@@ -157,7 +157,16 @@ export const DataTableSchema: ConfigSchema = {
     { name: 'paginate', type: 'boolean', default: true },
     { name: 'pageSize', type: 'number', default: 10 },
     { name: 'rowHeight', type: 'number', default: 36 },
-    { name: 'maxHeight', type: 'number', default: 600 }
+    { name: 'maxHeight', type: 'number', default: 600 },
+    { name: 'columnSelector', type: 'boolean', default: false },
+    { name: 'filterable', type: 'boolean', default: false },
+    { name: 'summaryRow', type: 'boolean', default: false },
+    { name: 'selectable', type: 'boolean', default: false },
+    // NEW: Advanced features
+    { name: 'resizableColumns', type: 'boolean', default: false },
+    { name: 'groupBy', type: 'string' },
+    { name: 'showSubtotals', type: 'boolean', default: false },
+    { name: 'groupCollapsible', type: 'boolean', default: true }
   ],
   sections: [
     {
@@ -171,7 +180,23 @@ export const DataTableSchema: ConfigSchema = {
           enum: ['number', 'currency', 'percent', 'date', 'text']
         },
         { name: 'align', type: 'enum', enum: ['left', 'right', 'center'] },
-        { name: 'width', type: 'string' }
+        { name: 'width', type: 'string' },
+        { name: 'visible', type: 'boolean', default: true },
+        { name: 'resizable', type: 'boolean', default: true },
+        { name: 'summary', type: 'enum', enum: ['sum', 'avg', 'count', 'min', 'max', 'none'], default: 'none' },
+        // NEW: Advanced column features
+        { name: 'contentType', type: 'enum', enum: ['text', 'image', 'html'], default: 'text' },
+        { name: 'frozen', type: 'enum', enum: ['left', 'right', 'false'], default: 'false' }
+      ]
+    },
+    {
+      name: 'imageConfig',
+      parent: 'columns',
+      itemFields: [
+        { name: 'width', type: 'number' },
+        { name: 'height', type: 'number' },
+        { name: 'rounded', type: 'boolean', default: false },
+        { name: 'fit', type: 'enum', enum: ['contain', 'cover', 'fill'], default: 'contain' }
       ]
     }
   ]
