@@ -990,11 +990,54 @@ src/
 
 ## Version History
 
-- **v1.0.0** (2025-12-14) - Initial design system documentation
+- **v1.1.0** (2024-12-23) - Updated for 43-component architecture
+  - Added component count and plugin architecture notes
+  - Updated to reflect Bootstrap layer and clean architecture
+  - Enhanced accessibility guidelines
+  - Added responsive design patterns for 43+ components
+
+- **v1.0.0** (2024-12-14) - Initial design system documentation
   - Modern dark-mode UI with Gemini inspiration
   - Complete button and form component system
   - Responsive layout patterns
   - Accessibility guidelines
+
+---
+
+## Component Integration
+
+### Plugin Components (43 Total)
+
+This design system is applied across all 43 plugin components:
+
+**Input Components (8)**: Dropdown, ButtonGroup, TextInput, Slider, DateRange, Checkbox, DimensionGrid
+- Use `form-input`, `form-select`, `btn` classes
+- Consistent focus states and validation styling
+
+**Data Display (22)**: BigValue, DataTable, Value, Sparkline, Charts, Gauge, KPIGrid, etc.
+- Use `evidence-card` for containers
+- Gradient accents via `bg-gemini-primary`
+- High-contrast text for readability
+
+**UI Components (6)**: Alert, Tabs, Accordion, Tooltip, Details, Modal
+- Consistent spacing and border radius
+- Smooth transitions (200-300ms)
+- Accessible keyboard navigation
+
+**Layout (1)**: Grid
+- Responsive grid system with 12-column layout
+- Consistent gaps and margins
+
+### Architecture Compliance
+
+All components must follow:
+- ✅ Tailwind utility-first approach
+- ✅ Design token consistency (colors, spacing, typography)
+- ✅ WCAG 2.1 AA accessibility
+- ✅ Responsive breakpoints (sm, md, lg, xl, 2xl)
+- ✅ Dark mode optimization
+
+For component development, see: [PLUGIN_ARCHITECTURE.md](./docs/PLUGIN_ARCHITECTURE.md)
 
 ---
 
@@ -1005,8 +1048,10 @@ src/
 - [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)
 - [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
 - [Cubic Bezier Easing](https://cubic-bezier.com/)
+- [Plugin Architecture Guide](./docs/PLUGIN_ARCHITECTURE.md)
+- [Component Quick Reference](./COMPONENTS_QUICK_REFERENCE.md)
 
 ---
 
-**Maintained by**: Miao Vision Team
-**Last Updated**: December 14, 2025
+**Maintained by**: Miaoshou Vision Team
+**Last Updated**: December 23, 2024

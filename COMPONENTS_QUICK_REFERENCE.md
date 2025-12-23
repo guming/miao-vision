@@ -511,13 +511,761 @@ xl:   1280px  Large desktop
 
 ---
 
+# Evidence.dev-Style Components (43 Total)
+
+> Components for data-driven reports in Markdown
+
+---
+
+## 📊 Input Components (8)
+
+### Dropdown
+
+```markdown
+\`\`\`dropdown
+name: region
+data: regions_query
+value: region_code
+label: region_name
+title: Select Region
+defaultValue: US
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `data` (required) - Query name or data source
+- `value` - Column for option values
+- `label` - Column for option labels
+- `title` - Dropdown title
+- `defaultValue` - Initial selection
+
+### ButtonGroup
+
+```markdown
+\`\`\`buttongroup
+name: time_period
+title: Time Period
+options: Day, Week, Month, Year
+defaultValue: Month
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `options` (required) - Comma-separated options
+- `title` - Button group title
+- `defaultValue` - Initial selection
+
+### TextInput
+
+```markdown
+\`\`\`textinput
+name: search
+title: Search Products
+placeholder: Enter product name...
+debounce: 300
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `title` - Input label
+- `placeholder` - Placeholder text
+- `debounce` - Debounce delay (ms)
+
+### Slider
+
+```markdown
+\`\`\`slider
+name: price_max
+title: Maximum Price
+min: 0
+max: 1000
+step: 10
+defaultValue: 500
+format: currency
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `min` - Minimum value
+- `max` - Maximum value
+- `step` - Step increment
+- `format` - Display format (currency, percent, number)
+
+### DateRange
+
+```markdown
+\`\`\`daterange
+name: date_filter
+title: Date Range
+presets: true
+defaultValue: Last 30 Days
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `title` - DateRange title
+- `presets` - Show preset options (true/false)
+- `defaultValue` - Initial range
+
+### Checkbox
+
+```markdown
+\`\`\`checkbox
+name: show_inactive
+title: Show Inactive Users
+defaultValue: false
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `title` - Checkbox label
+- `defaultValue` - Initial checked state
+
+### DimensionGrid
+
+```markdown
+\`\`\`dimensiongrid
+name: category
+data: categories_query
+title: Select Category
+\`\`\`
+```
+
+**Props:**
+- `name` (required) - Input variable name
+- `data` (required) - Query name with categories
+- `title` - Grid title
+
+---
+
+## 📈 Data Display Components (22)
+
+### BigValue
+
+```markdown
+\`\`\`bigvalue
+query: total_revenue
+value: revenue
+title: Total Revenue
+format: currency
+comparison: last_month
+comparisonLabel: vs Last Month
+sparkline: true
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Value column
+- `title` - Card title
+- `format` - number, currency, percent, compact
+- `comparison` - Comparison query name
+- `sparkline` - Show trend line (true/false)
+
+### DataTable
+
+```markdown
+\`\`\`datatable
+query: sales_data
+search: true
+downloadable: true
+rowsPerPage: 25
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `search` - Enable search (true/false)
+- `downloadable` - Enable CSV/Excel export
+- `rowsPerPage` - Rows per page (10, 25, 50, 100)
+- `sortable` - Enable sorting (true/false)
+
+### Value
+
+```markdown
+Revenue: \`\`\`value query=summary field=total_revenue format=currency\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `field` (required) - Field to display
+- `format` - Display format
+
+### Sparkline
+
+```markdown
+\`\`\`sparkline
+query: daily_sales
+value: revenue
+type: line
+color: #10B981
+height: 40
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Value column
+- `type` - line, area, bar
+- `color` - Line color
+- `height` - Chart height (px)
+
+### BarChart
+
+```markdown
+\`\`\`bar-chart
+query: category_sales
+x: category
+y: revenue
+title: Sales by Category
+orientation: vertical
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `x` (required) - X-axis column
+- `y` (required) - Y-axis column
+- `title` - Chart title
+- `orientation` - vertical, horizontal
+
+### PieChart
+
+```markdown
+\`\`\`pie-chart
+query: market_share
+category: company
+value: share
+title: Market Share
+donut: true
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `category` (required) - Category column
+- `value` (required) - Value column
+- `donut` - Donut style (true/false)
+
+### Histogram
+
+```markdown
+\`\`\`histogram
+query: age_distribution
+value: age
+bins: 10
+title: Age Distribution
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Value column
+- `bins` - Number of bins
+- `title` - Chart title
+
+### Delta
+
+```markdown
+\`\`\`delta
+query: kpi
+value: current_value
+comparison: previous_value
+format: percent
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Current value column
+- `comparison` (required) - Comparison value column
+- `format` - Display format
+
+### Sankey
+
+```markdown
+\`\`\`sankey
+query: flow_data
+source: from_state
+target: to_state
+value: count
+title: User Flow
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `source` (required) - Source column
+- `target` (required) - Target column
+- `value` (required) - Flow value column
+
+### Waterfall
+
+```markdown
+\`\`\`waterfall
+query: cash_flow
+category: month
+value: amount
+title: Cash Flow Analysis
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `category` (required) - Category column
+- `value` (required) - Value column
+
+### Progress
+
+```markdown
+\`\`\`progress
+query: goal_progress
+value: current
+max: target
+title: Goal Progress
+format: percent
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Current value column
+- `max` (required) - Max value column
+- `format` - Display format
+
+### BulletChart
+
+```markdown
+\`\`\`bullet-chart
+query: performance
+value: actual
+target: goal
+title: Sales Performance
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Actual value column
+- `target` (required) - Target value column
+
+### BoxPlot
+
+```markdown
+\`\`\`boxplot
+query: salary_distribution
+category: department
+value: salary
+title: Salary by Department
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `category` - Grouping column
+- `value` (required) - Value column
+
+### CalendarHeatmap
+
+```markdown
+\`\`\`calendar-heatmap
+query: daily_commits
+date: commit_date
+value: count
+year: 2024
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `date` (required) - Date column
+- `value` (required) - Value column
+- `year` - Year to display
+
+### Gauge
+
+```markdown
+\`\`\`gauge
+query: cpu_usage
+value: usage_percent
+min: 0
+max: 100
+thresholds: 60, 80
+colors: green, yellow, red
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `value` (required) - Value column
+- `min`, `max` - Range
+- `thresholds` - Threshold values
+- `colors` - Color ranges
+
+### KPIGrid
+
+```markdown
+\`\`\`kpigrid
+query: kpi_metrics
+metrics: revenue, users, conversion
+format: currency, number, percent
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `metrics` (required) - Columns to display
+- `format` - Format for each metric
+
+### Heatmap
+
+```markdown
+\`\`\`heatmap
+query: activity_matrix
+x: hour
+y: day
+value: count
+title: Activity Heatmap
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `x` (required) - X-axis column
+- `y` (required) - Y-axis column
+- `value` (required) - Value column
+
+### Radar
+
+```markdown
+\`\`\`radar
+query: skill_assessment
+dimension: skill
+value: score
+title: Skill Assessment
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `dimension` (required) - Dimension column
+- `value` (required) - Value column
+
+### Funnel
+
+```markdown
+\`\`\`funnel
+query: conversion_funnel
+stage: step
+value: users
+title: Conversion Funnel
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `stage` (required) - Stage column
+- `value` (required) - Value column
+
+### Treemap
+
+```markdown
+\`\`\`treemap
+query: product_sales
+category: product
+value: revenue
+title: Product Revenue
+\`\`\`
+```
+
+**Props:**
+- `query` (required) - Query name
+- `category` (required) - Category column
+- `value` (required) - Value column
+
+---
+
+## 📊 vgplot Charts (7)
+
+### Chart (Generic)
+
+```markdown
+\`\`\`chart
+data: sales_data
+x: date
+y: revenue
+type: line
+\`\`\`
+```
+
+### Line Chart
+
+```markdown
+\`\`\`line
+data: time_series
+x: date
+y: value
+title: Time Series
+\`\`\`
+```
+
+### Area Chart
+
+```markdown
+\`\`\`area
+data: cumulative_sales
+x: month
+y: total
+fill: #4285F4
+\`\`\`
+```
+
+### Scatter Plot
+
+```markdown
+\`\`\`scatter
+data: correlation_data
+x: temperature
+y: sales
+size: 5
+color: #EC4899
+\`\`\`
+```
+
+---
+
+## 🎨 UI Components (6)
+
+### Alert
+
+```markdown
+\`\`\`alert
+type: warning
+title: Important Notice
+
+This is a warning message that users should pay attention to.
+\`\`\`
+```
+
+**Types:** `info`, `warning`, `error`, `success`
+
+### Tabs
+
+```markdown
+\`\`\`tabs
+tabs: Overview, Details, Analytics
+
+# Overview Content
+Overview tab content here...
+
+# Details Content
+Details tab content here...
+
+# Analytics Content
+Analytics tab content here...
+\`\`\`
+```
+
+### Accordion
+
+```markdown
+\`\`\`accordion
+title: FAQ Section
+
+## Question 1?
+Answer to question 1...
+
+## Question 2?
+Answer to question 2...
+\`\`\`
+```
+
+### Tooltip
+
+```markdown
+Hover over \`\`\`tooltip text="This is a tooltip"\`\`\` for more info.
+```
+
+### Details
+
+```markdown
+\`\`\`details
+summary: Click to expand
+
+Hidden content that shows when expanded.
+\`\`\`
+```
+
+### Modal
+
+```markdown
+\`\`\`modal
+buttonText: View Details
+title: Detailed Information
+
+Modal content here...
+\`\`\`
+```
+
+---
+
+## 📐 Layout Components (1)
+
+### Grid
+
+```markdown
+\`\`\`grid
+columns: 3
+gap: 4
+
+<BigValue ... />
+<BigValue ... />
+<BigValue ... />
+\`\`\`
+```
+
+**Props:**
+- `columns` - Number of columns (1-4)
+- `gap` - Gap size (1-8)
+
+---
+
+## 💡 Usage Examples
+
+### Complete Dashboard Example
+
+```markdown
+# Sales Dashboard
+
+## Filters
+
+\`\`\`daterange
+name: date_range
+title: Select Date Range
+presets: true
+\`\`\`
+
+\`\`\`dropdown
+name: region
+data: regions
+value: region_code
+label: region_name
+title: Region
+\`\`\`
+
+## KPIs
+
+\`\`\`grid
+columns: 4
+gap: 4
+
+\`\`\`bigvalue
+query: total_revenue
+value: revenue
+title: Total Revenue
+format: currency
+\`\`\`
+
+\`\`\`bigvalue
+query: total_orders
+value: orders
+title: Total Orders
+format: number
+\`\`\`
+
+\`\`\`bigvalue
+query: avg_order_value
+value: aov
+title: Avg Order Value
+format: currency
+\`\`\`
+
+\`\`\`bigvalue
+query: conversion_rate
+value: rate
+title: Conversion Rate
+format: percent
+\`\`\`
+\`\`\`
+
+## Trends
+
+\`\`\`line
+data: daily_revenue
+x: date
+y: revenue
+title: Daily Revenue Trend
+\`\`\`
+
+## Top Products
+
+\`\`\`datatable
+query: top_products
+search: true
+downloadable: true
+\`\`\`
+```
+
+### Report with Conditionals
+
+```markdown
+# Monthly Report
+
+\`\`\`sql name=summary
+SELECT
+  SUM(revenue) as total_revenue,
+  COUNT(*) as order_count
+FROM sales
+WHERE month = '${inputs.month}'
+\`\`\`
+
+{#if ${summary.total_revenue} > 100000}
+## 🎉 Excellent Performance!
+
+Revenue exceeded $100K this month.
+
+\`\`\`bigvalue
+query: summary
+value: total_revenue
+title: Monthly Revenue
+format: currency
+\`\`\`
+{:else}
+## 📊 Performance Update
+
+\`\`\`alert
+type: info
+title: Revenue Below Target
+
+Current revenue is $${summary.total_revenue}. Target is $100,000.
+\`\`\`
+{/if}
+```
+
+---
+
 ## 📚 Full Documentation
 
 For complete documentation, examples, and guidelines, see:
+- [PLUGIN_ARCHITECTURE.md](./docs/PLUGIN_ARCHITECTURE.md) - Plugin development guide
 - [UI_DESIGN_SYSTEM.md](./UI_DESIGN_SYSTEM.md) - Complete design system
+- [CLAUDE.md](./CLAUDE.md) - Comprehensive development guide
 - [tailwind.config.js](./tailwind.config.js) - Theme configuration
 - [src/app.css](./src/app.css) - Component styles
 
 ---
 
-**Quick Tip**: Use browser DevTools to inspect existing components and see which classes are being used!
+**Quick Tips**:
+- Use browser DevTools to inspect existing components and see which classes are being used
+- All components support template variables: `${inputs.variable_name}`
+- Chain components with SQL: `query: previous_query_name`
+- Test components in isolation before adding to complex reports
+
+**Last Updated**: December 23, 2024
+**Total Components**: 43 (8 inputs + 22 data display + 7 charts + 6 UI + 1 layout)

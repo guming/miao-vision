@@ -399,9 +399,9 @@ export function initializePlugins(): void {
 }
 ```
 
-## 内置插件
+## 内置插件（43 个组件）
 
-### inputs/ - 输入组件
+### inputs/ - 输入组件（8 个）
 
 | 组件 | 语言标识 | 描述 |
 |------|----------|------|
@@ -410,6 +410,8 @@ export function initializePlugins(): void {
 | TextInput | `textinput` | 文本搜索框 |
 | Slider | `slider` | 数值滑块 |
 | DateRange | `daterange` | 日期范围选择 |
+| Checkbox | `checkbox` | 复选框 |
+| DimensionGrid | `dimensiongrid` | 维度网格选择器 |
 
 ```markdown
 \`\`\`dropdown
@@ -444,14 +446,30 @@ presets: true
 \`\`\`
 ```
 
-### data-display/ - 数据展示
+### data-display/ - 数据展示（22 个）
 
 | 组件 | 语言标识 | 描述 |
 |------|----------|------|
 | BigValue | `bigvalue` | 大数值卡片 |
-| DataTable | `datatable` | 数据表格 |
+| DataTable | `datatable` | 数据表格（搜索/排序/筛选/导出） |
 | Value | `value` | 内联数值 |
 | Sparkline | `sparkline` | 迷你趋势图 |
+| BarChart | `bar-chart` | 柱状图 |
+| PieChart | `pie-chart` | 饼图/环形图 |
+| Histogram | `histogram` | 直方图 |
+| Delta | `delta` | 变化指示器 |
+| Sankey | `sankey` | 桑基图（流向分析） |
+| Waterfall | `waterfall` | 瀑布图 |
+| Progress | `progress` | 进度条 |
+| BulletChart | `bullet-chart` | 子弹图 |
+| BoxPlot | `boxplot` | 箱线图 |
+| CalendarHeatmap | `calendar-heatmap` | 日历热力图 |
+| Gauge | `gauge` | 仪表盘 |
+| KPIGrid | `kpigrid` | KPI 网格 |
+| Heatmap | `heatmap` | 热力图 |
+| Radar | `radar` | 雷达图 |
+| Funnel | `funnel` | 漏斗图 |
+| Treemap | `treemap` | 树状图 |
 
 ```markdown
 \`\`\`bigvalue
@@ -472,10 +490,11 @@ height: 40
 \`\`\`
 ```
 
-### viz/ - 图表
+### viz/ - 图表（7 个 vgplot）
 
 | 类型 | 语言标识 | 描述 |
 |------|----------|------|
+| Chart | `chart` | 通用图表 |
 | Line | `line` | 折线图 |
 | Bar | `bar` | 柱状图 |
 | Area | `area` | 面积图 |
@@ -492,11 +511,22 @@ title: 月度收入趋势
 \`\`\`
 ```
 
-### ui/ - UI 组件
+### ui/ - UI 组件（6 个）
 
 | 组件 | 语言标识 | 描述 |
 |------|----------|------|
 | Alert | `alert` | 提示框 |
+| Tabs | `tabs` | 标签页 |
+| Accordion | `accordion` | 手风琴折叠 |
+| Tooltip | `tooltip` | 工具提示 |
+| Details | `details` | 详情折叠 |
+| Modal | `modal` | 模态对话框 |
+
+### layout/ - 布局组件（1 个）
+
+| 组件 | 语言标识 | 描述 |
+|------|----------|------|
+| Grid | `grid` | 网格布局 |
 
 ```markdown
 \`\`\`alert
@@ -628,14 +658,16 @@ console.log('Input components:', componentRegistry.getByCategory('input'))
 🚀 Main.ts: App starting...
 🔌 Initializing Plugin System...
 📝 Registering input plugins...
-✅ Input plugins registered: dropdown, buttongroup
+✅ Input plugins registered: 8 components
 📊 Registering data display plugins...
-✅ Data display plugins registered: bigvalue, datatable, value
+✅ Data display plugins registered: 22 components
 🎨 Registering UI plugins...
-✅ UI plugins registered: alert
+✅ UI plugins registered: 6 components
+📐 Registering layout plugins...
+✅ Layout plugins registered: 1 component
 ✅ All plugins registered!
 📚 Plugin Documentation:
-  Total components: 13
-  By category: { chart: 7, input: 2, dataViz: 3, ui: 1, layout: 0 }
+  Total components: 43
+  By category: { chart: 7, input: 8, dataDisplay: 22, ui: 6, layout: 1 }
 ✨ Plugin system initialized successfully!
 ```
