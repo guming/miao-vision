@@ -538,6 +538,43 @@ export const BubbleMapSchema: ConfigSchema = {
 }
 
 /**
+ * Image component schema
+ *
+ * Example:
+ * ```image
+ * src: /images/logo.png
+ * alt: Company Logo
+ * width: 200
+ * align: center
+ * ```
+ */
+export const ImageSchema: ConfigSchema = {
+  fields: [
+    { name: 'src', type: 'string', required: true },
+    { name: 'alt', type: 'string' },
+    { name: 'title', type: 'string' },
+    { name: 'caption', type: 'string' },
+    { name: 'width', type: 'string' },
+    { name: 'height', type: 'string' },
+    { name: 'link', type: 'string' },
+    {
+      name: 'align',
+      type: 'enum',
+      enum: ['left', 'center', 'right'],
+      default: 'center'
+    },
+    {
+      name: 'fit',
+      type: 'enum',
+      enum: ['contain', 'cover', 'fill', 'scale-down'],
+      default: 'contain'
+    },
+    { name: 'rounded', type: 'boolean', default: false },
+    { name: 'shadow', type: 'boolean', default: false }
+  ]
+}
+
+/**
  * Schema registry - maps component types to their schemas
  */
 export const SchemaRegistry: Record<string, ConfigSchema> = {
@@ -556,7 +593,8 @@ export const SchemaRegistry: Record<string, ConfigSchema> = {
   dimensiongrid: DimensionGridSchema,
   areamap: AreaMapSchema,
   pointmap: PointMapSchema,
-  bubblemap: BubbleMapSchema
+  bubblemap: BubbleMapSchema,
+  image: ImageSchema
 }
 
 /**

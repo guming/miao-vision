@@ -29,9 +29,10 @@ import { radarRegistration } from './radar'
 import { heatmapRegistration } from './heatmap'
 import { barChartRegistration } from './bar-chart'
 import { pieChartRegistration } from './pie-chart'
+import { imageRegistration } from './image'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration, pieChartRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration, pieChartRegistration, imageRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
@@ -54,6 +55,7 @@ export { default as Radar } from './radar/Radar.svelte'
 export { default as Heatmap } from './heatmap/Heatmap.svelte'
 export { default as BarChart } from './bar-chart/BarChart.svelte'
 export { default as PieChart } from './pie-chart/PieChart.svelte'
+export { default as Image } from './image/Image.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
@@ -76,6 +78,7 @@ export type { RadarConfig, RadarData, RadarAxis, RadarSeries, RadarPoint, RadarG
 export type { HeatmapConfig, HeatmapData, HeatmapCell } from './heatmap/types'
 export type { BarChartConfig, BarChartData, BarItem } from './bar-chart/types'
 export type { PieChartConfig, PieChartData, PieSlice } from './pie-chart/types'
+export type { ImageConfig } from './image/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -106,8 +109,9 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(heatmapRegistration)
   registry.register(barChartRegistration)
   registry.register(pieChartRegistration)
+  registry.register(imageRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar, pie')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar, pie, image')
 }
 
 /**
@@ -133,5 +137,6 @@ export const dataDisplayPlugins = [
   radarRegistration,
   heatmapRegistration,
   barChartRegistration,
-  pieChartRegistration
+  pieChartRegistration,
+  imageRegistration
 ]
