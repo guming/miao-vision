@@ -130,15 +130,19 @@ async function initMap() {
 
     // Calculate center if not provided
     let mapCenter: [number, number]
-    if (center) {
-      mapCenter = center
+    if (center && Array.isArray(center) && center.length === 2) {
+      // Ensure center values are numbers
+      mapCenter = [Number(center[0]), Number(center[1])]
+      console.log('[PointMap] Using provided center:', mapCenter)
     } else if (points.length > 0) {
       // Calculate centroid of all points
       const avgLat = points.reduce((sum, p) => sum + p.latitude, 0) / points.length
       const avgLon = points.reduce((sum, p) => sum + p.longitude, 0) / points.length
       mapCenter = [avgLat, avgLon]
+      console.log('[PointMap] Calculated center from points:', mapCenter)
     } else {
       mapCenter = [0, 0]
+      console.log('[PointMap] Using default center')
     }
 
     // Create map

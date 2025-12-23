@@ -95,17 +95,17 @@ showTooltip: true
 tooltipTemplate: {name}<br>Population: {value}
 ```
 
-### Point Map with Custom Styling
+### Point Map with Custom Zoom
 
 ```pointmap
 query: city_locations
 latitude: latitude
 longitude: longitude
 name: city_name
-title: City Locations (Centered)
+value: population
+title: City Locations with Auto-Center
 height: 400
-center: [39.8283, -98.5795]
-zoom: 4
+zoom: 5
 ```
 
 ---

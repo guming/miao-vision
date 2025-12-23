@@ -137,12 +137,14 @@ async function initMap() {
 
     // Calculate center if not provided
     let mapCenter: [number, number]
-    if (center) {
-      mapCenter = center
+    if (center && Array.isArray(center) && center.length === 2) {
+      mapCenter = [Number(center[0]), Number(center[1])]
+      console.log('[BubbleMap] Using provided center:', mapCenter)
     } else if (bubbles.length > 0) {
       const avgLat = bubbles.reduce((sum, b) => sum + b.latitude, 0) / bubbles.length
       const avgLon = bubbles.reduce((sum, b) => sum + b.longitude, 0) / bubbles.length
       mapCenter = [avgLat, avgLon]
+      console.log('[BubbleMap] Calculated center from bubbles:', mapCenter)
     } else {
       mapCenter = [0, 0]
     }
