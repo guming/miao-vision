@@ -96,8 +96,24 @@ export interface ResultsChartConfig {
   yColumns: string[]
   /** Group by column (for stacked/grouped charts) */
   groupColumn?: string
+  /** Group by column (alias for groupColumn, used by vgplot) */
+  groupBy?: string
   /** Aggregation function */
-  aggregation?: 'sum' | 'avg' | 'count' | 'min' | 'max'
+  aggregation?: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'none'
+  /** Chart width */
+  width?: number
+  /** Chart height */
+  height?: number
+  /** Chart title */
+  title?: string
+  /** X-axis label */
+  xLabel?: string
+  /** Y-axis label */
+  yLabel?: string
+  /** Sort order */
+  sort?: 'desc' | 'asc' | 'none'
+  /** Show grid lines */
+  showGrid?: boolean
 }
 
 /**

@@ -16,6 +16,8 @@
   import type { QueryResult } from '@/types/database'
   import type { ResultsChartConfig, ColumnStatistics } from './types'
   import { inferColumnType } from './types'
+  import { MosaicChartAdapter } from './MosaicChartAdapter'
+  import type { MosaicChartSpec } from './MosaicChartAdapter'
 
   interface Props {
     result: QueryResult
@@ -24,6 +26,13 @@
   }
 
   let { result, config, onConfigChange }: Props = $props()
+
+  // vgplot integration (Proof of Concept)
+  let useMosaicVgplot = $state(true) // Toggle between SVG and vgplot
+  let mosaicChartSpec = $state<MosaicChartSpec | null>(null)
+  let mosaicLoading = $state(false)
+  let mosaicError = $state<string | null>(null)
+  let chartContainer = $state<HTMLDivElement | null>(null)
 
   // Chart dimensions
   let chartWidth = $state(700)
@@ -123,6 +132,62 @@
 
   // Check if we can render
   const canRender = $derived(config.xColumn && config.yColumns.length > 0)
+
+  // Render vgplot chart when enabled and config changes
+  $effect(() => {
+    async function renderMosaicChart() {
+      // Only use vgplot for bar charts in this POC
+      if (!useMosaicVgplot || config.type !== 'bar' || !canRender) {
+        mosaicChartSpec = null
+        return
+      }
+
+      mosaicLoading = true
+      mosaicError = null
+
+      try {
+        console.log('[ResultsChart] Rendering with Mosaic vgplot...')
+
+        // Build chart config for adapter
+        const adapterConfig: ResultsChartConfig = {
+          ...config,
+          width: chartWidth,
+          height: chartHeight,
+          title: chartTitle || undefined,
+          xLabel: xLabel || undefined,
+          yLabel: yLabel || undefined,
+          sort: sortOrder,
+          showGrid: true
+        }
+
+        const spec = await MosaicChartAdapter.buildBarChart(result, adapterConfig)
+        mosaicChartSpec = spec
+
+        console.log(`[ResultsChart] vgplot chart rendered in ${spec.renderTime.toFixed(2)}ms`)
+      } catch (error) {
+        console.error('[ResultsChart] Failed to render vgplot chart:', error)
+        mosaicError = error instanceof Error ? error.message : 'Failed to render chart'
+        mosaicChartSpec = null
+      } finally {
+        mosaicLoading = false
+      }
+    }
+
+    renderMosaicChart()
+  })
+
+  // Append vgplot chart to container when spec changes
+  $effect(() => {
+    if (mosaicChartSpec && chartContainer) {
+      // Clear previous chart
+      chartContainer.innerHTML = ''
+
+      // Append new chart
+      chartContainer.appendChild(mosaicChartSpec.plot)
+
+      console.log('[ResultsChart] vgplot chart appended to DOM')
+    }
+  })
 
   // Prepare chart data with aggregation, sorting, and limiting
   function prepareChartData(limit?: number, sort?: 'desc' | 'asc' | 'none') {
@@ -909,6 +974,17 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
           <label for="y-label">Y Axis Label</label>
           <input id="y-label" type="text" bind:value={yLabel} placeholder="Optional label..." />
         </div>
+
+        <!-- vgplot Toggle (POC) -->
+        {#if config.type === 'bar'}
+          <div class="config-field">
+            <label>
+              <input type="checkbox" bind:checked={useMosaicVgplot} />
+              Use Mosaic vgplot (POC)
+            </label>
+            <p class="hint">Toggle between custom SVG and Mosaic vgplot rendering</p>
+          </div>
+        {/if}
       </div>
     {/if}
   </aside>
@@ -916,9 +992,33 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
   <!-- Chart Preview -->
   <div class="chart-preview">
     {#if canRender}
-      <div class="chart-container">
-        {@html chartSVG}
-      </div>
+      <!-- vgplot chart (POC) -->
+      {#if useMosaicVgplot && config.type === 'bar'}
+        {#if mosaicLoading}
+          <div class="mosaic-loading">
+            <div class="spinner"></div>
+            <p>Rendering with Mosaic vgplot...</p>
+          </div>
+        {:else if mosaicError}
+          <div class="mosaic-error">
+            <strong>⚠ Mosaic vgplot Error</strong>
+            <p>{mosaicError}</p>
+            <p class="hint">Falling back to custom SVG...</p>
+          </div>
+        {:else if mosaicChartSpec}
+          <div class="mosaic-info">
+            <span class="badge">✨ Mosaic vgplot</span>
+            <span class="perf">Rendered in {mosaicChartSpec.renderTime.toFixed(2)}ms</span>
+          </div>
+          <div class="chart-container" bind:this={chartContainer}></div>
+        {/if}
+      {:else}
+        <!-- Custom SVG chart (fallback) -->
+        <div class="chart-container">
+          {@html chartSVG}
+        </div>
+      {/if}
+
       <div class="export-toolbar">
         <button class="export-btn" onclick={exportPNG} title="Export as PNG">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1129,5 +1229,102 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
   :global(.chart-container svg) {
     max-width: 100%;
     height: auto;
+  }
+
+  /* Mosaic vgplot styles */
+  .mosaic-loading,
+  .mosaic-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    color: #9CA3AF;
+  }
+
+  .mosaic-loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #1F2937;
+    border-top-color: #4285F4;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .mosaic-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+  }
+
+  .mosaic-error strong {
+    color: #FCA5A5;
+    font-size: 0.9rem;
+  }
+
+  .mosaic-info {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .mosaic-info .badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .mosaic-info .perf {
+    color: #10B981;
+    font-weight: 500;
+  }
+
+  .hint {
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    color: #6B7280;
+  }
+
+  /* Checkbox styling */
+  .config-field label input[type="checkbox"] {
+    margin-right: 0.5rem;
+  }
+
+  /* vgplot default styling overrides - dark theme */
+  :global(.chart-container svg) {
+    font-family: inherit;
+    background-color: transparent !important;
+  }
+
+  /* Force dark background for plot area */
+  :global(.chart-container svg rect[fill="white"]),
+  :global(.chart-container svg rect[fill="#ffffff"]) {
+    fill: #1F2937 !important;
+  }
+
+  /* Dark text for axes and labels */
+  :global(.chart-container svg text) {
+    fill: #E5E7EB !important;
+  }
+
+  /* Dark grid lines */
+  :global(.chart-container svg .grid line) {
+    stroke: #374151 !important;
+  }
+
+  :global(.chart-container .mark) {
+    transition: opacity 0.2s;
+  }
+
+  :global(.chart-container .mark:hover) {
+    opacity: 0.8;
   }
 </style>
