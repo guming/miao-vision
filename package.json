@@ -34,9 +34,14 @@
     "check:size": "bash scripts/check-file-size.sh",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.10",
