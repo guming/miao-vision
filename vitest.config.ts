@@ -10,9 +10,28 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/lib/pure/**/*.ts', 'src/lib/inputs/**/*.ts', 'src/lib/services/**/*.ts'],
-      exclude: ['src/lib/pure/index.ts', 'src/lib/services/index.ts']
+      reporter: ['text', 'html', 'json-summary'],
+      include: [
+        'src/core/**/*.ts',
+        'src/plugins/**/*.ts',
+        'src/app/**/*.ts'
+      ],
+      exclude: [
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/*.d.ts',
+        '**/index.ts',
+        '**/types.ts',
+        '**/metadata.ts',
+        '**/definition.ts',
+        '**/*.svelte'
+      ],
+      thresholds: {
+        lines: 25,
+        functions: 25,
+        branches: 20,
+        statements: 25
+      }
     }
   },
   resolve: {
