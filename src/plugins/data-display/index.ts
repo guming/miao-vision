@@ -3,7 +3,7 @@
  *
  * Components for displaying data: BigValue, DataTable, Value, Delta, Sparkline, KPIGrid,
  * Progress, Funnel, CalendarHeatmap, Sankey, Treemap, Histogram, BoxPlot, Gauge, BulletChart,
- * Waterfall, Radar, Heatmap, BarChart
+ * Waterfall, Radar, Heatmap, BarChart, PieChart, Image, BubbleChart
  */
 
 import type { ComponentRegistry } from '@core/registry'
@@ -30,9 +30,10 @@ import { heatmapRegistration } from './heatmap'
 import { barChartRegistration } from './bar-chart'
 import { pieChartRegistration } from './pie-chart'
 import { imageRegistration } from './image'
+import { bubbleChartRegistration } from './bubble-chart'
 
 // Re-export registrations for direct import
-export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration, pieChartRegistration, imageRegistration }
+export { bigValueRegistration, dataTableRegistration, valueRegistration, deltaRegistration, sparklineRegistration, kpiGridRegistration, progressRegistration, funnelRegistration, calendarHeatmapRegistration, sankeyRegistration, treemapRegistration, histogramRegistration, boxPlotRegistration, gaugeRegistration, bulletChartRegistration, waterfallRegistration, radarRegistration, heatmapRegistration, barChartRegistration, pieChartRegistration, imageRegistration, bubbleChartRegistration }
 
 // Re-export components
 export { default as BigValue } from './bigvalue/BigValue.svelte'
@@ -56,6 +57,7 @@ export { default as Heatmap } from './heatmap/Heatmap.svelte'
 export { default as BarChart } from './bar-chart/BarChart.svelte'
 export { default as PieChart } from './pie-chart/PieChart.svelte'
 export { default as Image } from './image/Image.svelte'
+export { default as BubbleChart } from './bubble-chart/BubbleChart.svelte'
 
 // Re-export types
 export type { BigValueConfig, BigValueData } from './bigvalue/types'
@@ -79,6 +81,7 @@ export type { HeatmapConfig, HeatmapData, HeatmapCell } from './heatmap/types'
 export type { BarChartConfig, BarChartData, BarItem } from './bar-chart/types'
 export type { PieChartConfig, PieChartData, PieSlice } from './pie-chart/types'
 export type { ImageConfig } from './image/types'
+export type { BubbleChartConfig, BubbleChartData, BubbleItem } from './bubble-chart/types'
 
 // Re-export shared utilities
 export { formatValue, formatNumber, formatCurrency, formatPercent } from './shared/formatter'
@@ -110,8 +113,9 @@ export function registerDataDisplayPlugins(registry: ComponentRegistry): void {
   registry.register(barChartRegistration)
   registry.register(pieChartRegistration)
   registry.register(imageRegistration)
+  registry.register(bubbleChartRegistration)
 
-  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar, pie, image')
+  console.log('✅ Data display plugins registered: bigvalue, datatable, value, delta, sparkline, kpigrid, progress, funnel, calendar-heatmap, sankey, treemap, histogram, boxplot, gauge, bullet, waterfall, radar, heatmap, bar, pie, image, bubble')
 }
 
 /**
@@ -138,5 +142,6 @@ export const dataDisplayPlugins = [
   heatmapRegistration,
   barChartRegistration,
   pieChartRegistration,
-  imageRegistration
+  imageRegistration,
+  bubbleChartRegistration
 ]
