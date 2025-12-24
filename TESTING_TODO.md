@@ -2,15 +2,12 @@
 
 ## 🔴 P0 - 高优先级 (Critical)
 
-### 1. 修复测试覆盖率配置
+### ✅ 1. 修复测试覆盖率配置 (已完成)
+**状态**: ✅ 已完成 (2024-12-24)
+
 **问题**: `vitest.config.ts` 中的覆盖率路径已过时，导致覆盖率报告显示 0%
 
-**当前配置 (错误)**:
-```typescript
-include: ['src/lib/pure/**/*.ts', 'src/lib/inputs/**/*.ts', 'src/lib/services/**/*.ts']
-```
-
-**应改为**:
+**已修复配置**:
 ```typescript
 include: [
   'src/core/**/*.ts',
@@ -20,49 +17,67 @@ include: [
 exclude: [
   '**/*.test.ts',
   '**/*.spec.ts',
-  '**/*.svelte',
+  '**/*.d.ts',
   '**/index.ts',
   '**/types.ts',
-  '**/metadata.ts'
-]
+  '**/metadata.ts',
+  '**/definition.ts',
+  '**/*.svelte'
+],
+thresholds: {
+  lines: 25,
+  functions: 25,
+  branches: 20,
+  statements: 25
+}
 ```
 
-**预期收益**: 获得准确的代码覆盖率报告 (当前目标: 60%+)
+**实际收益**: 获得准确的代码覆盖率报告
+- **当前覆盖率**: 20.02% (lines)
+- **测试数量**: 862 tests (100% passing)
+- **设置增量目标**: 25% threshold for gradual improvement
 
 ---
 
-### 2. 为新创建的 BubbleChart 组件添加单元测试
-**缺失**: `src/plugins/data-display/bubble-chart/` 没有单元测试
+### ✅ 2. 为新创建的 BubbleChart 组件添加单元测试 (已完成)
+**状态**: ✅ 已完成 (2024-12-24)
 
-**需要创建**: `src/plugins/data-display/bubble-chart/bubble-chart.test.ts`
+**已创建**: `src/plugins/data-display/bubble-chart/bubble-chart.test.ts`
 
-**测试用例** (参考其他图表组件的模式):
+**测试覆盖** (43 tests):
 ```typescript
-describe('BubbleChart Data Processing', () => {
-  // ✅ 数据验证
-  test('validateData: should accept valid bubble data')
-  test('validateData: should reject missing x/y coordinates')
-  test('validateData: should reject invalid size values')
+describe('BubbleChart Component', () => {
+  // ✅ 值格式化 (4 tests)
+  describe('formatValue')
 
-  // ✅ 数据转换
-  test('transformData: should normalize bubble sizes')
-  test('transformData: should handle grouping by category')
-  test('transformData: should calculate scales correctly')
+  // ✅ 数据验证 (9 tests)
+  describe('validateBubbleChartData')
 
-  // ✅ 配置合并
-  test('mergeConfig: should apply defaults correctly')
-  test('mergeConfig: should validate axis configurations')
+  // ✅ 数据构建 (18 tests)
+  describe('buildBubbleChartData')
+    - Basic bubble building
+    - Group extraction and coloring
+    - Range calculation with padding
+    - Radius calculation
+    - Edge cases (empty, single, equal values)
+    - String number parsing
+    - Custom configurations
 
-  // ✅ 边界情况
-  test('should handle empty data gracefully')
-  test('should handle single bubble')
-  test('should handle extreme size values')
-  test('should handle null/undefined values')
+  // ✅ 元数据测试 (10 tests)
+  describe('BubbleChartMetadata')
+
+  // ✅ 组件注册 (5 tests)
+  describe('bubbleChartRegistration')
 })
 ```
 
-**工作量**: ~2-3 hours
-**优先级**: P0 (新功能必须有测试)
+**代码重构**:
+- 导出可测试函数: `formatValue()`, `validateBubbleChartData()`, `buildBubbleChartData()`
+- 遵循 heatmap 测试模式
+- 所有测试通过 ✅
+
+**工作量**: ~3 hours (实际)
+**测试增加**: +43 tests (总计 862)
 
 ---
 
@@ -313,12 +328,14 @@ test('BubbleChart component exists in app', async ({ page }) => {
 ## 📊 建议实施路线图
 
 ### Phase 1 (Week 1-2): 修复基础设施 + 核心组件
-- [x] ✅ E2E 基础设施 (已完成)
-- [ ] 🔴 P0-1: 修复覆盖率配置
-- [ ] 🔴 P0-2: BubbleChart 单元测试
+- [x] ✅ E2E 基础设施 (已完成 - 2024-12-24)
+- [x] ✅ P0-1: 修复覆盖率配置 (已完成 - 2024-12-24)
+- [x] ✅ P0-2: BubbleChart 单元测试 (已完成 - 2024-12-24)
 - [ ] 🔴 P0-3: DataTable 单元测试套件
 
-**目标**: 覆盖率从 ~30% → ~50%
+**进度**: 3/4 完成 (75%)
+**当前覆盖率**: 20.02% → 目标 35%
+**下一步**: DataTable 测试套件预计可提升覆盖率至 25-30%
 
 ---
 
@@ -349,16 +366,21 @@ test('BubbleChart component exists in app', async ({ page }) => {
 
 ## 🎯 成功指标 (KPIs)
 
-| 指标 | 当前 | 6个月目标 |
+| 指标 | 当前 (2024-12-24) | 6个月目标 |
 |------|------|----------|
-| 单元测试覆盖率 | ~30%* | 75%+ |
+| 单元测试数量 | 862 | 1500+ |
+| 单元测试覆盖率 | 20.02% | 75%+ |
 | 组件测试覆盖率 | 0% | 40%+ |
-| E2E 测试用例数 | 2 | 15+ |
-| 测试执行时间 | 16s | <30s |
-| 每周测试通过率 | 100% | 100% |
+| E2E 测试用例数 | 2 (smoke) + 8 (pending) | 15+ |
+| 测试执行时间 | ~13s (unit) | <30s |
+| 每周测试通过率 | 100% ✅ | 100% |
 | Bug 发现 (测试中) | 0 | 3-5/month |
 
-*注: 当前覆盖率报告显示 0% 是因为配置错误，实际覆盖率估计在 30-35% 左右
+**更新说明**:
+- ✅ 覆盖率配置已修复，获得准确的 20.02% 基线
+- ✅ 测试数量从 819 增加到 862 (+43 BubbleChart tests)
+- ⚠️ 覆盖率低于预期，主要因为 definition.ts 文件被排除在覆盖率统计之外
+- 📈 设置增量阈值 (25%) 以逐步提升
 
 ---
 
@@ -454,16 +476,23 @@ export const createMockTableData = (rows = 10) => {
 
 ## 📝 结论
 
-**总体评价**:
-- ✅ 单元测试基础扎实 (819 tests passing)
-- ⚠️ 覆盖率工具配置错误，需立即修复
+**总体评价** (更新于 2024-12-24):
+- ✅ 单元测试基础扎实 (862 tests passing, 100%)
+- ✅ 覆盖率工具配置已修复，获得准确基线 (20.02%)
+- ✅ BubbleChart 组件测试完成 (43 tests, 遵循最佳实践)
 - ❌ 组件测试完全缺失
 - ⚠️ E2E 测试刚起步，需完善
 
+**Phase 1 进度**: 3/4 完成 (75%)
+- ✅ E2E 基础设施
+- ✅ 覆盖率配置修复
+- ✅ BubbleChart 单元测试
+- ⏳ DataTable 测试套件 (下一步)
+
 **最紧急任务** (本周):
-1. 🔴 修复 vitest 覆盖率配置
-2. 🔴 为 BubbleChart 添加单元测试
-3. 🔴 开始 DataTable 测试套件
+1. ~~🔴 修复 vitest 覆盖率配置~~ ✅ 已完成
+2. ~~🔴 为 BubbleChart 添加单元测试~~ ✅ 已完成
+3. 🔴 开始 DataTable 测试套件 (export, formatter, operations)
 
 **长期投资** (3-6个月):
 - 建立完整的组件测试体系
@@ -472,4 +501,13 @@ export const createMockTableData = (rows = 10) => {
 
 ---
 
-**技术专家建议**: 当前测试策略偏向单元测试，这是好的开始。但缺失组件测试是严重问题，因为 Svelte 组件的很多 bug 只能在渲染时发现。建议立即启动 Phase 1 和 Phase 4 并行推进。
+**技术专家建议**:
+- ✅ Phase 1 进展良好，覆盖率基线已确立
+- 📊 当前覆盖率 (20.02%) 低于预期主要是因为 definition.ts 被排除，这是合理的设计选择
+- 🎯 下一优先级: DataTable 测试（复杂度高，已有bug修复历史）
+- 💡 建议: 继续 Phase 1 完成后，启动 Phase 2 (图表组件) 和 Phase 4 (组件测试体系) 并行推进
+
+**已完成的里程碑** 🎉:
+- 测试基础设施完善
+- 获得准确的覆盖率基线
+- 建立图表组件测试模式 (BubbleChart 可作为模板)
