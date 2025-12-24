@@ -205,7 +205,7 @@ resizableColumns: true
 summaryRow: true
 columnSelector: true
 filterable: true
-rowHeight: 70
+rowHeight: 90
 ```
 
 ---

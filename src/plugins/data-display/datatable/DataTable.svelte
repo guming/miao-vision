@@ -180,7 +180,21 @@
     return 36 // Default row height
   })
   const maxHeight = $derived(config.maxHeight || 600)
-  const overscan = 10  // Increased for smoother scrolling with images
+
+  // Increase overscan for complex tables (frozen columns + images)
+  const overscan = $derived.by(() => {
+    const hasFrozenColumns = visibleColumns.some(col => col.frozen)
+    const hasImages = visibleColumns.some(col => col.contentType === 'image')
+
+    // Tables with both frozen columns and images need more overscan for stability
+    if (hasFrozenColumns && hasImages) return 20
+
+    // Tables with images need moderate overscan
+    if (hasImages) return 10
+
+    // Default overscan
+    return 5
+  })
 
   let visibleRange = $derived.by(() => {
     const start = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan)
@@ -328,14 +342,16 @@
   function handleExportCSV() {
     if (!data.config.exportable) return
     const filename = `${data.config.query}_${new Date().toISOString().split('T')[0]}.csv`
-    downloadCSV(processedData, visibleColumns, filename)
+    // Pass getCellValue as formatter to export formatted values
+    downloadCSV(processedData, visibleColumns, filename, getCellValue)
     showExportMenu = false
   }
 
   function handleExportExcel() {
     if (!data.config.exportable) return
     const filename = `${data.config.query}_${new Date().toISOString().split('T')[0]}.xlsx`
-    downloadExcel(processedData, visibleColumns, filename)
+    // Pass getCellValue as formatter to export formatted values
+    downloadExcel(processedData, visibleColumns, filename, 'Data', getCellValue)
     showExportMenu = false
   }
 
@@ -960,6 +976,8 @@
                               <img
                                 src={imageUrl}
                                 alt=""
+                                loading="eager"
+                                decoding="async"
                                 style="width: {typeof imgWidth === 'number' ? `${imgWidth}px` : imgWidth}; height: {typeof imgHeight === 'number' ? `${imgHeight}px` : imgHeight}; object-fit: {imgFit}; {imgRounded ? 'border-radius: 4px;' : ''}"
                                 onerror={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }}
                               />
@@ -1620,6 +1638,7 @@
     position: sticky;
     z-index: 5;
     background: #1F2937;
+    will-change: transform;
   }
 
   .header-cell.frozen-left {
@@ -1632,6 +1651,7 @@
     position: sticky;
     z-index: 5;
     background: #1F2937;
+    will-change: transform;
   }
 
   .header-cell.frozen-right {
