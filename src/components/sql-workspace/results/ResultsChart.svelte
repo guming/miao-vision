@@ -132,47 +132,54 @@
   // Check if we can render
   const canRender = $derived(config.xColumn && config.yColumns.length > 0)
 
-  // Render vgplot chart when config changes
+  // Render vgplot chart when config changes (debounced for performance)
   $effect(() => {
-    async function renderMosaicChart() {
-      // Use vgplot for all supported chart types (bar, line, scatter, histogram)
-      if (!MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
-        mosaicChartSpec = null
-        return
-      }
-
-      mosaicLoading = true
-      mosaicError = null
-
-      try {
-        console.log('[ResultsChart] Rendering with Mosaic vgplot...')
-
-        // Build chart config for adapter
-        const adapterConfig: ResultsChartConfig = {
-          ...config,
-          width: chartWidth,
-          height: chartHeight,
-          title: chartTitle || undefined,
-          xLabel: xLabel || undefined,
-          yLabel: yLabel || undefined,
-          sort: sortOrder,
-          showGrid: true
-        }
-
-        const spec = await MosaicChartAdapter.buildChart(result, adapterConfig)
-        mosaicChartSpec = spec
-
-        console.log(`[ResultsChart] vgplot chart rendered in ${spec.renderTime.toFixed(2)}ms`)
-      } catch (error) {
-        console.error('[ResultsChart] Failed to render vgplot chart:', error)
-        mosaicError = error instanceof Error ? error.message : 'Failed to render chart'
-        mosaicChartSpec = null
-      } finally {
-        mosaicLoading = false
-      }
+    // Use vgplot for all supported chart types (bar, line, scatter, histogram)
+    if (!MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
+      mosaicChartSpec = null
+      return
     }
 
-    renderMosaicChart()
+    // Show loading immediately
+    mosaicLoading = true
+    mosaicError = null
+
+    // Debounce rendering to avoid blocking UI
+    const timeoutId = setTimeout(() => {
+      async function renderMosaicChart() {
+        try {
+          console.log('[ResultsChart] Rendering with Mosaic vgplot...')
+
+          // Build chart config for adapter
+          const adapterConfig: ResultsChartConfig = {
+            ...config,
+            width: chartWidth,
+            height: chartHeight,
+            title: chartTitle || undefined,
+            xLabel: xLabel || undefined,
+            yLabel: yLabel || undefined,
+            sort: sortOrder,
+            showGrid: true
+          }
+
+          const spec = await MosaicChartAdapter.buildChart(result, adapterConfig)
+          mosaicChartSpec = spec
+
+          console.log(`[ResultsChart] vgplot chart rendered in ${spec.renderTime.toFixed(2)}ms`)
+        } catch (error) {
+          console.error('[ResultsChart] Failed to render vgplot chart:', error)
+          mosaicError = error instanceof Error ? error.message : 'Failed to render chart'
+          mosaicChartSpec = null
+        } finally {
+          mosaicLoading = false
+        }
+      }
+
+      renderMosaicChart()
+    }, 50) // 50ms delay to unblock UI
+
+    // Cleanup
+    return () => clearTimeout(timeoutId)
   })
 
   // Append vgplot chart to container when spec changes

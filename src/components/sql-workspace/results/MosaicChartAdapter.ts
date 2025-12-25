@@ -134,12 +134,8 @@ export class MosaicChartAdapter {
     // Build mark options
     const markOptions: any = {
       x: xColumn,
-      y: yEncoding
-    }
-
-    // Add grouping (color encoding)
-    if (config.groupBy) {
-      markOptions.fill = config.groupBy
+      y: yEncoding,
+      fill: config.groupBy || '#8B5CF6'  // Default purple color if no grouping
     }
 
     // Add sorting if configured
@@ -176,7 +172,7 @@ export class MosaicChartAdapter {
     const markOptions: any = {
       x: xColumn,
       y: yEncoding,
-      stroke: config.groupBy || '#4285F4',
+      stroke: config.groupBy || '#8B5CF6',  // Default purple color
       strokeWidth: 2
     }
 
@@ -223,7 +219,7 @@ export class MosaicChartAdapter {
     const markOptions: any = {
       x: xColumn,
       y: yColumn,
-      fill: config.groupBy || '#4285F4',
+      fill: config.groupBy || '#8B5CF6',  // Default purple color
       r: 4  // Point radius
     }
 
@@ -240,7 +236,7 @@ export class MosaicChartAdapter {
     const markOptions: any = {
       x: vg.bin(xColumn, { thresholds: 20 }),
       y: vg.count(),
-      fill: '#4285F4'
+      fill: '#8B5CF6'  // Default purple color
     }
 
     return vg.rectY(source, markOptions)
