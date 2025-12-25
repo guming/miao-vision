@@ -17,6 +17,7 @@
 import { snippetStore } from '@app/stores/snippet.svelte'
 import type { SQLSnippet, SnippetCategory } from '@/types/snippet'
 import SnippetCard from './SnippetCard.svelte'
+import SnippetEditor from './SnippetEditor.svelte'
 
 interface Props {
   isOpen: boolean
@@ -36,6 +37,8 @@ let searchQuery = $state('')
 
 // Modal state
 let showImportExport = $state(false)
+let showEditor = $state(false)
+let editingSnippet = $state<SQLSnippet | undefined>(undefined)
 
 // Filtered snippets based on active tab and filters
 const filteredSnippets = $derived.by(() => {
@@ -151,17 +154,65 @@ function handleImport() {
 }
 
 /**
+ * Open editor to create new snippet
+ */
+function handleCreateSnippet() {
+  editingSnippet = undefined
+  showEditor = true
+}
+
+/**
+ * Open editor to edit existing snippet
+ */
+function handleEditSnippet(snippet: SQLSnippet) {
+  editingSnippet = snippet
+  showEditor = true
+}
+
+/**
+ * Save snippet (create or update)
+ */
+function handleSaveSnippet(snippetData: Omit<SQLSnippet, 'id' | 'createdAt' | 'lastModified' | 'usageCount' | 'isBuiltIn'>) {
+  if (editingSnippet) {
+    // Update existing snippet
+    snippetStore.updateSnippet(editingSnippet.id, snippetData)
+  } else {
+    // Create new snippet
+    snippetStore.addSnippet(snippetData)
+  }
+
+  showEditor = false
+  editingSnippet = undefined
+
+  // Switch to custom tab to see the new/updated snippet
+  activeTab = 'custom'
+}
+
+/**
+ * Close editor
+ */
+function handleCloseEditor() {
+  showEditor = false
+  editingSnippet = undefined
+}
+
+/**
  * Handle keyboard shortcuts
  */
 function handleKeyDown(event: KeyboardEvent) {
   // Escape to close
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && !showEditor) {
     onClose()
   }
   // Ctrl/Cmd + F to focus search
-  if ((event.ctrlKey || event.metaKey) && event.key === 'f') {
+  if ((event.ctrlKey || event.metaKey) && event.key === 'f' && !showEditor) {
     event.preventDefault()
     document.querySelector<HTMLInputElement>('.snippet-search-input')?.focus()
+  }
+  // Ctrl/Cmd + N to create new snippet
+  if ((event.ctrlKey || event.metaKey) && event.key === 'n' && !showEditor) {
+    event.preventDefault()
+    handleCreateSnippet()
   }
 }
 </script>
@@ -189,6 +240,17 @@ function handleKeyDown(event: KeyboardEvent) {
         </div>
 
         <div class="header-actions">
+          <button
+            class="create-btn"
+            onclick={handleCreateSnippet}
+            title="Create new snippet (⌘N)"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Create Snippet
+          </button>
+
           <button
             class="icon-btn"
             onclick={() => showImportExport = !showImportExport}
@@ -322,6 +384,7 @@ function handleKeyDown(event: KeyboardEvent) {
               {snippet}
               onInsert={(paramValues) => handleInsert(snippet, paramValues)}
               onToggleFavorite={() => snippetStore.toggleFavorite(snippet.id)}
+              onEdit={snippet.isBuiltIn ? undefined : () => handleEditSnippet(snippet)}
               onDelete={snippet.isBuiltIn ? undefined : () => handleDelete(snippet)}
             />
           {/each}
@@ -329,6 +392,14 @@ function handleKeyDown(event: KeyboardEvent) {
       </div>
     </div>
   </div>
+
+  <!-- Snippet Editor -->
+  <SnippetEditor
+    snippet={editingSnippet}
+    isOpen={showEditor}
+    onClose={handleCloseEditor}
+    onSave={handleSaveSnippet}
+  />
 {/if}
 
 <style>
@@ -404,6 +475,29 @@ function handleKeyDown(event: KeyboardEvent) {
   .header-actions {
     display: flex;
     gap: 0.5rem;
+  }
+
+  .create-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #4285F4;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .create-btn:hover {
+    background: #5294F5;
+  }
+
+  .create-btn svg {
+    flex-shrink: 0;
   }
 
   .icon-btn {

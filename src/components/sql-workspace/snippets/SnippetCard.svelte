@@ -15,16 +15,16 @@
  */
 
 import type { SQLSnippet } from '@/types/snippet'
-import { substituteParameters } from '@/types/snippet'
 
 interface Props {
   snippet: SQLSnippet
   onInsert: (paramValues: Record<string, string>) => void
   onToggleFavorite: () => void
   onDelete?: () => void
+  onEdit?: () => void
 }
 
-let { snippet, onInsert, onToggleFavorite, onDelete }: Props = $props()
+let { snippet, onInsert, onToggleFavorite, onDelete, onEdit }: Props = $props()
 
 // State
 let isExpanded = $state(false)
@@ -115,6 +115,15 @@ const usageText = $derived.by(() => {
       >
         {snippet.isFavorite ? '⭐' : '☆'}
       </button>
+
+      {#if onEdit}
+        <button class="action-icon edit" onclick={onEdit} title="Edit snippet">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+      {/if}
 
       {#if onDelete}
         <button class="action-icon delete" onclick={onDelete} title="Delete snippet">
@@ -316,6 +325,16 @@ const usageText = $derived.by(() => {
   .action-icon.favorited {
     background: rgba(251, 191, 36, 0.15);
     border-color: rgba(251, 191, 36, 0.3);
+  }
+
+  .action-icon.edit {
+    color: #9CA3AF;
+  }
+
+  .action-icon.edit:hover {
+    background: rgba(66, 133, 244, 0.15);
+    border-color: rgba(66, 133, 244, 0.3);
+    color: #93C5FD;
   }
 
   .action-icon.delete {
