@@ -249,7 +249,12 @@ export class MosaicChartAdapter {
     const plotConfig: any[] = [
       mark,
       vg.width(config.width || 700),
-      vg.height(config.height || 400)
+      vg.height(config.height || 400),
+      // Add margins for better spacing
+      vg.marginLeft(60),
+      vg.marginRight(30),
+      vg.marginTop(40),
+      vg.marginBottom(60)
     ]
 
     // Add title
@@ -276,6 +281,11 @@ export class MosaicChartAdapter {
     if (config.showGrid !== false) {
       plotConfig.push(vg.grid(true))
     }
+
+    // Configure Y-axis tick format to avoid scientific notation and format large numbers
+    plotConfig.push(
+      vg.yTickFormat('~s')  // SI-prefix format (1k, 1M, etc.)
+    )
 
     return plotConfig
   }
