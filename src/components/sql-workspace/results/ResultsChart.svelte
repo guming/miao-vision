@@ -27,8 +27,7 @@
 
   let { result, config, onConfigChange }: Props = $props()
 
-  // vgplot integration (Proof of Concept)
-  let useMosaicVgplot = $state(true) // Toggle between SVG and vgplot
+  // vgplot integration (now default for supported chart types)
   let mosaicChartSpec = $state<MosaicChartSpec | null>(null)
   let mosaicLoading = $state(false)
   let mosaicError = $state<string | null>(null)
@@ -133,11 +132,11 @@
   // Check if we can render
   const canRender = $derived(config.xColumn && config.yColumns.length > 0)
 
-  // Render vgplot chart when enabled and config changes
+  // Render vgplot chart when config changes
   $effect(() => {
     async function renderMosaicChart() {
       // Use vgplot for all supported chart types (bar, line, scatter, histogram)
-      if (!useMosaicVgplot || !MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
+      if (!MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
         mosaicChartSpec = null
         return
       }
@@ -304,257 +303,8 @@
     }
   }
 
-  // Render bar chart as SVG
-  function renderBarChart() {
-    const data = prepareChartData()
-    if (!data || data.labels.length === 0) return ''
-
-    const width = chartWidth
-    const height = chartHeight
-    const padding = { top: 50, right: 30, bottom: 80, left: 70 }
-    const innerWidth = width - padding.left - padding.right
-    const innerHeight = height - padding.top - padding.bottom
-
-    const numBars = data.labels.length
-    const maxValue = Math.max(...data.datasets.flatMap(d => d.values), 0) || 1
-
-    // Calculate nice Y-axis ticks
-    const yTicks = calculateNiceTicks(0, maxValue, 5)
-    const yMax = yTicks[yTicks.length - 1]
-
-    // Calculate bar dimensions with dynamic sizing based on data count
-    // More bars = thinner bars, fewer bars = wider bars (but not too wide)
-    const totalBarGroupWidth = innerWidth / numBars
-
-    // Dynamic bar width limits based on number of bars
-    let minBarWidth: number, maxBarWidth: number, gapRatio: number
-    if (numBars <= 5) {
-      minBarWidth = 20
-      maxBarWidth = 40
-      gapRatio = 0.4 // 40% gap for few bars
-    } else if (numBars <= 15) {
-      minBarWidth = 12
-      maxBarWidth = 30
-      gapRatio = 0.35
-    } else if (numBars <= 30) {
-      minBarWidth = 8
-      maxBarWidth = 20
-      gapRatio = 0.3
-    } else {
-      minBarWidth = 4
-      maxBarWidth = 15
-      gapRatio = 0.25 // Less gap for many bars
-    }
-
-    const barGroupGap = totalBarGroupWidth * gapRatio
-    const availableBarWidth = totalBarGroupWidth - barGroupGap
-    const barWidth = Math.min(maxBarWidth, Math.max(minBarWidth, availableBarWidth / data.datasets.length))
-    const actualGroupWidth = barWidth * data.datasets.length
-
-    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: transparent;">`
-
-    // Title
-    if (chartTitle) {
-      svg += `<text x="${width / 2}" y="24" fill="#E5E7EB" font-size="14" font-weight="600" text-anchor="middle">${chartTitle}</text>`
-    }
-
-    // Data info (showing limited)
-    if (data.totalCount > data.limitedCount) {
-      svg += `<text x="${width - padding.right}" y="24" fill="#6B7280" font-size="10" text-anchor="end">Showing top ${data.limitedCount} of ${data.totalCount}</text>`
-    }
-
-    // Y-axis grid lines and labels
-    yTicks.forEach(tick => {
-      const y = padding.top + innerHeight - (tick / yMax) * innerHeight
-      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#374151" stroke-opacity="0.5" stroke-dasharray="4"/>`
-      svg += `<text x="${padding.left - 12}" y="${y + 4}" fill="#6B7280" font-size="11" text-anchor="end">${formatValue(tick)}</text>`
-    })
-
-    // Baseline
-    svg += `<line x1="${padding.left}" y1="${padding.top + innerHeight}" x2="${width - padding.right}" y2="${padding.top + innerHeight}" stroke="#4B5563" stroke-width="1"/>`
-
-    // Calculate X-axis label interval (smart tick display)
-    const labelInterval = calculateLabelInterval(numBars, innerWidth)
-
-    // Bars
-    data.labels.forEach((label, i) => {
-      const groupCenterX = padding.left + (i + 0.5) * totalBarGroupWidth
-      const groupStartX = groupCenterX - actualGroupWidth / 2
-
-      data.datasets.forEach((dataset, j) => {
-        const value = dataset.values[i]
-        const barHeight = yMax > 0 ? (value / yMax) * innerHeight : 0
-        const x = groupStartX + j * barWidth
-        const y = padding.top + innerHeight - barHeight
-        const color = colors[j % colors.length]
-
-        // Bar with rounded top corners (corner radius proportional to bar width)
-        if (barHeight > 0) {
-          const cornerRadius = Math.min(3, barWidth / 6)
-          const barGap = Math.max(1, barWidth * 0.08) // Small gap between bars
-          svg += `<rect x="${x + barGap}" y="${y}" width="${barWidth - barGap * 2}" height="${barHeight}" fill="${color}" rx="${cornerRadius}" ry="${cornerRadius}">
-            <title>${label}\n${dataset.label}: ${formatValue(value)}</title>
-          </rect>`
-        }
-      })
-
-      // X-axis label (only show at intervals)
-      if (i % labelInterval === 0 || i === numBars - 1) {
-        const labelText = truncateLabel(label, 12)
-        const labelY = padding.top + innerHeight + 16
-
-        if (numBars > 10) {
-          // Rotated labels for many bars
-          svg += `<text x="${groupCenterX}" y="${labelY}" fill="#9CA3AF" font-size="10" text-anchor="end" transform="rotate(-45, ${groupCenterX}, ${labelY})">${labelText}</text>`
-        } else {
-          // Horizontal labels for few bars
-          svg += `<text x="${groupCenterX}" y="${labelY}" fill="#9CA3AF" font-size="11" text-anchor="middle">${labelText}</text>`
-        }
-      }
-    })
-
-    // X-axis label
-    if (xLabel || config.xColumn) {
-      svg += `<text x="${width / 2}" y="${height - 8}" fill="#6B7280" font-size="11" text-anchor="middle">${xLabel || config.xColumn}</text>`
-    }
-
-    // Y-axis label
-    if (yLabel || config.yColumns[0]) {
-      svg += `<text x="16" y="${height / 2}" fill="#6B7280" font-size="11" text-anchor="middle" transform="rotate(-90, 16, ${height / 2})">${yLabel || config.yColumns[0]}</text>`
-    }
-
-    // Legend (bottom)
-    const legendY = height - 24
-    const legendItemWidth = 100
-    const legendStartX = (width - data.datasets.length * legendItemWidth) / 2
-
-    data.datasets.forEach((dataset, i) => {
-      const x = legendStartX + i * legendItemWidth
-      const color = colors[i % colors.length]
-      svg += `<rect x="${x}" y="${legendY - 10}" width="14" height="14" fill="${color}" rx="3"/>`
-      svg += `<text x="${x + 20}" y="${legendY}" fill="#9CA3AF" font-size="11">${truncateLabel(dataset.label, 10)}</text>`
-    })
-
-    svg += '</svg>'
-    return svg
-  }
-
-  // Calculate nice tick values for axis
-  function calculateNiceTicks(min: number, max: number, targetCount: number): number[] {
-    const range = max - min
-    const roughStep = range / targetCount
-
-    // Find nice step value
-    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)))
-    const normalized = roughStep / magnitude
-
-    let niceStep: number
-    if (normalized <= 1) niceStep = magnitude
-    else if (normalized <= 2) niceStep = 2 * magnitude
-    else if (normalized <= 5) niceStep = 5 * magnitude
-    else niceStep = 10 * magnitude
-
-    const niceMin = Math.floor(min / niceStep) * niceStep
-    const niceMax = Math.ceil(max / niceStep) * niceStep
-
-    const ticks: number[] = []
-    for (let tick = niceMin; tick <= niceMax; tick += niceStep) {
-      ticks.push(tick)
-    }
-    return ticks
-  }
-
-  // Calculate label display interval based on available space
-  function calculateLabelInterval(numLabels: number, availableWidth: number): number {
-    const minLabelWidth = 60 // Minimum pixels per label
-    const maxVisibleLabels = Math.floor(availableWidth / minLabelWidth)
-    return Math.max(1, Math.ceil(numLabels / maxVisibleLabels))
-  }
-
-  // Truncate label with ellipsis
-  function truncateLabel(label: string, maxLength: number): string {
-    if (label.length <= maxLength) return label
-    return label.slice(0, maxLength - 1) + '…'
-  }
-
-  // Render line chart as SVG
-  function renderLineChart() {
-    const data = prepareChartData()
-    if (!data) return ''
-
-    const width = chartWidth
-    const height = chartHeight
-    const padding = { top: 40, right: 20, bottom: 60, left: 60 }
-    const innerWidth = width - padding.left - padding.right
-    const innerHeight = height - padding.top - padding.bottom
-
-    const maxValue = Math.max(...data.datasets.flatMap(d => d.values), 0) || 1
-    const minValue = Math.min(...data.datasets.flatMap(d => d.values), 0)
-    const valueRange = maxValue - minValue || 1
-
-    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: transparent;">`
-
-    // Title
-    if (chartTitle) {
-      svg += `<text x="${width / 2}" y="20" fill="#E5E7EB" font-size="14" font-weight="600" text-anchor="middle">${chartTitle}</text>`
-    }
-
-    // Grid lines
-    for (let i = 0; i <= 5; i++) {
-      const y = padding.top + (innerHeight / 5) * i
-      const value = maxValue - (valueRange / 5) * i
-      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#374151" stroke-dasharray="4"/>`
-      svg += `<text x="${padding.left - 10}" y="${y + 4}" fill="#6B7280" font-size="10" text-anchor="end">${formatValue(value)}</text>`
-    }
-
-    // Lines
-    data.datasets.forEach((dataset, j) => {
-      const color = colors[j % colors.length]
-      let pathD = ''
-
-      dataset.values.forEach((value, i) => {
-        const x = padding.left + (i / Math.max(data.labels.length - 1, 1)) * innerWidth
-        const y = padding.top + innerHeight - ((value - minValue) / valueRange) * innerHeight
-        pathD += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`
-      })
-
-      svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`
-
-      // Points
-      dataset.values.forEach((value, i) => {
-        const x = padding.left + (i / Math.max(data.labels.length - 1, 1)) * innerWidth
-        const y = padding.top + innerHeight - ((value - minValue) / valueRange) * innerHeight
-        svg += `<circle cx="${x}" cy="${y}" r="4" fill="${color}" stroke="#111827" stroke-width="2">
-          <title>${dataset.label}: ${formatValue(value)}</title>
-        </circle>`
-      })
-    })
-
-    // X-axis labels
-    data.labels.forEach((label, i) => {
-      const x = padding.left + (i / Math.max(data.labels.length - 1, 1)) * innerWidth
-      const labelText = label.length > 10 ? label.slice(0, 10) + '...' : label
-      svg += `<text x="${x}" y="${height - padding.bottom + 20}" fill="#6B7280" font-size="10" text-anchor="middle">${labelText}</text>`
-    })
-
-    // Axis labels
-    if (xLabel) svg += `<text x="${width / 2}" y="${height - 5}" fill="#9CA3AF" font-size="11" text-anchor="middle">${xLabel}</text>`
-    if (yLabel) svg += `<text x="15" y="${height / 2}" fill="#9CA3AF" font-size="11" text-anchor="middle" transform="rotate(-90, 15, ${height / 2})">${yLabel}</text>`
-
-    // Legend
-    if (data.datasets.length > 1) {
-      let legendX = padding.left
-      data.datasets.forEach((dataset, i) => {
-        const color = colors[i % colors.length]
-        svg += `<line x1="${legendX}" y1="36" x2="${legendX + 12}" y2="36" stroke="${color}" stroke-width="2"/>`
-        svg += `<text x="${legendX + 16}" y="40" fill="#9CA3AF" font-size="10">${dataset.label}</text>`
-        legendX += Math.min(100, dataset.label.length * 8 + 30)
-      })
-    }
-
-    svg += '</svg>'
-    return svg
-  }
+  // Custom SVG render functions removed for bar, line, scatter, histogram
+  // These chart types now use Mosaic vgplot exclusively for better performance
 
   // Render pie chart as SVG
   function renderPieChart() {
@@ -626,141 +376,6 @@
     return svg
   }
 
-  // Render scatter plot as SVG
-  function renderScatterChart() {
-    if (!config.xColumn || config.yColumns.length === 0) return ''
-
-    const width = chartWidth
-    const height = chartHeight
-    const padding = { top: 40, right: 20, bottom: 60, left: 60 }
-    const innerWidth = width - padding.left - padding.right
-    const innerHeight = height - padding.top - padding.bottom
-
-    const xValues = result.data.map(row => Number(row[config.xColumn!]) || 0)
-    const yValues = result.data.map(row => Number(row[config.yColumns[0]]) || 0)
-
-    const xMin = Math.min(...xValues)
-    const xMax = Math.max(...xValues)
-    const yMin = Math.min(...yValues)
-    const yMax = Math.max(...yValues)
-    const xRange = xMax - xMin || 1
-    const yRange = yMax - yMin || 1
-
-    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: transparent;">`
-
-    // Title
-    if (chartTitle) {
-      svg += `<text x="${width / 2}" y="20" fill="#E5E7EB" font-size="14" font-weight="600" text-anchor="middle">${chartTitle}</text>`
-    }
-
-    // Grid
-    for (let i = 0; i <= 5; i++) {
-      const y = padding.top + (innerHeight / 5) * i
-      const x = padding.left + (innerWidth / 5) * i
-      const yValue = yMax - (yRange / 5) * i
-      const xValue = xMin + (xRange / 5) * i
-      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#374151" stroke-dasharray="4"/>`
-      svg += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}" stroke="#374151" stroke-dasharray="4"/>`
-      svg += `<text x="${padding.left - 10}" y="${y + 4}" fill="#6B7280" font-size="10" text-anchor="end">${formatValue(yValue)}</text>`
-      svg += `<text x="${x}" y="${height - padding.bottom + 15}" fill="#6B7280" font-size="10" text-anchor="middle">${formatValue(xValue)}</text>`
-    }
-
-    // Points
-    result.data.forEach((row) => {
-      const xVal = Number(row[config.xColumn!]) || 0
-      const yVal = Number(row[config.yColumns[0]]) || 0
-      const x = padding.left + ((xVal - xMin) / xRange) * innerWidth
-      const y = padding.top + innerHeight - ((yVal - yMin) / yRange) * innerHeight
-      const color = colors[0]
-
-      svg += `<circle cx="${x}" cy="${y}" r="5" fill="${color}" fill-opacity="0.7" stroke="${color}" stroke-width="1">
-        <title>${config.xColumn}: ${formatValue(xVal)}, ${config.yColumns[0]}: ${formatValue(yVal)}</title>
-      </circle>`
-    })
-
-    // Axis labels
-    if (xLabel || config.xColumn) svg += `<text x="${width / 2}" y="${height - 5}" fill="#9CA3AF" font-size="11" text-anchor="middle">${xLabel || config.xColumn}</text>`
-    if (yLabel || config.yColumns[0]) svg += `<text x="15" y="${height / 2}" fill="#9CA3AF" font-size="11" text-anchor="middle" transform="rotate(-90, 15, ${height / 2})">${yLabel || config.yColumns[0]}</text>`
-
-    svg += '</svg>'
-    return svg
-  }
-
-  // Render histogram as SVG
-  function renderHistogram() {
-    if (!config.xColumn) return ''
-
-    const width = chartWidth
-    const height = chartHeight
-    const padding = { top: 40, right: 20, bottom: 60, left: 60 }
-    const innerWidth = width - padding.left - padding.right
-    const innerHeight = height - padding.top - padding.bottom
-
-    const values = result.data.map(row => Number(row[config.xColumn!])).filter(v => !isNaN(v))
-    if (values.length === 0) return ''
-
-    const min = Math.min(...values)
-    const max = Math.max(...values)
-    const binCount = 15
-    const binWidth = (max - min) / binCount || 1
-
-    // Create bins
-    const bins = Array.from({ length: binCount }, (_, i) => ({
-      x0: min + i * binWidth,
-      x1: min + (i + 1) * binWidth,
-      count: 0
-    }))
-
-    values.forEach(v => {
-      const binIndex = Math.min(Math.floor((v - min) / binWidth), binCount - 1)
-      if (binIndex >= 0 && binIndex < bins.length) {
-        bins[binIndex].count++
-      }
-    })
-
-    const maxCount = Math.max(...bins.map(b => b.count), 1)
-
-    let svg = `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="background: transparent;">`
-
-    // Title
-    if (chartTitle) {
-      svg += `<text x="${width / 2}" y="20" fill="#E5E7EB" font-size="14" font-weight="600" text-anchor="middle">${chartTitle}</text>`
-    }
-
-    // Y-axis grid
-    for (let i = 0; i <= 5; i++) {
-      const y = padding.top + (innerHeight / 5) * i
-      const value = maxCount - (maxCount / 5) * i
-      svg += `<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" stroke="#374151" stroke-dasharray="4"/>`
-      svg += `<text x="${padding.left - 10}" y="${y + 4}" fill="#6B7280" font-size="10" text-anchor="end">${Math.round(value)}</text>`
-    }
-
-    // Bars
-    const barWidthPx = innerWidth / binCount
-    bins.forEach((bin, i) => {
-      const x = padding.left + i * barWidthPx
-      const barHeight = (bin.count / maxCount) * innerHeight
-      const y = padding.top + innerHeight - barHeight
-
-      svg += `<rect x="${x + 1}" y="${y}" width="${barWidthPx - 2}" height="${barHeight}" fill="${colors[0]}" fill-opacity="0.8" stroke="${colors[0]}" stroke-width="1">
-        <title>${formatValue(bin.x0)} - ${formatValue(bin.x1)}: ${bin.count}</title>
-      </rect>`
-    })
-
-    // X-axis labels
-    for (let i = 0; i <= 5; i++) {
-      const x = padding.left + (innerWidth / 5) * i
-      const value = min + (max - min) / 5 * i
-      svg += `<text x="${x}" y="${height - padding.bottom + 15}" fill="#6B7280" font-size="10" text-anchor="middle">${formatValue(value)}</text>`
-    }
-
-    // Axis labels
-    if (xLabel || config.xColumn) svg += `<text x="${width / 2}" y="${height - 5}" fill="#9CA3AF" font-size="11" text-anchor="middle">${xLabel || config.xColumn}</text>`
-    svg += `<text x="15" y="${height / 2}" fill="#9CA3AF" font-size="11" text-anchor="middle" transform="rotate(-90, 15, ${height / 2})">Count</text>`
-
-    svg += '</svg>'
-    return svg
-  }
 
   // Format number for display
   function formatValue(n: number): string {
@@ -772,18 +387,18 @@
   }
 
   // Get chart SVG based on type - use $derived for reactivity
+  // Only pie chart uses custom SVG; other types use vgplot exclusively
   const chartSVG = $derived.by(() => {
     // Access all reactive dependencies to ensure proper tracking
     void [config.type, config.xColumn, config.yColumns, config.aggregation, sortOrder, dataLimit, chartWidth, chartHeight, chartTitle, xLabel, yLabel]
 
-    switch (config.type) {
-      case 'bar': return renderBarChart()
-      case 'line': return renderLineChart()
-      case 'pie': return renderPieChart()
-      case 'scatter': return renderScatterChart()
-      case 'histogram': return renderHistogram()
-      default: return ''
+    // Only render custom SVG for pie chart
+    if (config.type === 'pie') {
+      return renderPieChart()
     }
+
+    // Bar, line, scatter, histogram use vgplot exclusively
+    return ''
   })
 
   // Keep function for export functionality
@@ -838,7 +453,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
 
   // Unified export SVG handler
   function handleExportSVG() {
-    if (useMosaicVgplot && MosaicChartAdapter.isVgplotSupported(config.type) && mosaicChartSpec) {
+    if (MosaicChartAdapter.isVgplotSupported(config.type) && mosaicChartSpec) {
       exportVgplotSVG()
     } else {
       exportSVG()
@@ -946,11 +561,94 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
 
   // Unified export PNG handler
   async function handleExportPNG() {
-    if (useMosaicVgplot && MosaicChartAdapter.isVgplotSupported(config.type) && mosaicChartSpec) {
+    if (MosaicChartAdapter.isVgplotSupported(config.type) && mosaicChartSpec) {
       await exportVgplotPNG()
     } else {
       await exportPNG()
     }
+  }
+
+  // Save chart configuration as JSON
+  function saveConfiguration() {
+    const configData = {
+      version: '1.0',
+      chartConfig: {
+        type: config.type,
+        xColumn: config.xColumn,
+        yColumns: config.yColumns,
+        groupColumn: config.groupColumn,
+        aggregation: config.aggregation
+      },
+      advancedOptions: {
+        width: chartWidth,
+        height: chartHeight,
+        title: chartTitle,
+        xLabel: xLabel,
+        yLabel: yLabel,
+        sort: sortOrder,
+        dataLimit: dataLimit
+      },
+      savedAt: new Date().toISOString()
+    }
+
+    const json = JSON.stringify(configData, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `chart-config-${config.type}-${Date.now()}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Load chart configuration from JSON file
+  function loadConfiguration() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      try {
+        const text = await file.text()
+        const configData = JSON.parse(text)
+
+        // Validate version
+        if (!configData.version || !configData.chartConfig) {
+          throw new Error('Invalid configuration file format')
+        }
+
+        // Apply chart config
+        onConfigChange({
+          ...config,
+          type: configData.chartConfig.type || config.type,
+          xColumn: configData.chartConfig.xColumn || config.xColumn,
+          yColumns: configData.chartConfig.yColumns || config.yColumns,
+          groupColumn: configData.chartConfig.groupColumn,
+          aggregation: configData.chartConfig.aggregation || config.aggregation
+        })
+
+        // Apply advanced options
+        if (configData.advancedOptions) {
+          chartWidth = configData.advancedOptions.width || chartWidth
+          chartHeight = configData.advancedOptions.height || chartHeight
+          chartTitle = configData.advancedOptions.title || ''
+          xLabel = configData.advancedOptions.xLabel || ''
+          yLabel = configData.advancedOptions.yLabel || ''
+          sortOrder = configData.advancedOptions.sort || 'none'
+          dataLimit = configData.advancedOptions.dataLimit || 20
+        }
+
+        console.log('[ResultsChart] Configuration loaded successfully')
+      } catch (error) {
+        console.error('[ResultsChart] Failed to load configuration:', error)
+        alert('Failed to load configuration file. Please check the file format.')
+      }
+    }
+    input.click()
   }
 </script>
 
@@ -1072,16 +770,29 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
           <input id="y-label" type="text" bind:value={yLabel} placeholder="Optional label..." />
         </div>
 
-        <!-- vgplot Toggle -->
-        {#if MosaicChartAdapter.isVgplotSupported(config.type)}
-          <div class="config-field">
-            <label>
-              <input type="checkbox" bind:checked={useMosaicVgplot} />
-              Use Mosaic vgplot
-            </label>
-            <p class="hint">Toggle between custom SVG and Mosaic vgplot rendering</p>
+        <!-- Configuration Management -->
+        <div class="config-field">
+          <label>Configuration</label>
+          <div class="config-buttons">
+            <button class="config-btn" onclick={saveConfiguration} title="Save chart configuration">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save Config
+            </button>
+            <button class="config-btn" onclick={loadConfiguration} title="Load chart configuration">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/>
+                <polyline points="16 8 12 4 8 8"/>
+                <line x1="12" y1="4" x2="12" y2="16"/>
+              </svg>
+              Load Config
+            </button>
           </div>
-        {/if}
+          <p class="hint">Save/load all chart settings as JSON</p>
+        </div>
       </div>
     {/if}
   </aside>
@@ -1089,8 +800,8 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
   <!-- Chart Preview -->
   <div class="chart-preview">
     {#if canRender}
-      <!-- vgplot chart (for supported chart types) -->
-      {#if useMosaicVgplot && MosaicChartAdapter.isVgplotSupported(config.type)}
+      <!-- vgplot chart (for supported chart types: bar, line, scatter, histogram) -->
+      {#if MosaicChartAdapter.isVgplotSupported(config.type)}
         {#if mosaicLoading}
           <div class="mosaic-loading">
             <div class="spinner"></div>
@@ -1100,7 +811,6 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
           <div class="mosaic-error">
             <strong>⚠ Mosaic vgplot Error</strong>
             <p>{mosaicError}</p>
-            <p class="hint">Falling back to custom SVG...</p>
           </div>
         {:else if mosaicChartSpec}
           <div class="mosaic-info">
@@ -1110,7 +820,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
           <div class="chart-container" bind:this={chartContainer}></div>
         {/if}
       {:else}
-        <!-- Custom SVG chart (fallback) -->
+        <!-- Custom SVG chart (pie chart only) -->
         <div class="chart-container">
           {@html chartSVG}
         </div>
@@ -1251,6 +961,38 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
   .config-section.advanced {
     padding-top: 0.5rem;
     border-top: 1px solid #1F2937;
+  }
+
+  .config-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .config-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #1F2937;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    color: #9CA3AF;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+  }
+
+  .config-btn:hover {
+    background: #374151;
+    border-color: #4B5563;
+    color: #E5E7EB;
+  }
+
+  .config-btn svg {
+    flex-shrink: 0;
   }
 
   /* Chart Preview */
