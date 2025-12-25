@@ -812,16 +812,15 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
         {#if mosaicLoading}
           <div class="mosaic-loading">
             <div class="spinner"></div>
-            <p>Rendering with Mosaic vgplot...</p>
+            <p>Rendering chart...</p>
           </div>
         {:else if mosaicError}
           <div class="mosaic-error">
-            <strong>⚠ Mosaic vgplot Error</strong>
+            <strong>⚠ Chart Error</strong>
             <p>{mosaicError}</p>
           </div>
         {:else if mosaicChartSpec}
           <div class="mosaic-info">
-            <span class="badge">✨ Mosaic vgplot</span>
             <span class="perf">Rendered in {mosaicChartSpec.renderTime.toFixed(2)}ms</span>
           </div>
           <div class="chart-container" bind:this={chartContainer}></div>
