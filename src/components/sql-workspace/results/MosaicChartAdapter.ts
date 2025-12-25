@@ -27,14 +27,14 @@ export class MosaicChartAdapter {
    * Chart types supported by vgplot
    */
   private static readonly VGPLOT_SUPPORTED = new Set([
-    'bar', 'line', 'area', 'scatter', 'histogram', 'heatmap'
+    'bar', 'line', 'scatter', 'histogram'
   ])
 
   /**
-   * Chart types requiring D3 fallback
+   * Chart types requiring D3 fallback (keep Pie in custom SVG for now)
    */
   private static readonly D3_FALLBACK = new Set([
-    'pie', 'boxplot', 'funnel'
+    'pie'
   ])
 
   /**
@@ -78,36 +78,7 @@ export class MosaicChartAdapter {
       const mark = this.buildBarMark(tableName, config)
 
       // Step 3: Build plot configuration
-      const plotConfig: any[] = [
-        mark,
-        vg.width(config.width || 700),
-        vg.height(config.height || 400)
-      ]
-
-      // Add title
-      if (config.title) {
-        plotConfig.push(
-          vg.text([config.title], {
-            fontSize: 16,
-            fontWeight: 600,
-            frameAnchor: 'top',
-            dy: -10
-          })
-        )
-      }
-
-      // Add axis labels
-      if (config.xLabel || config.xColumn) {
-        plotConfig.push(vg.xLabel(config.xLabel || config.xColumn))
-      }
-      if (config.yLabel || config.yColumns[0]) {
-        plotConfig.push(vg.yLabel(config.yLabel || config.yColumns[0]))
-      }
-
-      // Add grid
-      if (config.showGrid !== false) {
-        plotConfig.push(vg.grid(true))
-      }
+      const plotConfig = this.buildPlotConfig(mark, config)
 
       // Step 4: Create plot
       const plot = vg.plot(...plotConfig)
@@ -184,7 +155,245 @@ export class MosaicChartAdapter {
   }
 
   /**
-   * Build generic vgplot chart (extensible for other chart types)
+   * Build vgplot line mark
+   */
+  private static buildLineMark(tableName: string, config: ResultsChartConfig): any {
+    const source = vg.from(tableName)
+    const xColumn = config.xColumn!
+    const yColumn = config.yColumns[0]
+    const aggregation = config.aggregation || 'none'
+
+    let yEncoding: any
+    switch (aggregation) {
+      case 'sum': yEncoding = vg.sum(yColumn); break
+      case 'avg': yEncoding = vg.avg(yColumn); break
+      case 'count': yEncoding = vg.count(); break
+      case 'min': yEncoding = vg.min(yColumn); break
+      case 'max': yEncoding = vg.max(yColumn); break
+      default: yEncoding = yColumn
+    }
+
+    const markOptions: any = {
+      x: xColumn,
+      y: yEncoding,
+      stroke: config.groupBy || '#4285F4',
+      strokeWidth: 2
+    }
+
+    return vg.lineY(source, markOptions)
+  }
+
+  /**
+   * Build vgplot area mark
+   */
+  private static buildAreaMark(tableName: string, config: ResultsChartConfig): any {
+    const source = vg.from(tableName)
+    const xColumn = config.xColumn!
+    const yColumn = config.yColumns[0]
+    const aggregation = config.aggregation || 'none'
+
+    let yEncoding: any
+    switch (aggregation) {
+      case 'sum': yEncoding = vg.sum(yColumn); break
+      case 'avg': yEncoding = vg.avg(yColumn); break
+      case 'count': yEncoding = vg.count(); break
+      case 'min': yEncoding = vg.min(yColumn); break
+      case 'max': yEncoding = vg.max(yColumn); break
+      default: yEncoding = yColumn
+    }
+
+    const markOptions: any = {
+      x: xColumn,
+      y: yEncoding,
+      fill: config.groupBy || '#4285F4',
+      fillOpacity: 0.7
+    }
+
+    return vg.areaY(source, markOptions)
+  }
+
+  /**
+   * Build vgplot scatter mark
+   */
+  private static buildScatterMark(tableName: string, config: ResultsChartConfig): any {
+    const source = vg.from(tableName)
+    const xColumn = config.xColumn!
+    const yColumn = config.yColumns[0]
+
+    const markOptions: any = {
+      x: xColumn,
+      y: yColumn,
+      fill: config.groupBy || '#4285F4',
+      r: 4  // Point radius
+    }
+
+    return vg.dot(source, markOptions)
+  }
+
+  /**
+   * Build vgplot histogram mark
+   */
+  private static buildHistogramMark(tableName: string, config: ResultsChartConfig): any {
+    const source = vg.from(tableName)
+    const xColumn = config.xColumn!
+
+    const markOptions: any = {
+      x: vg.bin(xColumn, { thresholds: 20 }),
+      y: vg.count(),
+      fill: '#4285F4'
+    }
+
+    return vg.rectY(source, markOptions)
+  }
+
+  /**
+   * Build common plot configuration
+   */
+  private static buildPlotConfig(mark: any, config: ResultsChartConfig): any[] {
+    const plotConfig: any[] = [
+      mark,
+      vg.width(config.width || 700),
+      vg.height(config.height || 400)
+    ]
+
+    // Add title
+    if (config.title) {
+      plotConfig.push(
+        vg.text([config.title], {
+          fontSize: 16,
+          fontWeight: 600,
+          frameAnchor: 'top',
+          dy: -10
+        })
+      )
+    }
+
+    // Add axis labels
+    if (config.xLabel || config.xColumn) {
+      plotConfig.push(vg.xLabel(config.xLabel || config.xColumn))
+    }
+    if (config.yLabel || config.yColumns[0]) {
+      plotConfig.push(vg.yLabel(config.yLabel || config.yColumns[0]))
+    }
+
+    // Add grid
+    if (config.showGrid !== false) {
+      plotConfig.push(vg.grid(true))
+    }
+
+    return plotConfig
+  }
+
+  /**
+   * Build Line Chart using vgplot
+   */
+  static async buildLineChart(
+    result: QueryResult,
+    config: ResultsChartConfig
+  ): Promise<MosaicChartSpec> {
+    const startTime = performance.now()
+
+    try {
+      console.log('[MosaicAdapter] Building Line Chart...')
+
+      const { tableName } = await prepareChartData(result)
+      const mark = this.buildLineMark(tableName, config)
+      const plotConfig = this.buildPlotConfig(mark, config)
+      const plot = vg.plot(...plotConfig)
+
+      const renderTime = performance.now() - startTime
+      console.log(`[MosaicAdapter] Line Chart rendered in ${renderTime.toFixed(2)}ms`)
+
+      return { plot, tableName, renderTime }
+    } catch (error) {
+      console.error('[MosaicAdapter] Failed to build Line Chart:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Build Area Chart using vgplot
+   */
+  static async buildAreaChart(
+    result: QueryResult,
+    config: ResultsChartConfig
+  ): Promise<MosaicChartSpec> {
+    const startTime = performance.now()
+
+    try {
+      console.log('[MosaicAdapter] Building Area Chart...')
+
+      const { tableName } = await prepareChartData(result)
+      const mark = this.buildAreaMark(tableName, config)
+      const plotConfig = this.buildPlotConfig(mark, config)
+      const plot = vg.plot(...plotConfig)
+
+      const renderTime = performance.now() - startTime
+      console.log(`[MosaicAdapter] Area Chart rendered in ${renderTime.toFixed(2)}ms`)
+
+      return { plot, tableName, renderTime }
+    } catch (error) {
+      console.error('[MosaicAdapter] Failed to build Area Chart:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Build Scatter Chart using vgplot
+   */
+  static async buildScatterChart(
+    result: QueryResult,
+    config: ResultsChartConfig
+  ): Promise<MosaicChartSpec> {
+    const startTime = performance.now()
+
+    try {
+      console.log('[MosaicAdapter] Building Scatter Chart...')
+
+      const { tableName } = await prepareChartData(result)
+      const mark = this.buildScatterMark(tableName, config)
+      const plotConfig = this.buildPlotConfig(mark, config)
+      const plot = vg.plot(...plotConfig)
+
+      const renderTime = performance.now() - startTime
+      console.log(`[MosaicAdapter] Scatter Chart rendered in ${renderTime.toFixed(2)}ms`)
+
+      return { plot, tableName, renderTime }
+    } catch (error) {
+      console.error('[MosaicAdapter] Failed to build Scatter Chart:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Build Histogram using vgplot
+   */
+  static async buildHistogram(
+    result: QueryResult,
+    config: ResultsChartConfig
+  ): Promise<MosaicChartSpec> {
+    const startTime = performance.now()
+
+    try {
+      console.log('[MosaicAdapter] Building Histogram...')
+
+      const { tableName } = await prepareChartData(result)
+      const mark = this.buildHistogramMark(tableName, config)
+      const plotConfig = this.buildPlotConfig(mark, config)
+      const plot = vg.plot(...plotConfig)
+
+      const renderTime = performance.now() - startTime
+      console.log(`[MosaicAdapter] Histogram rendered in ${renderTime.toFixed(2)}ms`)
+
+      return { plot, tableName, renderTime }
+    } catch (error) {
+      console.error('[MosaicAdapter] Failed to build Histogram:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Build generic vgplot chart (router for all chart types)
    *
    * @param result - Query result data
    * @param config - Chart configuration
@@ -194,16 +403,18 @@ export class MosaicChartAdapter {
     result: QueryResult,
     config: ResultsChartConfig
   ): Promise<MosaicChartSpec> {
-    const chartType = config.type
-
-    // Only bar chart is implemented in this POC
-    if (chartType === 'bar') {
-      return this.buildBarChart(result, config)
+    switch (config.type) {
+      case 'bar':
+        return this.buildBarChart(result, config)
+      case 'line':
+        return this.buildLineChart(result, config)
+      case 'scatter':
+        return this.buildScatterChart(result, config)
+      case 'histogram':
+        return this.buildHistogram(result, config)
+      default:
+        throw new Error(`Chart type "${config.type}" not supported by vgplot adapter`)
     }
-
-    // Future: Implement other chart types
-    // - line, area, scatter, histogram, heatmap
-    throw new Error(`Chart type "${chartType}" not yet implemented in vgplot adapter (POC: bar only)`)
   }
 
   /**

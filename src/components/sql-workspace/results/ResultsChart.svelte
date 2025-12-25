@@ -136,8 +136,8 @@
   // Render vgplot chart when enabled and config changes
   $effect(() => {
     async function renderMosaicChart() {
-      // Only use vgplot for bar charts in this POC
-      if (!useMosaicVgplot || config.type !== 'bar' || !canRender) {
+      // Use vgplot for all supported chart types (bar, line, scatter, histogram)
+      if (!useMosaicVgplot || !MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
         mosaicChartSpec = null
         return
       }
@@ -160,7 +160,7 @@
           showGrid: true
         }
 
-        const spec = await MosaicChartAdapter.buildBarChart(result, adapterConfig)
+        const spec = await MosaicChartAdapter.buildChart(result, adapterConfig)
         mosaicChartSpec = spec
 
         console.log(`[ResultsChart] vgplot chart rendered in ${spec.renderTime.toFixed(2)}ms`)
@@ -811,6 +811,40 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
     URL.revokeObjectURL(url)
   }
 
+  // Export vgplot chart as SVG
+  function exportVgplotSVG() {
+    if (!mosaicChartSpec || !chartContainer) return
+
+    const svgElement = chartContainer.querySelector('svg')
+    if (!svgElement) return
+
+    // Clone the SVG and add XML namespace
+    const svgClone = svgElement.cloneNode(true) as SVGElement
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+
+    const svgString = new XMLSerializer().serializeToString(svgClone)
+    const fullSvg = `<?xml version="1.0" encoding="UTF-8"?>\n${svgString}`
+
+    const blob = new Blob([fullSvg], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `chart-${config.type}-vgplot-${Date.now()}.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  // Unified export SVG handler
+  function handleExportSVG() {
+    if (useMosaicVgplot && MosaicChartAdapter.isVgplotSupported(config.type) && mosaicChartSpec) {
+      exportVgplotSVG()
+    } else {
+      exportSVG()
+    }
+  }
+
   // Export chart as PNG
   async function exportPNG() {
     const svgContent = getChartSVG()
@@ -854,6 +888,69 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
       }, 'image/png')
     }
     img.src = svgUrl
+  }
+
+  // Export vgplot chart as PNG
+  async function exportVgplotPNG() {
+    if (!mosaicChartSpec || !chartContainer) return
+
+    const svgElement = chartContainer.querySelector('svg')
+    if (!svgElement) return
+
+    // Get SVG dimensions
+    const bbox = svgElement.getBoundingClientRect()
+    const width = bbox.width
+    const height = bbox.height
+
+    // Create canvas with higher resolution
+    const scale = 2
+    const canvas = document.createElement('canvas')
+    canvas.width = width * scale
+    canvas.height = height * scale
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Fill with background
+    ctx.fillStyle = '#111827'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Convert SVG to data URL
+    const svgClone = svgElement.cloneNode(true) as SVGElement
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    const svgString = new XMLSerializer().serializeToString(svgClone)
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    // Load and draw image
+    const img = new Image()
+    img.onload = () => {
+      ctx.scale(scale, scale)
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(svgUrl)
+
+      // Download
+      canvas.toBlob((blob) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `chart-${config.type}-vgplot-${Date.now()}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }, 'image/png')
+    }
+    img.src = svgUrl
+  }
+
+  // Unified export PNG handler
+  async function handleExportPNG() {
+    if (useMosaicVgplot && MosaicChartAdapter.isVgplotSupported(config.type) && mosaicChartSpec) {
+      await exportVgplotPNG()
+    } else {
+      await exportPNG()
+    }
   }
 </script>
 
@@ -975,12 +1072,12 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
           <input id="y-label" type="text" bind:value={yLabel} placeholder="Optional label..." />
         </div>
 
-        <!-- vgplot Toggle (POC) -->
-        {#if config.type === 'bar'}
+        <!-- vgplot Toggle -->
+        {#if MosaicChartAdapter.isVgplotSupported(config.type)}
           <div class="config-field">
             <label>
               <input type="checkbox" bind:checked={useMosaicVgplot} />
-              Use Mosaic vgplot (POC)
+              Use Mosaic vgplot
             </label>
             <p class="hint">Toggle between custom SVG and Mosaic vgplot rendering</p>
           </div>
@@ -992,8 +1089,8 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
   <!-- Chart Preview -->
   <div class="chart-preview">
     {#if canRender}
-      <!-- vgplot chart (POC) -->
-      {#if useMosaicVgplot && config.type === 'bar'}
+      <!-- vgplot chart (for supported chart types) -->
+      {#if useMosaicVgplot && MosaicChartAdapter.isVgplotSupported(config.type)}
         {#if mosaicLoading}
           <div class="mosaic-loading">
             <div class="spinner"></div>
@@ -1020,7 +1117,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
       {/if}
 
       <div class="export-toolbar">
-        <button class="export-btn" onclick={exportPNG} title="Export as PNG">
+        <button class="export-btn" onclick={handleExportPNG} title="Export as PNG">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
@@ -1028,7 +1125,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
           </svg>
           PNG
         </button>
-        <button class="export-btn" onclick={exportSVG} title="Export as SVG">
+        <button class="export-btn" onclick={handleExportSVG} title="Export as SVG">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/>
