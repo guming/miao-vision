@@ -33,6 +33,10 @@
   let mosaicError = $state<string | null>(null)
   let chartContainer = $state<HTMLDivElement | null>(null)
 
+  // UX: Track whether user has actively selected a chart type
+  // Don't auto-render on mount - wait for user to select
+  let userHasInteracted = $state(false)
+
   // P0.2: Cache DuckDB table to avoid reloading same data
   let cachedTableName = $state<string | null>(null)
   let cachedResultHash = $state<string>('')
@@ -162,6 +166,12 @@
 
   // P0.4: Render vgplot chart only when data or config actually changes
   $effect(() => {
+    // UX: Don't auto-render until user selects a chart type
+    if (!userHasInteracted) {
+      mosaicChartSpec = null
+      return
+    }
+
     // Use vgplot for all supported chart types (bar, line, scatter, histogram)
     if (!MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
       mosaicChartSpec = null
@@ -725,7 +735,10 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
       <div class="chart-type-select">
         <select
           value={config.type}
-          onchange={(e) => onConfigChange({ ...config, type: e.currentTarget.value as any })}
+          onchange={(e) => {
+            userHasInteracted = true
+            onConfigChange({ ...config, type: e.currentTarget.value as any })
+          }}
         >
           {#each chartTypes as ct}
             <option value={ct.value}>{ct.label}</option>
@@ -864,7 +877,26 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
 
   <!-- Chart Preview -->
   <div class="chart-preview">
-    {#if canRender}
+    {#if !userHasInteracted}
+      <!-- UX: Show friendly placeholder until user selects chart type -->
+      <div class="chart-placeholder initial">
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        <h3>Select Chart Type</h3>
+        <p>Choose a chart type from the left panel to visualize your data</p>
+        <div class="chart-type-hints">
+          <span>📊 Bar</span>
+          <span>📈 Line</span>
+          <span>🥧 Pie</span>
+          <span>⚬ Scatter</span>
+          <span>📶 Histogram</span>
+        </div>
+      </div>
+    {:else if canRender}
       <!-- vgplot chart (for supported chart types: bar, line, scatter, histogram) -->
       {#if MosaicChartAdapter.isVgplotSupported(config.type)}
         {#if mosaicLoading}
@@ -1134,6 +1166,51 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
 
   .chart-placeholder .text {
     font-size: 0.875rem;
+  }
+
+  /* UX: Initial state placeholder */
+  .chart-placeholder.initial {
+    justify-content: center;
+    height: 100%;
+    gap: 1.5rem;
+    padding: 3rem 2rem;
+  }
+
+  .chart-placeholder.initial svg {
+    opacity: 0.3;
+    stroke: #4B5563;
+  }
+
+  .chart-placeholder.initial h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #9CA3AF;
+  }
+
+  .chart-placeholder.initial p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6B7280;
+    text-align: center;
+    max-width: 320px;
+  }
+
+  .chart-type-hints {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  .chart-type-hints span {
+    padding: 0.375rem 0.75rem;
+    background: rgba(75, 85, 99, 0.3);
+    border: 1px solid #374151;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #9CA3AF;
   }
 
   :global(.chart-preview svg) {
