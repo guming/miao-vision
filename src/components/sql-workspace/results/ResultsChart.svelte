@@ -167,7 +167,7 @@
   // P0.4: Render vgplot chart only when data or config actually changes
   $effect(() => {
     // UX: Don't auto-render until user selects a chart type
-    if (!userHasInteracted) {
+    if (!userHasInteracted && !config.type) {
       mosaicChartSpec = null
       return
     }
@@ -881,7 +881,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
 
   <!-- Chart Preview -->
   <div class="chart-preview">
-    {#if !userHasInteracted}
+    {#if !userHasInteracted && !config.type}
       <!-- UX: Show friendly placeholder until user selects chart type -->
       <div class="chart-placeholder initial">
         <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
