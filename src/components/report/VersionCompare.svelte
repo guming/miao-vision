@@ -8,6 +8,9 @@
     /** Report ID to show versions for */
     reportId: string
 
+    /** Show/hide modal */
+    show?: boolean
+
     /** Optional: Pre-selected version to compare from */
     fromVersion?: ReportVersion
 
@@ -18,7 +21,7 @@
     onClose?: () => void
   }
 
-  let { reportId, fromVersion, toVersion, onClose }: Props = $props()
+  let { reportId, show = $bindable(false), fromVersion, toVersion, onClose }: Props = $props()
 
   // Local state
   let selectedFrom = $state<ReportVersion | null>(fromVersion || null)
@@ -66,7 +69,7 @@
 
   // Load versions when report ID changes
   $effect(() => {
-    if (reportId) {
+    if (reportId && show) {
       versionStore.loadVersions(reportId)
     }
   })
@@ -76,15 +79,23 @@
     if (fromVersion) selectedFrom = fromVersion
     if (toVersion) selectedTo = toVersion
   })
+
+  function handleClose() {
+    show = false
+    onClose?.()
+  }
 </script>
 
-<div class="version-compare">
-  <header class="compare-header">
-    <h2>Compare Versions</h2>
-    <button class="close-btn" onclick={() => onClose?.()} title="Close">
-      ✕
-    </button>
-  </header>
+{#if show}
+  <div class="modal-overlay" onclick={handleClose}>
+    <div class="modal-dialog" onclick={(e) => e.stopPropagation()}>
+      <div class="version-compare">
+        <header class="compare-header">
+          <h2>Compare Versions</h2>
+          <button class="close-btn" onclick={handleClose} title="Close">
+            ✕
+          </button>
+        </header>
 
   <div class="compare-content">
     <!-- Version Selectors -->
@@ -308,14 +319,41 @@
       {/if}
     </div>
   </div>
-</div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-dialog {
+    width: 95%;
+    max-width: 1200px;
+    height: 90vh;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
   .version-compare {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    background: #030712;
+    height: 100%;
+    background: #111827;
     color: #F3F4F6;
   }
 

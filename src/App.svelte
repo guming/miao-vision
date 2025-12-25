@@ -16,6 +16,9 @@
   import { htmlExportService } from '@core/export'
   import { exportToPDF } from '@/lib/export'
   import type { Report } from './types/report'
+  import VersionHistory from './components/report/VersionHistory.svelte'
+  import VersionCompare from './components/report/VersionCompare.svelte'
+  import { versionStore } from '@app/stores/version.svelte'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
@@ -25,9 +28,14 @@
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
   let isExecutingReport = $state(false)
+  let isSavingReport = $state(false)
   let isExportingReport = $state(false)
   let isExportingPDF = $state(false)
   let currentInputStore = $state<InputStore | null>(null)
+
+  // Version control state
+  let showVersionHistory = $state(false)
+  let showVersionCompare = $state(false)
 
   onMount(async () => {
     // Initialize database on mount
@@ -129,9 +137,35 @@
     }
   }
 
-  function handleSaveReport() {
-    reportStore.saveReports()
-    console.log('Report saved')
+  async function handleSaveReport() {
+    if (!reportStore.state.currentReport || isSavingReport) {
+      return
+    }
+
+    isSavingReport = true
+    const report = reportStore.state.currentReport
+
+    try {
+      // Save to localStorage
+      reportStore.saveReports()
+      console.log('📝 Report saved to localStorage')
+
+      // Create version snapshot
+      const version = await versionStore.createVersion(
+        report.id,
+        report.content,
+        'Manual save',
+        false // not auto-save
+      )
+
+      if (version) {
+        console.log(`✅ Created version ${version.version} for report ${report.id}`)
+      }
+    } catch (error) {
+      console.error('❌ Failed to save/version report:', error)
+    } finally {
+      isSavingReport = false
+    }
   }
 
   async function handleExportReport() {
@@ -192,6 +226,16 @@
     } finally {
       isExportingPDF = false
     }
+  }
+
+  function handleVersionHistory() {
+    console.log('📜 Opening version history')
+    showVersionHistory = true
+  }
+
+  function handleVersionCompare() {
+    console.log('⇄ Opening version compare')
+    showVersionCompare = true
   }
 
   function handleSelectReport(report: Report) {
@@ -390,7 +434,10 @@
                 onSave={handleSaveReport}
                 onExport={handleExportReport}
                 onExportPDF={handleExportPDF}
+                onVersionHistory={handleVersionHistory}
+                onVersionCompare={handleVersionCompare}
                 isExecuting={isExecutingReport}
+                isSaving={isSavingReport}
                 isExporting={isExportingReport}
                 isExportingPDF={isExportingPDF}
               />
@@ -436,6 +483,19 @@
               </div>
             {/if}
           </div>
+
+          <!-- Version Control Modals -->
+          {#if reportStore.state.currentReport}
+            <VersionHistory
+              reportId={reportStore.state.currentReport.id}
+              bind:show={showVersionHistory}
+            />
+
+            <VersionCompare
+              reportId={reportStore.state.currentReport.id}
+              bind:show={showVersionCompare}
+            />
+          {/if}
         </div>
       {/if}
     </div>

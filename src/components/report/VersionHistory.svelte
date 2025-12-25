@@ -6,6 +6,9 @@
     /** Report ID to show versions for */
     reportId: string
 
+    /** Show/hide modal */
+    show?: boolean
+
     /** Callback when a version is selected */
     onSelect?: (version: ReportVersion) => void
 
@@ -16,7 +19,7 @@
     onRestore?: (version: ReportVersion) => void
   }
 
-  let { reportId, onSelect, onCompare, onRestore }: Props = $props()
+  let { reportId, show = $bindable(false), onSelect, onCompare, onRestore }: Props = $props()
 
   // Format timestamp
   function formatTimestamp(date: Date): string {
@@ -63,23 +66,40 @@
 
   // Load versions when report ID changes
   $effect(() => {
-    if (reportId) {
+    if (reportId && show) {
       versionStore.loadVersions(reportId)
     }
   })
+
+  function handleClose() {
+    show = false
+  }
 </script>
 
-<div class="version-history">
-  <header class="history-header">
-    <h3>Version History</h3>
-    <div class="header-stats">
-      {#if versionStore.state.versions.length > 0}
-        <span class="stat-item">
-          {versionStore.state.versions.length} version{versionStore.state.versions.length > 1 ? 's' : ''}
-        </span>
-      {/if}
-    </div>
-  </header>
+{#if show}
+  <div class="modal-overlay" onclick={handleClose}>
+    <div class="modal-dialog" onclick={(e) => e.stopPropagation()}>
+      <div class="version-history">
+        <header class="history-header">
+          <h3>Version History</h3>
+          <div class="header-actions">
+            <div class="header-stats">
+              {#if versionStore.state.versions.length > 0}
+                <span class="stat-item">
+                  {versionStore.state.versions.length} version{versionStore.state.versions.length > 1 ? 's' : ''}
+                </span>
+              {/if}
+            </div>
+            <button
+              type="button"
+              class="close-btn"
+              onclick={handleClose}
+              title="Close"
+            >
+              ×
+            </button>
+          </div>
+        </header>
 
   <div class="history-content">
     {#if versionStore.state.isLoading}
@@ -176,14 +196,41 @@
       </div>
     {/if}
   </div>
-</div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-dialog {
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    background: #111827;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
   .version-history {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #030712;
+    background: #111827;
     color: #F3F4F6;
   }
 
@@ -191,8 +238,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
+    padding: 1rem 1.5rem;
     border-bottom: 1px solid #1F2937;
+    flex-shrink: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
   }
 
   .history-header h3 {
@@ -213,6 +267,28 @@
     padding: 0.25rem 0.5rem;
     background: #1F2937;
     border-radius: 4px;
+  }
+
+  .close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #9CA3AF;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .close-btn:hover {
+    background: #1F2937;
+    color: #F3F4F6;
   }
 
   .history-content {
