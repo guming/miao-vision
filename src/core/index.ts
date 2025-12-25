@@ -79,6 +79,19 @@ export {
 // Markdown
 export { parseMarkdown } from './markdown/parser'
 
+// Version Control
+export {
+  getVersionStorage,
+  initVersionStorage,
+  VersionStorage,
+  diffText,
+  diffTextWithLineNumbers,
+  diffToHTML,
+  compareVersions,
+  compareMarkdownStructure,
+  getDiffSummary
+} from './version'
+
 // Shared utilities
 export * from './shared/pure'
 
