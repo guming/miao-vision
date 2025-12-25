@@ -8,10 +8,14 @@
   import QueryToolbar from './QueryToolbar.svelte'
   import { ResultsPanel } from './results'
   import MonacoEditor from '../MonacoEditor.svelte'
+  import SnippetManager from './snippets/SnippetManager.svelte'
   import type { SQLCompletionProvider } from './sql-completion'
   import type { SnippetCompletionProvider } from './snippet-completion'
+  import type { SQLSnippet } from '@/types/snippet'
+  import { substituteParameters } from '@/types/snippet'
 
   let editorRef = $state<MonacoEditor | null>(null)
+  let showSnippetManager = $state(false)
 
   // SQL Completion Provider using database store
   const sqlCompletionProvider: SQLCompletionProvider = {
@@ -127,6 +131,12 @@
         queryWorkspaceStore.closeTab(activeTab.id)
       }
     }
+
+    // Open Snippet Manager with Cmd/Ctrl + K
+    if (modKey && e.key === 'k') {
+      e.preventDefault()
+      openSnippetManager()
+    }
   }
 
   // Handle get-current-sql event for Add to Report feature
@@ -135,6 +145,29 @@
     if (activeTab) {
       e.detail.sql = activeTab.sql
     }
+  }
+
+  // Open snippet manager
+  function openSnippetManager() {
+    showSnippetManager = true
+  }
+
+  // Insert snippet into editor
+  function handleSnippetInsert(snippet: SQLSnippet, paramValues: Record<string, string>) {
+    const sql = substituteParameters(snippet.template, paramValues)
+
+    if (editorRef) {
+      const current = editorRef.getValue()
+      // Insert at cursor or append
+      const insertSQL = current.endsWith('\n') || !current ? sql : '\n\n' + sql
+      editorRef.setValue(current + insertSQL)
+    }
+
+    // Record usage in snippet store
+    snippetStore.recordUsage(snippet.id)
+
+    // Close snippet manager
+    showSnippetManager = false
   }
 
   onMount(() => {
@@ -181,6 +214,7 @@
         <QueryToolbar
           onRun={executeQuery}
           onRunSelection={executeSelection}
+          onOpenSnippets={openSnippetManager}
           isExecuting={queryWorkspaceStore.activeTab?.isExecuting || false}
         />
 
@@ -229,6 +263,13 @@
       </div>
     </div>
   </div>
+
+  <!-- Snippet Manager -->
+  <SnippetManager
+    isOpen={showSnippetManager}
+    onClose={() => showSnippetManager = false}
+    onInsert={handleSnippetInsert}
+  />
 </div>
 
 <style>

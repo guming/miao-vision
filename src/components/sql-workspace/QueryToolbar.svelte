@@ -6,10 +6,11 @@
     onRun: () => void
     onRunSelection: () => void
     onFormat?: () => void
+    onOpenSnippets?: () => void
     isExecuting: boolean
   }
 
-  let { onRun, onRunSelection, onFormat, isExecuting }: Props = $props()
+  let { onRun, onRunSelection, onFormat, onOpenSnippets, isExecuting }: Props = $props()
 
   let showHistory = $state(false)
 
@@ -77,6 +78,20 @@
   </div>
 
   <div class="toolbar-right">
+    {#if onOpenSnippets}
+      <button
+        class="btn-secondary"
+        onclick={onOpenSnippets}
+        title="SQL Snippets (Cmd+K)"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+          <path d="M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        Snippets
+      </button>
+    {/if}
+
     <div class="history-dropdown">
       <button
         class="btn-secondary"
