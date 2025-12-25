@@ -279,18 +279,33 @@ export function createVersionStore() {
   }
 
   /**
-   * Compare two versions (to be implemented with diff service)
+   * Compare two versions using diff service
    *
    * @param fromVersion - Older version
    * @param toVersion - Newer version
+   * @returns Diff result
    */
-  async function compareVersions(
+  async function compareVersionsAsync(
     fromVersion: ReportVersion,
     toVersion: ReportVersion
   ): Promise<DiffResult | null> {
-    // TODO: Implement with diff service (Task 5)
-    console.log('TODO: compareVersions', fromVersion.id, toVersion.id)
-    return null
+    try {
+      // Import diff service dynamically to avoid circular dependencies
+      const { compareVersions: compareVersionsSync } = await import('@core/version')
+
+      const diffResult = compareVersionsSync(fromVersion, toVersion, {
+        semanticCleanup: true,
+        ignoreWhitespace: false
+      })
+
+      state.diffResult = diffResult
+      console.log(`✅ Compared versions ${fromVersion.version} and ${toVersion.version}`)
+      return diffResult
+    } catch (error) {
+      console.error('❌ Failed to compare versions:', error)
+      state.error = 'Failed to compare versions'
+      return null
+    }
   }
 
   // ============================================================================
@@ -553,7 +568,7 @@ export function createVersionStore() {
     // Selection & comparison
     selectVersion,
     setCompareVersion,
-    compareVersions,
+    compareVersions: compareVersionsAsync,
 
     // Restore
     restoreVersion,
