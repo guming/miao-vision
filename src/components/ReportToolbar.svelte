@@ -7,6 +7,8 @@
     onSave?: () => void
     onExport?: () => void
     onExportPDF?: () => void
+    onVersionHistory?: () => void
+    onVersionCompare?: () => void
     isExecuting?: boolean
     isSaving?: boolean
     isExporting?: boolean
@@ -19,6 +21,8 @@
     onSave,
     onExport,
     onExportPDF,
+    onVersionHistory,
+    onVersionCompare,
     isExecuting = false,
     isSaving = false,
     isExporting = false,
@@ -113,6 +117,26 @@
       title="Format Document"
     >
       ✨ Format
+    </button>
+  </div>
+
+  <div class="toolbar-divider"></div>
+
+  <div class="toolbar-section">
+    <button
+      class="toolbar-btn"
+      onclick={() => onVersionHistory?.()}
+      title="View Version History"
+    >
+      📜 History
+    </button>
+
+    <button
+      class="toolbar-btn"
+      onclick={() => onVersionCompare?.()}
+      title="Compare Versions"
+    >
+      ⇄ Compare
     </button>
   </div>
 
