@@ -4,6 +4,8 @@
   import type { MonacoEditor } from '@/types/editor'
   import type { SQLCompletionProvider } from './sql-workspace/sql-completion'
   import { registerSQLCompletion } from './sql-workspace/sql-completion'
+  import type { SnippetCompletionProvider } from './sql-workspace/snippet-completion'
+  import { registerSnippetCompletion } from './sql-workspace/snippet-completion'
 
   interface Props {
     value?: string
@@ -13,6 +15,7 @@
     height?: string
     onChange?: (value: string) => void
     sqlCompletionProvider?: SQLCompletionProvider
+    snippetCompletionProvider?: SnippetCompletionProvider
   }
 
   let {
@@ -22,13 +25,16 @@
     readOnly = false,
     height = '400px',
     onChange,
-    sqlCompletionProvider
+    sqlCompletionProvider,
+    snippetCompletionProvider
   }: Props = $props()
 
   let editorContainer: HTMLDivElement
   let editor: MonacoEditor | null = null
   let monaco: typeof import('monaco-editor') | null = null
-  let completionRegistered = false
+  let sqlCompletionRegistered = false
+  let snippetCompletionRegistered = false
+  let snippetCompletionDisposable: any = null
 
   onMount(async () => {
     try {
@@ -41,9 +47,15 @@
       }
 
       // Register SQL completion provider if provided and language is SQL
-      if (language === 'sql' && sqlCompletionProvider && !completionRegistered) {
+      if (language === 'sql' && sqlCompletionProvider && !sqlCompletionRegistered) {
         registerSQLCompletion(monaco, sqlCompletionProvider)
-        completionRegistered = true
+        sqlCompletionRegistered = true
+      }
+
+      // Register snippet completion provider if provided and language is SQL
+      if (language === 'sql' && snippetCompletionProvider && !snippetCompletionRegistered) {
+        snippetCompletionDisposable = registerSnippetCompletion(monaco, snippetCompletionProvider)
+        snippetCompletionRegistered = true
       }
 
       // Create editor instance
@@ -85,6 +97,13 @@
   })
 
   onDestroy(() => {
+    // Dispose snippet completion provider
+    if (snippetCompletionDisposable) {
+      snippetCompletionDisposable.dispose()
+      snippetCompletionDisposable = null
+    }
+
+    // Dispose editor
     if (editor) {
       editor.dispose()
       editor = null

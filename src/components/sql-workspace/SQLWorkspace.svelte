@@ -2,12 +2,14 @@
   import { onMount, onDestroy } from 'svelte'
   import { databaseStore } from '@app/stores/database.svelte'
   import { queryWorkspaceStore } from '@app/stores/query-workspace.svelte'
+  import { snippetStore } from '@app/stores/snippet.svelte'
   import DataExplorer from './DataExplorer.svelte'
   import QueryTabs from './QueryTabs.svelte'
   import QueryToolbar from './QueryToolbar.svelte'
   import { ResultsPanel } from './results'
   import MonacoEditor from '../MonacoEditor.svelte'
   import type { SQLCompletionProvider } from './sql-completion'
+  import type { SnippetCompletionProvider } from './snippet-completion'
 
   let editorRef = $state<MonacoEditor | null>(null)
 
@@ -27,6 +29,12 @@
         return []
       }
     }
+  }
+
+  // Snippet Completion Provider using snippet store
+  const snippetCompletionProvider: SnippetCompletionProvider = {
+    getSnippets: () => snippetStore.allSnippets,
+    recordUsage: (id: string) => snippetStore.recordUsage(id)
   }
 
   // Execute the current query
@@ -186,6 +194,7 @@
                 height="100%"
                 onChange={handleSqlChange}
                 {sqlCompletionProvider}
+                {snippetCompletionProvider}
               />
             {/key}
           {/if}
