@@ -38,7 +38,7 @@
   let statsModalOpen = $state(false)
   let insightsModalOpen = $state(false)
   let chartConfig = $state<ResultsChartConfig>({
-    type: 'bar',
+    type: '' as any, // UX: No default - user must select
     xColumn: null,
     yColumns: [],
     aggregation: 'sum'

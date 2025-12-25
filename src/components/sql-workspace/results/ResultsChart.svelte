@@ -736,10 +736,14 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
         <select
           value={config.type}
           onchange={(e) => {
-            userHasInteracted = true
-            onConfigChange({ ...config, type: e.currentTarget.value as any })
+            const value = e.currentTarget.value
+            if (value) {
+              userHasInteracted = true
+            }
+            onConfigChange({ ...config, type: value as any })
           }}
         >
+          <option value="" disabled>Select chart type...</option>
           {#each chartTypes as ct}
             <option value={ct.value}>{ct.label}</option>
           {/each}
