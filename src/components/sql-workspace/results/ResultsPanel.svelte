@@ -44,6 +44,23 @@
     aggregation: 'sum'
   })
 
+  // P0.1: Lazy loading for chart - mount component in next tick
+  let chartMounted = $state(false)
+
+  // Lazy mount chart when switching to chart view
+  $effect(() => {
+    if (viewMode === 'chart') {
+      // Delay mounting to next tick to unblock tab switch
+      const timeoutId = setTimeout(() => {
+        chartMounted = true
+      }, 0)
+      return () => clearTimeout(timeoutId)
+    } else {
+      // Unmount when switching away
+      chartMounted = false
+    }
+  })
+
   // Initialize column visibility when result changes
   $effect(() => {
     if (result) {
@@ -448,11 +465,18 @@
         </div>
       {/if}
     {:else if viewMode === 'chart'}
-      <ResultsChart
-        {result}
-        config={chartConfig}
-        onConfigChange={(c) => chartConfig = c}
-      />
+      {#if chartMounted}
+        <ResultsChart
+          {result}
+          config={chartConfig}
+          onConfigChange={(c) => chartConfig = c}
+        />
+      {:else}
+        <div class="chart-loading-placeholder">
+          <div class="spinner"></div>
+          <p>Loading chart...</p>
+        </div>
+      {/if}
     {/if}
   </div>
 
@@ -898,5 +922,34 @@
     border-radius: 4px;
     color: #E5E7EB;
     font-size: 0.75rem;
+  }
+
+  /* P0.1: Lazy loading placeholder */
+  .chart-loading-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    gap: 1rem;
+    color: #9CA3AF;
+  }
+
+  .chart-loading-placeholder .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #1F2937;
+    border-top-color: #4285F4;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .chart-loading-placeholder p {
+    font-size: 0.875rem;
   }
 </style>

@@ -56,11 +56,13 @@ export class MosaicChartAdapter {
    *
    * @param result - Query result data
    * @param config - Chart configuration
+   * @param cachedTableName - Optional cached table name to reuse
    * @returns Chart spec with plot element and metadata
    */
   static async buildBarChart(
     result: QueryResult,
-    config: ResultsChartConfig
+    config: ResultsChartConfig,
+    cachedTableName?: string
   ): Promise<MosaicChartSpec> {
     const startTime = performance.now()
 
@@ -68,11 +70,18 @@ export class MosaicChartAdapter {
       console.log('[MosaicAdapter] Building Bar Chart...')
       console.log('[MosaicAdapter] Data rows:', result.data.length)
       console.log('[MosaicAdapter] Config:', config)
+      console.log('[MosaicAdapter] Using cached table:', cachedTableName)
 
-      // Step 1: Load data into DuckDB table
-      const { tableName, columns } = await prepareChartData(result)
-      console.log('[MosaicAdapter] Data loaded to table:', tableName)
-      console.log('[MosaicAdapter] Columns:', columns)
+      // Step 1: Load data into DuckDB table (or reuse cached)
+      let tableName: string
+      if (cachedTableName) {
+        tableName = cachedTableName
+        console.log('[MosaicAdapter] Reusing cached table:', tableName)
+      } else {
+        const prepared = await prepareChartData(result)
+        tableName = prepared.tableName
+        console.log('[MosaicAdapter] Data loaded to table:', tableName)
+      }
 
       // Step 2: Build vgplot mark
       const mark = this.buildBarMark(tableName, config)
@@ -295,14 +304,15 @@ export class MosaicChartAdapter {
    */
   static async buildLineChart(
     result: QueryResult,
-    config: ResultsChartConfig
+    config: ResultsChartConfig,
+    cachedTableName?: string
   ): Promise<MosaicChartSpec> {
     const startTime = performance.now()
 
     try {
       console.log('[MosaicAdapter] Building Line Chart...')
 
-      const { tableName } = await prepareChartData(result)
+      const tableName = cachedTableName || (await prepareChartData(result)).tableName
       const mark = this.buildLineMark(tableName, config)
       const plotConfig = this.buildPlotConfig(mark, config)
       const plot = vg.plot(...plotConfig)
@@ -322,14 +332,15 @@ export class MosaicChartAdapter {
    */
   static async buildAreaChart(
     result: QueryResult,
-    config: ResultsChartConfig
+    config: ResultsChartConfig,
+    cachedTableName?: string
   ): Promise<MosaicChartSpec> {
     const startTime = performance.now()
 
     try {
       console.log('[MosaicAdapter] Building Area Chart...')
 
-      const { tableName } = await prepareChartData(result)
+      const tableName = cachedTableName || (await prepareChartData(result)).tableName
       const mark = this.buildAreaMark(tableName, config)
       const plotConfig = this.buildPlotConfig(mark, config)
       const plot = vg.plot(...plotConfig)
@@ -349,14 +360,15 @@ export class MosaicChartAdapter {
    */
   static async buildScatterChart(
     result: QueryResult,
-    config: ResultsChartConfig
+    config: ResultsChartConfig,
+    cachedTableName?: string
   ): Promise<MosaicChartSpec> {
     const startTime = performance.now()
 
     try {
       console.log('[MosaicAdapter] Building Scatter Chart...')
 
-      const { tableName } = await prepareChartData(result)
+      const tableName = cachedTableName || (await prepareChartData(result)).tableName
       const mark = this.buildScatterMark(tableName, config)
       const plotConfig = this.buildPlotConfig(mark, config)
       const plot = vg.plot(...plotConfig)
@@ -376,14 +388,15 @@ export class MosaicChartAdapter {
    */
   static async buildHistogram(
     result: QueryResult,
-    config: ResultsChartConfig
+    config: ResultsChartConfig,
+    cachedTableName?: string
   ): Promise<MosaicChartSpec> {
     const startTime = performance.now()
 
     try {
       console.log('[MosaicAdapter] Building Histogram...')
 
-      const { tableName } = await prepareChartData(result)
+      const tableName = cachedTableName || (await prepareChartData(result)).tableName
       const mark = this.buildHistogramMark(tableName, config)
       const plotConfig = this.buildPlotConfig(mark, config)
       const plot = vg.plot(...plotConfig)
@@ -403,21 +416,23 @@ export class MosaicChartAdapter {
    *
    * @param result - Query result data
    * @param config - Chart configuration
+   * @param cachedTableName - Optional cached table name to reuse
    * @returns Chart spec with plot element and metadata
    */
   static async buildChart(
     result: QueryResult,
-    config: ResultsChartConfig
+    config: ResultsChartConfig,
+    cachedTableName?: string
   ): Promise<MosaicChartSpec> {
     switch (config.type) {
       case 'bar':
-        return this.buildBarChart(result, config)
+        return this.buildBarChart(result, config, cachedTableName)
       case 'line':
-        return this.buildLineChart(result, config)
+        return this.buildLineChart(result, config, cachedTableName)
       case 'scatter':
-        return this.buildScatterChart(result, config)
+        return this.buildScatterChart(result, config, cachedTableName)
       case 'histogram':
-        return this.buildHistogram(result, config)
+        return this.buildHistogram(result, config, cachedTableName)
       default:
         throw new Error(`Chart type "${config.type}" not supported by vgplot adapter`)
     }

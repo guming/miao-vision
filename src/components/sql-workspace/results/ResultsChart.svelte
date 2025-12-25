@@ -33,6 +33,34 @@
   let mosaicError = $state<string | null>(null)
   let chartContainer = $state<HTMLDivElement | null>(null)
 
+  // P0.2: Cache DuckDB table to avoid reloading same data
+  let cachedTableName = $state<string | null>(null)
+  let cachedResultHash = $state<string>('')
+
+  // Generate hash for query result to detect changes
+  function getResultHash(result: QueryResult): string {
+    return `${result.data.length}_${result.columns.join('_')}_${result.rowCount}`
+  }
+
+  // P0.4: Generate hash for chart config to detect meaningful changes
+  function getConfigHash(config: ResultsChartConfig, width: number, height: number, title: string, xLbl: string, yLbl: string, sort: string): string {
+    return JSON.stringify({
+      type: config.type,
+      xColumn: config.xColumn,
+      yColumns: config.yColumns,
+      aggregation: config.aggregation,
+      groupBy: config.groupBy,
+      width,
+      height,
+      title,
+      xLbl,
+      yLbl,
+      sort
+    })
+  }
+
+  let cachedConfigHash = $state<string>('')
+
   // Chart dimensions
   let chartWidth = $state(700)
   let chartHeight = $state(400)
@@ -132,13 +160,28 @@
   // Check if we can render
   const canRender = $derived(config.xColumn && config.yColumns.length > 0)
 
-  // Render vgplot chart when config changes (debounced for performance)
+  // P0.4: Render vgplot chart only when data or config actually changes
   $effect(() => {
     // Use vgplot for all supported chart types (bar, line, scatter, histogram)
     if (!MosaicChartAdapter.isVgplotSupported(config.type) || !canRender) {
       mosaicChartSpec = null
       return
     }
+
+    // P0.4: Check if data or config has changed
+    const currentResultHash = getResultHash(result)
+    const currentConfigHash = getConfigHash(config, chartWidth, chartHeight, chartTitle, xLabel, yLabel, sortOrder)
+
+    const dataChanged = currentResultHash !== cachedResultHash
+    const configChanged = currentConfigHash !== cachedConfigHash
+
+    // Skip rendering if nothing changed
+    if (!dataChanged && !configChanged && mosaicChartSpec) {
+      console.log('[ResultsChart] Skipping render - no changes detected')
+      return
+    }
+
+    console.log('[ResultsChart] Triggering render:', { dataChanged, configChanged })
 
     // Show loading immediately
     mosaicLoading = true
@@ -148,7 +191,7 @@
     const timeoutId = setTimeout(() => {
       async function renderMosaicChart() {
         try {
-          console.log('[ResultsChart] Rendering with Mosaic vgplot...')
+          console.log('[ResultsChart] Rendering vgplot chart...')
 
           // Build chart config for adapter
           const adapterConfig: ResultsChartConfig = {
@@ -162,12 +205,28 @@
             showGrid: true
           }
 
-          const spec = await MosaicChartAdapter.buildChart(result, adapterConfig)
+          // P0.2: Pass cached table name if data hasn't changed
+          const tableNameToUse = dataChanged ? undefined : cachedTableName || undefined
+          const spec = await MosaicChartAdapter.buildChart(result, adapterConfig, tableNameToUse)
           mosaicChartSpec = spec
 
-          console.log(`[ResultsChart] vgplot chart rendered in ${spec.renderTime.toFixed(2)}ms`)
+          // P0.2 & P0.4: Update cache
+          if (dataChanged) {
+            cachedTableName = spec.tableName
+            cachedResultHash = currentResultHash
+            console.log('[ResultsChart] Cached new table:', cachedTableName)
+          } else if (cachedTableName) {
+            console.log('[ResultsChart] Reused cached table:', cachedTableName)
+          }
+
+          if (configChanged) {
+            cachedConfigHash = currentConfigHash
+            console.log('[ResultsChart] Updated config cache')
+          }
+
+          console.log(`[ResultsChart] Chart rendered in ${spec.renderTime.toFixed(2)}ms`)
         } catch (error) {
-          console.error('[ResultsChart] Failed to render vgplot chart:', error)
+          console.error('[ResultsChart] Failed to render chart:', error)
           mosaicError = error instanceof Error ? error.message : 'Failed to render chart'
           mosaicChartSpec = null
         } finally {
@@ -393,18 +452,17 @@
     return n.toFixed(2)
   }
 
-  // Get chart SVG based on type - use $derived for reactivity
+  // P0.4: Optimize $derived to avoid unnecessary recalculations
   // Only pie chart uses custom SVG; other types use vgplot exclusively
   const chartSVG = $derived.by(() => {
-    // Access all reactive dependencies to ensure proper tracking
-    void [config.type, config.xColumn, config.yColumns, config.aggregation, sortOrder, dataLimit, chartWidth, chartHeight, chartTitle, xLabel, yLabel]
-
-    // Only render custom SVG for pie chart
+    // Only access dependencies when needed (pie chart)
     if (config.type === 'pie') {
+      // Only track dependencies relevant to pie chart
+      void [config.xColumn, config.yColumns, config.aggregation, sortOrder, dataLimit, chartWidth, chartHeight, chartTitle]
       return renderPieChart()
     }
 
-    // Bar, line, scatter, histogram use vgplot exclusively
+    // For vgplot charts, return empty (no dependencies needed)
     return ''
   })
 
@@ -810,9 +868,18 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
       <!-- vgplot chart (for supported chart types: bar, line, scatter, histogram) -->
       {#if MosaicChartAdapter.isVgplotSupported(config.type)}
         {#if mosaicLoading}
-          <div class="mosaic-loading">
-            <div class="spinner"></div>
-            <p>Rendering chart...</p>
+          <!-- P0.3: Skeleton screen for better perceived performance -->
+          <div class="chart-skeleton">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-chart">
+              <div class="skeleton-y-axis"></div>
+              <div class="skeleton-bars">
+                {#each Array(8) as _, i}
+                  <div class="skeleton-bar" style="height: {20 + Math.random() * 60}%"></div>
+                {/each}
+              </div>
+            </div>
+            <div class="skeleton-x-axis"></div>
           </div>
         {:else if mosaicError}
           <div class="mosaic-error">
@@ -1079,8 +1146,74 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
     height: auto;
   }
 
+  /* P0.3: Skeleton screen for loading state */
+  .chart-skeleton {
+    width: 100%;
+    max-width: 700px;
+    padding: 2rem;
+  }
+
+  .skeleton-header {
+    height: 24px;
+    width: 200px;
+    background: linear-gradient(90deg, #1F2937 25%, #374151 50%, #1F2937 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    margin-bottom: 2rem;
+  }
+
+  .skeleton-chart {
+    display: flex;
+    gap: 1rem;
+    height: 350px;
+  }
+
+  .skeleton-y-axis {
+    width: 40px;
+    background: linear-gradient(90deg, #1F2937 25%, #374151 50%, #1F2937 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+  }
+
+  .skeleton-bars {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .skeleton-bar {
+    flex: 1;
+    background: linear-gradient(90deg, #1F2937 25%, #374151 50%, #1F2937 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px 4px 0 0;
+    min-height: 50px;
+  }
+
+  .skeleton-x-axis {
+    height: 20px;
+    width: 100%;
+    background: linear-gradient(90deg, #1F2937 25%, #374151 50%, #1F2937 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
   /* Mosaic vgplot styles */
-  .mosaic-loading,
   .mosaic-error {
     display: flex;
     flex-direction: column;
@@ -1088,19 +1221,6 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
     gap: 0.75rem;
     padding: 2rem;
     color: #9CA3AF;
-  }
-
-  .mosaic-loading .spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid #1F2937;
-    border-top-color: #4285F4;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 
   .mosaic-error {
