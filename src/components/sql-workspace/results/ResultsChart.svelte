@@ -874,7 +874,7 @@ ${svgContent.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ')}`
             <div class="skeleton-chart">
               <div class="skeleton-y-axis"></div>
               <div class="skeleton-bars">
-                {#each Array(8) as _, i}
+                {#each Array(8) as _}
                   <div class="skeleton-bar" style="height: {20 + Math.random() * 60}%"></div>
                 {/each}
               </div>
