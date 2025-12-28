@@ -12,9 +12,9 @@ import type { ProgressConfig, ProgressData } from './types'
 const ProgressSchema = {
   fields: [
     { name: 'query', type: 'string' as const, required: false },  // SQL query name
-    { name: 'value', type: 'string' as const, required: false },  // Column name for value
-    { name: 'max', type: 'string' as const, required: false },    // Column name for max (optional)
-    { name: 'maxValue', type: 'number' as const, default: 100 },  // Static max value
+    { name: 'value', type: 'any' as const, required: false },     // Column name (string) or static value (number)
+    { name: 'max', type: 'any' as const, required: false },       // Column name (string) or static max (number)
+    { name: 'maxValue', type: 'number' as const, default: 100 },  // Static max value (fallback)
     { name: 'label', type: 'string' as const },
     { name: 'format', type: 'string' as const, default: 'number' },
     { name: 'color', type: 'string' as const, default: 'blue' },
@@ -89,15 +89,46 @@ export const progressRegistration = defineComponent<ProgressConfig, ProgressProp
   buildProps: (config, rawData, _context): ProgressProps | null => {
     const extractedData = rawData as ExtractedProgressData | null
 
-    // If no data available, return null to show placeholder
-    if (!extractedData) {
+    let value: number
+    let max: number
+
+    // Check if value is provided as a static value in config (number or parseable string)
+    const configValue = config.value
+    const configMax = config.max
+
+    if (configValue !== undefined && configValue !== null && typeof configValue !== 'string') {
+      // Static mode: value is a number in config
+      value = Number(configValue)
+      max = configMax !== undefined && configMax !== null && typeof configMax !== 'string'
+        ? Number(configMax)
+        : config.maxValue ?? 100
+    } else if (extractedData) {
+      // SQL mode: value and max come from query data
+      value = extractedData.value
+      max = extractedData.max ?? config.maxValue ?? 100
+    } else if (configValue !== undefined && configValue !== null) {
+      // Fallback: try to parse value as number (in case YAML parsed it as string)
+      const parsedValue = Number(configValue)
+      if (!isNaN(parsedValue)) {
+        value = parsedValue
+        max = configMax !== undefined && configMax !== null
+          ? Number(configMax)
+          : config.maxValue ?? 100
+      } else {
+        // Value is a string (column name) but no query data available
+        console.warn('[Progress] Column name provided but no query data available:', configValue)
+        return null
+      }
+    } else {
+      // No data available and no static value, return null to show placeholder
       return null
     }
 
-    const { value, max: dataMax } = extractedData
-
-    // Use max from data, or maxValue from config, or default to 100
-    const max = dataMax ?? config.maxValue ?? 100
+    // Validate that we have a valid number
+    if (isNaN(value)) {
+      console.warn('[Progress] Invalid value:', config.value)
+      return null
+    }
 
     // Calculate percentage
     const percent = max > 0 ? (value / max) * 100 : 0

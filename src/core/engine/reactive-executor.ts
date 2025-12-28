@@ -9,6 +9,7 @@ import type { ReportBlock, ParsedCodeBlock } from '@/types/report'
 import type { IInputState } from '@/types/interfaces'
 import { executeSQLBlock } from '@core/markdown/sql-executor'
 import type { SQLTemplateContext } from '@core/database/template'
+import type { DuckDBManager } from '@core/database'
 import {
   findAffectedBlocks as pureFindAffectedBlocks,
   getChangedInputs as pureGetChangedInputs,
@@ -63,7 +64,8 @@ export async function reExecuteAffectedBlocks(
   parsedBlocks: ParsedCodeBlock[],
   tableMapping: Map<string, string>,
   templateContext: SQLTemplateContext,
-  onBlockUpdate: (blockId: string, result: any, dependencies?: { inputs: string[]; blocks: string[] }) => void
+  onBlockUpdate: (blockId: string, result: any, dependencies?: { inputs: string[]; blocks: string[] }) => void,
+  db?: DuckDBManager  // NEW: Database instance to use for execution
 ): Promise<void> {
   console.log(`🔄 Re-executing ${affectedBlocks.length} affected SQL blocks...`)
   console.log(`  Current tableMapping:`, Object.fromEntries(tableMapping))
@@ -79,8 +81,8 @@ export async function reExecuteAffectedBlocks(
     console.log(`  Re-executing ${block.id}...`)
 
     try {
-      // Re-execute the SQL block
-      const execution = await executeSQLBlock(parsedBlock, tableMapping, templateContext)
+      // Re-execute the SQL block with the provided DB instance
+      const execution = await executeSQLBlock(parsedBlock, tableMapping, templateContext, db)
 
       if (execution.success && execution.result) {
         console.log(`  ✅ ${block.id} re-executed successfully`)

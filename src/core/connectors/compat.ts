@@ -33,6 +33,7 @@ export interface LegacyDuckDBManager {
   loadParquet(file: File, tableName: string): Promise<void>
   listTables(): Promise<string[]>
   getTableSchema(tableName: string): Promise<any[]>
+  cleanupReportTables(): Promise<void>
   close(): Promise<void>
   isInitialized(): boolean
   getDB(): AsyncDuckDB | null
@@ -67,13 +68,18 @@ export function createLegacyManager(connector?: WasmConnector): LegacyDuckDBMana
         name: 'Default DuckDB',
         type: 'wasm',
         options: {
-          persist: false // Match old behavior (in-memory)
+          persist: false // Memory mode only
         }
       })
 
       if (!result.ok) {
         throw new Error(result.error.message)
       }
+
+      // Create report_data schema for report internal tables
+      // This separates report tables from user tables in SQL Workspace
+      await this.exec('CREATE SCHEMA IF NOT EXISTS report_data;')
+      console.log('Created report_data schema for report tables')
 
       console.log('DuckDB-WASM initialized successfully')
     },
@@ -170,7 +176,7 @@ export function createLegacyManager(connector?: WasmConnector): LegacyDuckDBMana
     },
 
     /**
-     * List all tables
+     * List all tables from main schema (excludes report_data schema)
      *
      * @returns Array of table names
      */
@@ -179,14 +185,21 @@ export function createLegacyManager(connector?: WasmConnector): LegacyDuckDBMana
         throw new Error('Database not initialized')
       }
 
-      const result = await _connector.listTables()
-
-      if (!result.ok) {
-        console.error('Failed to list tables:', result.error)
+      try {
+        // Only show tables from main schema (exclude report_data schema)
+        // This naturally separates user tables from report internal tables
+        const result = await this.query(`
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = 'main'
+            AND table_type = 'BASE TABLE'
+          ORDER BY table_name
+        `)
+        return result.data.map((row: any) => row.table_name)
+      } catch (error) {
+        console.error('Failed to list tables:', error)
         return []
       }
-
-      return result.value.map(t => t.name)
     },
 
     /**
@@ -204,6 +217,46 @@ export function createLegacyManager(connector?: WasmConnector): LegacyDuckDBMana
       // Use direct query for legacy format compatibility
       const queryResult = await this.query(`DESCRIBE ${tableName}`)
       return queryResult.data
+    },
+
+    /**
+     * Clean up all tables in report_data schema
+     *
+     * Useful when re-executing reports or clearing report cache.
+     * @throws Error if cleanup fails
+     */
+    async cleanupReportTables(): Promise<void> {
+      if (!_connector?.isConnected()) {
+        throw new Error('Database not initialized')
+      }
+
+      try {
+        // Get all tables in report_data schema
+        const result = await this.query(`
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = 'report_data'
+            AND table_type = 'BASE TABLE'
+        `)
+
+        const tableCount = result.data.length
+
+        if (tableCount === 0) {
+          console.log('No report tables to clean up')
+          return
+        }
+
+        // Drop each table (use full catalog.schema.table format)
+        for (const row of result.data) {
+          const tableName = row.table_name
+          await this.query(`DROP TABLE IF EXISTS memory.report_data."${tableName}"`)
+        }
+
+        console.log(`Cleaned up ${tableCount} report tables from report_data schema`)
+      } catch (error) {
+        console.error('Failed to cleanup report tables:', error)
+        throw error
+      }
     },
 
     /**

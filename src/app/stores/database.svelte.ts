@@ -19,11 +19,12 @@ export function createDatabaseStore() {
     state.error = null
 
     try {
+      // Initialize SQL Workspace (Memory mode)
       await duckDBManager.initialize()
       state.initialized = true
       // Update connection status
       connectionStore.updateConnectionStatus('wasm-local', 'connected')
-      console.log('Database store initialized')
+      console.log('Database store initialized (Memory mode)')
     } catch (error) {
       state.error = error instanceof Error ? error.message : 'Failed to initialize database'
       connectionStore.updateConnectionStatus('wasm-local', 'error', state.error)
@@ -161,6 +162,18 @@ export function createDatabaseStore() {
     state.dataSources = state.dataSources.filter(ds => ds.tableName !== tableName)
   }
 
+  async function cleanupReportTables(): Promise<void> {
+    if (!state.initialized) {
+      return
+    }
+
+    try {
+      await duckDBManager.cleanupReportTables()
+    } catch (error) {
+      console.error('Failed to cleanup report tables:', error)
+    }
+  }
+
   return {
     get state() {
       return state
@@ -175,7 +188,8 @@ export function createDatabaseStore() {
     getTableSchema,
     removeDataSource,
     switchConnection,
-    getCurrentConnectionId
+    getCurrentConnectionId,
+    cleanupReportTables
   }
 }
 

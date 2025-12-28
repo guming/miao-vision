@@ -9,7 +9,7 @@
  */
 
 import { getDatabaseStore } from '@core/services'
-import { loadDataIntoTable } from '@core/database'
+import { loadDataIntoTable, WORKSPACE_ATTACH_NAME } from '@core/database'
 import { buildChartsFromBlocks } from '@core/services'
 import type { ReportBlock, Report, ReportExecutionResult } from '@/types/report'
 import type { ParsedCodeBlock } from '@/types/report'
@@ -22,14 +22,47 @@ import {
   extractBlockReferences,
   type DependencyAnalysis
 } from '@core/engine/dependency-graph'
+import type { DuckDBManager } from '@core/database'
+
+/**
+ * Detect if SQL references workspace tables
+ *
+ * Looks for patterns like:
+ * - workspace_data.table_name
+ * - FROM workspace_data.table_name
+ *
+ * @param sql - SQL query to analyze
+ * @returns true if workspace reference detected
+ */
+function detectWorkspaceTableReference(sql: string): boolean {
+  // Pattern: Explicit workspace_data schema reference
+  return sql.includes(`${WORKSPACE_ATTACH_NAME}.`)
+}
 
 /**
  * Execute a single SQL block and load result into DuckDB table
+ *
+ * SQL blocks can reference workspace tables using the workspace_data schema:
+ *
+ * @example
+ * ```sql
+ * -- Reference workspace tables
+ * SELECT * FROM workspace_data.customers
+ * WHERE region = '${inputs.region}'
+ * ```
+ *
+ * The workspace database will be automatically attached (read-only) when needed.
+ *
+ * @param block - Parsed SQL code block
+ * @param tableMapping - Map of logical names to physical table names
+ * @param templateContext - Template variables (inputs, metadata)
+ * @param db - Database instance to use (defaults to workspace)
  */
 export async function executeSQLBlock(
   block: ParsedCodeBlock,
   tableMapping: Map<string, string>,
-  templateContext?: SQLTemplateContext
+  templateContext?: SQLTemplateContext,
+  db?: DuckDBManager
 ): Promise<{
   success: boolean
   result?: any
@@ -41,11 +74,6 @@ export async function executeSQLBlock(
   const startTime = Date.now()
 
   try {
-    const dbStore = getDatabaseStore()
-    if (!dbStore.state.initialized) {
-      throw new Error('Database not initialized')
-    }
-
     // Extract dependencies from SQL template variables
     const inputDeps = extractTemplateVariables(block.content)
 
@@ -70,30 +98,59 @@ export async function executeSQLBlock(
       sql = resolveBlockReferences(sql, tableMapping)
     }
 
+    // Auto-attach workspace if Report Memory DB needs to access workspace tables
+    if (db && detectWorkspaceTableReference(sql)) {
+      console.log(`🔍 Detected workspace table reference in SQL block ${block.id}`)
+      const attached = await db.attachWorkspaceDatabase()
+      if (attached) {
+        console.log('✅ Workspace OPFS database attached for this query')
+      }
+    }
+
     // Execute the query
-    const result = await dbStore.executeQuery(sql)
+    let result
+    if (db) {
+      // Use provided DB instance (for Report Memory DB)
+      result = await db.query(sql)
+    } else {
+      // Use databaseStore (for SQL Workspace)
+      const dbStore = getDatabaseStore()
+      if (!dbStore.state.initialized) {
+        throw new Error('Database not initialized')
+      }
+      result = await dbStore.executeQuery(sql)
+    }
 
     // Generate table name for this result
     const tableName = `chart_data_${block.id}`
 
-    // Load result into unified DuckDB table
-    // With the merged DuckDB instance, this table is available for both:
-    // - SQL block references (${base_data} → chart_data_block_0)
-    // - Mosaic chart rendering
+    // Load result into unified DuckDB table in report_data schema
+    // With the merged DuckDB instance, this table is available for:
+    // - SQL block references (${base_data} → report_data.chart_data_block_0)
+    // - Plugin charts (via dataBinding extracting JSON from queryResult)
+    //
+    // Use report_data schema to separate from SQL Workspace user tables
+    // Plugin charts (bar, pie, line, area, scatter) don't need DuckDB access - they use JSON
+    // SQL Workspace only shows tables from main schema
     try {
-      await loadDataIntoTable(tableName, result.data, result.columns)
-      console.log(`Loaded ${result.rowCount} rows into table: ${tableName}`)
+      await loadDataIntoTable(tableName, result.data, result.columns, {
+        schema: 'report_data',  // Create in report_data schema (hidden from SQL Workspace)
+        db: db  // Use provided DB instance or undefined (will default to workspaceDB)
+      })
+      console.log(`Loaded ${result.rowCount} rows into report_data.${tableName}`)
     } catch (loadError) {
       console.warn(`Failed to load data into table ${tableName}:`, loadError)
       // Don't fail the query if table loading fails
     }
 
-    // Store mapping: block name/id -> table name
+    // Store mapping: block name/id -> fully qualified table name (catalog.schema.table)
+    // DuckDB-WASM uses 'memory' as the default catalog
+    const fullTableName = `memory.report_data.${tableName}`
     if (block.metadata && 'name' in block.metadata && block.metadata.name) {
-      tableMapping.set(block.metadata.name, tableName)
-      console.log(`Mapped "${block.metadata.name}" → ${tableName}`)
+      tableMapping.set(block.metadata.name, fullTableName)
+      console.log(`Mapped "${block.metadata.name}" → ${fullTableName}`)
     }
-    tableMapping.set(block.id, tableName)
+    tableMapping.set(block.id, fullTableName)
 
     const executionTime = Date.now() - startTime
 
@@ -134,6 +191,7 @@ export async function executeSQLBlock(
  */
 export async function executeReportSQL(
   blocks: ParsedCodeBlock[],
+  db?: DuckDBManager,
   onProgress?: (progress: number, current: number, total: number) => void,
   templateContext?: SQLTemplateContext
 ): Promise<{
@@ -176,7 +234,7 @@ export async function executeReportSQL(
     }
 
     // Execute block and load into table
-    const execution = await executeSQLBlock(block, tableMapping, templateContext)
+    const execution = await executeSQLBlock(block, tableMapping, templateContext, db)
 
     if (execution.success && execution.result) {
       // Store result by block ID
@@ -241,6 +299,7 @@ export function createReportBlock(
 export async function executeReport(
   report: Report,
   parsedBlocks: ParsedCodeBlock[],
+  db?: DuckDBManager,
   onProgress?: (progress: number) => void,
   templateContext?: SQLTemplateContext
 ): Promise<ReportExecutionResult & { tableMapping: Map<string, string>; dependencyAnalysis?: DependencyAnalysis }> {
@@ -298,7 +357,7 @@ export async function executeReport(
       }
 
       // Execute block and load into table
-      const execution = await executeSQLBlock(block, result.tableMapping, templateContext)
+      const execution = await executeSQLBlock(block, result.tableMapping, templateContext, db)
 
       if (execution.success) {
         result.executedBlocks++

@@ -97,10 +97,12 @@ export function registerVgplotCharts(): void {
   })
 
   // Register specific chart types that benefit from vgplot
-  const charts = [
-    { metadata: LineChartMetadata, type: 'line' },
-    { metadata: AreaChartMetadata, type: 'area' },
-    { metadata: ScatterChartMetadata, type: 'scatter' }
+  // Note: line, area, scatter are now plugin components (use Svelte+SVG instead of vgplot)
+  // Only keep generic 'chart' for vgplot (used in SQL Workspace for advanced features)
+  const charts: Array<{ metadata: any; type: string }> = [
+    // { metadata: LineChartMetadata, type: 'line' },      // Migrated to plugin
+    // { metadata: AreaChartMetadata, type: 'area' },      // Migrated to plugin
+    // { metadata: ScatterChartMetadata, type: 'scatter' } // Migrated to plugin
   ]
 
   for (const { metadata, type } of charts) {
@@ -111,5 +113,5 @@ export function registerVgplotCharts(): void {
     })
   }
 
-  console.log('✅ vgplot charts registered: chart, line, area, scatter')
+  console.log('✅ vgplot charts registered: chart (line, area, scatter are now plugins)')
 }

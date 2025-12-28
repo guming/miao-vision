@@ -65,6 +65,19 @@ export interface Report {
   content: string // Raw markdown content
   metadata: ReportMetadata
   blocks: ReportBlock[]
+
+  /**
+   * Embedded data snapshots for self-contained reports
+   * Used when Report is executed with Memory DB for sharing/distribution
+   * Key: table name, Value: { columns, data }
+   */
+  embeddedData?: {
+    [tableName: string]: {
+      columns: string[]
+      data: any[]
+    }
+  }
+
   createdAt: Date
   lastModified: Date
   lastExecuted?: Date

@@ -27,7 +27,7 @@ import {
   getChangedInputs
 } from '@core/engine/reactive-executor'
 import { getInputInitializer, buildChartFromBlock } from '@core/services'
-import { coordinator, duckDBManager } from '@core/database'
+import { coordinator, duckDBManager, createReportDB, type DuckDBManager } from '@core/database'
 import type { DependencyAnalysis } from '@core/engine/dependency-graph'
 
 /**
@@ -68,6 +68,7 @@ export type BlockUpdateCallback = (report: Report) => void
 export class ReportExecutionService {
   private executionStates = new Map<string, ReportExecutionState>()
   private reactiveUnsubscribers = new Map<string, Unsubscriber>()
+  private reportDatabases = new Map<string, DuckDBManager>()  // Memory DB instances per report
 
   /**
    * Execute a report
@@ -81,6 +82,12 @@ export class ReportExecutionService {
     console.log('🚀 ReportExecutionService.executeReport() called for:', report.id)
 
     try {
+      // Create a Memory DuckDB instance for this report
+      console.log('🔧 Creating Memory DuckDB instance for Report...')
+      const reportDB = await createReportDB()
+      this.reportDatabases.set(report.id, reportDB)
+      console.log('✅ Report Memory DB created')
+
       // Parse the markdown to extract blocks
       console.log('Parsing markdown...')
       const parsed = await parseMarkdown(report.content)
@@ -100,11 +107,12 @@ export class ReportExecutionService {
         metadata: report.metadata
       }
 
-      // Execute the report
-      console.log('Calling executeReportSQL()...')
+      // Execute the report with Memory DB
+      console.log('Calling executeReportSQL() with Memory DB...')
       const result = await executeReportSQL(
         report,
         parsed.codeBlocks,
+        reportDB,  // ✅ Pass Memory DB instance
         onProgress,
         templateContext
       )
@@ -294,6 +302,9 @@ export class ReportExecutionService {
 
       console.log('🔧 Template context for reactive execution:', { inputs: newInputs })
 
+      // Get the Report's Memory DB instance
+      const reportDB = this.reportDatabases.get(report.id)
+
       await reExecuteAffectedBlocks(
         affectedBlocks,
         state.parsedBlocks,
@@ -313,7 +324,8 @@ export class ReportExecutionService {
 
             console.log(`✅ Block ${blockId} updated with new result`)
           }
-        }
+        },
+        reportDB  // Pass Report's Memory DB instance
       )
 
       // Rebuild chart configs for affected charts
@@ -501,20 +513,44 @@ export class ReportExecutionService {
       this.reactiveUnsubscribers.delete(reportId)
     }
 
+    // Detach workspace if attached
+    const reportDB = this.reportDatabases.get(reportId)
+    if (reportDB && reportDB.isWorkspaceAttached()) {
+      console.log('  Detaching workspace database...')
+      reportDB.detachWorkspaceDatabase().catch(err =>
+        console.warn('  Failed to detach workspace:', err)
+      )
+    }
+
     // Clear execution state
     this.executionStates.delete(reportId)
   }
 
   /**
-   * Cleanup all subscriptions
+   * Cleanup all subscriptions and database instances
    */
   cleanup() {
-    console.log('🧹 Cleaning up all reactive subscriptions')
+    console.log('🧹 Cleaning up all reactive subscriptions and Memory DB instances')
     for (const [_reportId, unsubscribe] of this.reactiveUnsubscribers.entries()) {
       unsubscribe()
     }
     this.reactiveUnsubscribers.clear()
     this.executionStates.clear()
+
+    // Cleanup all Report Memory DB instances
+    for (const [reportId, db] of this.reportDatabases.entries()) {
+      console.log(`  Closing Memory DB for report: ${reportId}`)
+
+      // Detach workspace before closing
+      if (db.isWorkspaceAttached()) {
+        db.detachWorkspaceDatabase().catch(err =>
+          console.warn(`  Failed to detach workspace for ${reportId}:`, err)
+        )
+      }
+
+      db.close().catch(err => console.warn(`Failed to close DB for ${reportId}:`, err))
+    }
+    this.reportDatabases.clear()
   }
 }
 

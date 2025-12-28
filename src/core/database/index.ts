@@ -16,7 +16,13 @@ export const duckDBManager = duckDBManagerCompat
 
 // Export the legacy class for type compatibility (deprecated)
 // New code should use WasmConnector from '@core/connectors'
-export { DuckDBManager } from './duckdb'
+export {
+  DuckDBManager,
+  workspaceDB,
+  createReportDB,
+  WORKSPACE_DB_PATH,
+  WORKSPACE_ATTACH_NAME
+} from './duckdb'
 
 // Mosaic/vgplot integration
 export {
