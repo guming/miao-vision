@@ -19,6 +19,8 @@
   import VersionHistory from './components/report/VersionHistory.svelte'
   import VersionCompare from './components/report/VersionCompare.svelte'
   import { versionStore } from '@app/stores/version.svelte'
+  import PageTreeSidebar from './components/report/PageTreeSidebar.svelte'
+  import AddPageDialog from './components/report/AddPageDialog.svelte'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
@@ -32,6 +34,9 @@
   let isExportingReport = $state(false)
   let isExportingPDF = $state(false)
   let currentInputStore = $state<InputStore | null>(null)
+
+  // Multi-page report state
+  let showAddPageDialog = $state(false)
 
   // Version control state
   let showVersionHistory = $state(false)
@@ -81,7 +86,39 @@
   function handleReportContentChange(content: string, reportId: string) {
     console.log('📝 handleReportContentChange called with reportId:', reportId)
     console.log('  current report id:', reportStore.state.currentReport?.id)
-    reportStore.updateContent(content, reportId)
+
+    const currentReport = reportStore.state.currentReport
+    if (!currentReport) return
+
+    // For multi-page reports, update the current page's content
+    if (currentReport.type === 'multi-page') {
+      const currentPage = reportStore.getCurrentPage()
+      if (currentPage) {
+        reportStore.updatePageContent(currentPage.id, content)
+        console.log(`  Updated page ${currentPage.id} content`)
+      }
+    } else {
+      // For single-page reports, update the report content
+      reportStore.updateContent(content, reportId)
+    }
+  }
+
+  // Multi-page report handlers
+  function handleSelectPage(pageId: string) {
+    reportStore.selectPage(pageId)
+    console.log('📄 Selected page:', pageId)
+  }
+
+  function handleAddPage() {
+    showAddPageDialog = true
+  }
+
+  function handleAddPageConfirm(title: string, slug: string, parentId?: string) {
+    const newPage = reportStore.addPage(title, slug, parentId)
+    if (newPage) {
+      reportStore.selectPage(newPage.id)
+      console.log('✅ Added and selected new page:', newPage.id)
+    }
   }
 
   async function handleExecuteReport() {
@@ -442,15 +479,33 @@
                 isExportingPDF={isExportingPDF}
               />
 
-              <div class="report-workspace">
+              <div class="report-workspace" class:multi-page={reportStore.state.currentReport.type === 'multi-page'}>
+                <!-- Multi-page: Show page tree sidebar -->
+                {#if reportStore.state.currentReport.type === 'multi-page'}
+                  <PageTreeSidebar
+                    pages={reportStore.state.currentReport.pages || []}
+                    currentPageId={reportStore.state.currentReport.currentPageId}
+                    onSelectPage={handleSelectPage}
+                    onAddPage={handleAddPage}
+                  />
+                {/if}
+
                 <div class="editor-pane">
                   <div class="pane-header">
                     <h3>📝 Editor</h3>
+                    {#if reportStore.state.currentReport.type === 'multi-page'}
+                      {@const currentPage = reportStore.getCurrentPage()}
+                      {#if currentPage}
+                        <span class="current-page-title">— {currentPage.title}</span>
+                      {/if}
+                    {/if}
                   </div>
-                  {#key reportStore.state.currentReport.id}
+                  {#key reportStore.state.currentReport.type === 'multi-page' ? reportStore.getCurrentPage()?.id : reportStore.state.currentReport.id}
                     <MarkdownEditor
                       bind:this={markdownEditor}
-                      value={reportStore.state.currentReport.content}
+                      value={reportStore.state.currentReport.type === 'multi-page'
+                        ? (reportStore.getCurrentPage()?.content || '')
+                        : reportStore.state.currentReport.content}
                       reportId={reportStore.state.currentReport.id}
                       onChange={handleReportContentChange}
                       height="calc(100vh - 300px)"
@@ -495,6 +550,16 @@
               reportId={reportStore.state.currentReport.id}
               bind:show={showVersionCompare}
             />
+
+            <!-- Multi-page Report: Add Page Dialog -->
+            {#if reportStore.state.currentReport.type === 'multi-page'}
+              <AddPageDialog
+                show={showAddPageDialog}
+                pages={reportStore.state.currentReport.pages || []}
+                onClose={() => showAddPageDialog = false}
+                onConfirm={handleAddPageConfirm}
+              />
+            {/if}
           {/if}
         </div>
       {/if}
@@ -984,6 +1049,11 @@
     overflow: hidden;
   }
 
+  /* Multi-page layout: sidebar + editor + preview */
+  .report-workspace.multi-page {
+    grid-template-columns: 250px 1fr 1fr;
+  }
+
   .editor-pane,
   .preview-pane {
     display: flex;
@@ -1010,6 +1080,14 @@
     color: #9CA3AF;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+  }
+
+  .current-page-title {
+    margin-left: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #60A5FA;
+    text-transform: none;
   }
 
   .preview-pane {
