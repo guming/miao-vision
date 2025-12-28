@@ -18,21 +18,20 @@ const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
   }
 }
 
+/**
+ * Workspace database alias for ATTACH (deprecated - Memory-only mode)
+ */
+export const WORKSPACE_DB_PATH = 'workspace.db'
+export const WORKSPACE_ATTACH_NAME = 'workspace_data'
+
 export class DuckDBManager {
-  private static instance: DuckDBManager | null = null
   private db: duckdb.AsyncDuckDB | null = null
   private conn: duckdb.AsyncDuckDBConnection | null = null
   private logger: duckdb.ConsoleLogger
+  private attachedDatabases = new Set<string>()
 
-  private constructor() {
+  constructor() {
     this.logger = new duckdb.ConsoleLogger()
-  }
-
-  static getInstance(): DuckDBManager {
-    if (!DuckDBManager.instance) {
-      DuckDBManager.instance = new DuckDBManager()
-    }
-    return DuckDBManager.instance
   }
 
   async initialize(config: DatabaseConfig = {}): Promise<void> {
@@ -57,7 +56,12 @@ export class DuckDBManager {
 
       this.conn = await this.db.connect()
 
-      console.log('DuckDB-WASM initialized successfully')
+      // Create report_data schema for report internal tables
+      // This separates report tables from user tables in SQL Workspace
+      await this.conn.query('CREATE SCHEMA IF NOT EXISTS report_data;')
+      console.log('Created report_data schema for report tables')
+
+      console.log('DuckDB-WASM initialized successfully (Memory mode)')
     } catch (error) {
       console.error('Failed to initialize DuckDB:', error)
       throw error
@@ -174,8 +178,16 @@ export class DuckDBManager {
     }
 
     try {
-      const result = await this.query("SHOW TABLES")
-      return result.data.map((row: any) => row.name)
+      // Only show tables from main schema (exclude report_data schema)
+      // This naturally separates user tables from report internal tables
+      const result = await this.query(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'main'
+          AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+      `)
+      return result.data.map((row: any) => row.table_name)
     } catch (error) {
       console.error('Failed to list tables:', error)
       return []
@@ -196,8 +208,117 @@ export class DuckDBManager {
     }
   }
 
+  /**
+   * Clean up all tables in report_data schema
+   * Useful when re-executing reports or clearing report cache
+   */
+  async cleanupReportTables(): Promise<void> {
+    if (!this.conn) {
+      throw new Error('Database not initialized')
+    }
+
+    try {
+      // Get all tables in report_data schema
+      const result = await this.query(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'report_data'
+          AND table_type = 'BASE TABLE'
+      `)
+
+      const tableCount = result.data.length
+
+      if (tableCount === 0) {
+        console.log('No report tables to clean up')
+        return
+      }
+
+      // Drop each table (use full catalog.schema.table format)
+      for (const row of result.data) {
+        const tableName = row.table_name
+        await this.query(`DROP TABLE IF EXISTS memory.report_data."${tableName}"`)
+      }
+
+      console.log(`Cleaned up ${tableCount} report tables from report_data schema`)
+    } catch (error) {
+      console.error('Failed to cleanup report tables:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Attach workspace database (deprecated - Memory-only mode)
+   * Note: In Memory-only mode, both workspace and report use same memory space
+   *
+   * @returns true if attached, false if already attached
+   */
+  async attachWorkspaceDatabase(): Promise<boolean> {
+    if (!this.conn) {
+      throw new Error('Database not initialized')
+    }
+
+    // Check if already attached
+    if (this.attachedDatabases.has(WORKSPACE_ATTACH_NAME)) {
+      console.log(`📎 Workspace already attached as ${WORKSPACE_ATTACH_NAME}`)
+      return false
+    }
+
+    try {
+      // ATTACH workspace.db in read-only mode
+      await this.conn.query(`
+        ATTACH '${WORKSPACE_DB_PATH}' (READ_ONLY) AS ${WORKSPACE_ATTACH_NAME}
+      `)
+
+      this.attachedDatabases.add(WORKSPACE_ATTACH_NAME)
+      console.log(`✅ Attached workspace database as ${WORKSPACE_ATTACH_NAME} (READ_ONLY)`)
+      return true
+    } catch (error) {
+      console.warn(`⚠️  Failed to attach workspace database:`, error)
+      // Workspace DB might not exist yet (first time user)
+      return false
+    }
+  }
+
+  /**
+   * Detach workspace database
+   */
+  async detachWorkspaceDatabase(): Promise<void> {
+    if (!this.conn) {
+      return
+    }
+
+    if (!this.attachedDatabases.has(WORKSPACE_ATTACH_NAME)) {
+      return
+    }
+
+    try {
+      await this.conn.query(`DETACH ${WORKSPACE_ATTACH_NAME}`)
+      this.attachedDatabases.delete(WORKSPACE_ATTACH_NAME)
+      console.log(`🔓 Detached workspace database`)
+    } catch (error) {
+      console.warn(`Failed to detach workspace:`, error)
+    }
+  }
+
+  /**
+   * Check if workspace database is currently attached
+   */
+  isWorkspaceAttached(): boolean {
+    return this.attachedDatabases.has(WORKSPACE_ATTACH_NAME)
+  }
+
   async close(): Promise<void> {
     if (this.conn) {
+      // Detach all attached databases before closing
+      for (const dbName of this.attachedDatabases) {
+        try {
+          await this.conn.query(`DETACH ${dbName}`)
+        } catch (err) {
+          console.warn(`Failed to detach ${dbName}:`, err)
+        }
+      }
+      this.attachedDatabases.clear()
+
       await this.conn.close()
       this.conn = null
     }
@@ -237,5 +358,28 @@ export class DuckDBManager {
   }
 }
 
-// Export singleton instance
-export const duckDBManager = DuckDBManager.getInstance()
+/**
+ * SQL Workspace database instance (Memory-only mode)
+ * This is the main database instance for user data uploaded via SQL Workspace
+ */
+export const workspaceDB = new DuckDBManager()
+
+/**
+ * Legacy alias for backward compatibility
+ * @deprecated Use workspaceDB instead
+ */
+export const duckDBManager = workspaceDB
+
+/**
+ * Create a new Memory database instance for Report execution
+ * Each Report gets its own isolated database instance that doesn't persist
+ *
+ * @returns A new DuckDBManager instance configured for in-memory storage
+ */
+export async function createReportDB(): Promise<DuckDBManager> {
+  const db = new DuckDBManager()
+  // Initialize with in-memory storage (no OPFS persistence)
+  await db.initialize({ persist: false })
+  console.log('✅ Created Memory DuckDB instance for Report')
+  return db
+}

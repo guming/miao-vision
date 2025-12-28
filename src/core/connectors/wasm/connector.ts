@@ -1,7 +1,7 @@
 /**
  * WASM Connector
  *
- * DuckDB-WASM connector implementation with OPFS persistence support.
+ * DuckDB-WASM connector implementation (Memory-only mode).
  *
  * @module core/connectors/wasm/connector
  */
@@ -30,7 +30,7 @@ import type {
 import type { ConnectorError, QueryError } from '../errors'
 import { connectorError, toQueryError } from '../errors'
 import { type Result, ok, err, tryAsync } from '../result'
-import type { WasmConnectorDeps, WasmConnectorOptions } from './types'
+import type { WasmConnectorDeps } from './types'
 
 /**
  * Default WASM bundles
@@ -125,13 +125,12 @@ export class WasmConnector implements WasmConnectorInterface {
   /**
    * Connect to DuckDB-WASM
    */
-  async connect(config: ConnectorConfig): Promise<Result<void, ConnectorError>> {
+  async connect(_config: ConnectorConfig): Promise<Result<void, ConnectorError>> {
     if (this.db) {
       return err(connectorError('ALREADY_CONNECTED', 'Already connected'))
     }
 
     this._status = 'connecting'
-    const options = config.options as WasmConnectorOptions
 
     try {
       // Select bundle
@@ -149,23 +148,14 @@ export class WasmConnector implements WasmConnectorInterface {
       this.db = new this.deps.duckdb.AsyncDuckDB(logger, worker)
       await this.db.instantiate(bundle.mainModule)
 
-      // Handle persistence
-      const persist = Boolean(options?.persist) && isOPFSSupported()
-      this._dbPath = persist ? (options?.dbPath || 'opfs://miao.db') : ':memory:'
-      this._isPersistent = persist
+      // Memory mode only
+      this._dbPath = ':memory:'
+      this._isPersistent = false
 
-      // Open database (OPFS support requires v1.30.0+)
-      // For now, we use in-memory mode
-      // TODO: Upgrade to v1.30.0+ for OPFS support
       this.conn = await this.db.connect()
 
-      // Start auto-checkpoint if enabled
-      if (persist && options?.autoCheckpoint !== false) {
-        this.startAutoCheckpoint(options?.checkpointInterval || 30000)
-      }
-
       this._status = 'connected'
-      this.deps.logger.info(`DuckDB-WASM connected (persistent: ${persist})`)
+      this.deps.logger.info(`DuckDB-WASM connected (Memory mode)`)
 
       return ok(undefined)
     } catch (error) {
@@ -439,7 +429,7 @@ export class WasmConnector implements WasmConnectorInterface {
   }
 
   /**
-   * Force checkpoint to OPFS
+   * Force checkpoint (no-op in Memory mode)
    */
   async checkpoint(): Promise<Result<void, ConnectorError>> {
     if (!this.conn) {
@@ -492,15 +482,6 @@ export class WasmConnector implements WasmConnectorInterface {
   }
 
   // ==================== Private methods ====================
-
-  private startAutoCheckpoint(intervalMs: number): void {
-    this.stopAutoCheckpoint()
-    this.checkpointTimer = setInterval(() => {
-      this.checkpoint().catch(err => {
-        this.deps.logger.error('Auto-checkpoint failed:', err)
-      })
-    }, intervalMs)
-  }
 
   private stopAutoCheckpoint(): void {
     if (this.checkpointTimer) {
