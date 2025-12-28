@@ -62,7 +62,8 @@ export async function executeSQLBlock(
   block: ParsedCodeBlock,
   tableMapping: Map<string, string>,
   templateContext?: SQLTemplateContext,
-  db?: DuckDBManager
+  db?: DuckDBManager,
+  schema?: string  // Schema name for table isolation (e.g., "report_abc123")
 ): Promise<{
   success: boolean
   result?: any
@@ -124,20 +125,17 @@ export async function executeSQLBlock(
     // Generate table name for this result
     const tableName = `chart_data_${block.id}`
 
-    // Load result into unified DuckDB table in report_data schema
-    // With the merged DuckDB instance, this table is available for:
-    // - SQL block references (${base_data} → report_data.chart_data_block_0)
-    // - Plugin charts (via dataBinding extracting JSON from queryResult)
-    //
-    // Use report_data schema to separate from SQL Workspace user tables
+    // Load result into DuckDB table in report-specific schema
+    // Use schema isolation to separate different reports and SQL Workspace
     // Plugin charts (bar, pie, line, area, scatter) don't need DuckDB access - they use JSON
     // SQL Workspace only shows tables from main schema
+    const actualSchema = schema || 'report_data'
     try {
       await loadDataIntoTable(tableName, result.data, result.columns, {
-        schema: 'report_data',  // Create in report_data schema (hidden from SQL Workspace)
+        schema: actualSchema,  // Use report-specific schema or fallback to report_data
         db: db  // Use provided DB instance or undefined (will default to workspaceDB)
       })
-      console.log(`Loaded ${result.rowCount} rows into report_data.${tableName}`)
+      console.log(`Loaded ${result.rowCount} rows into ${actualSchema}.${tableName}`)
     } catch (loadError) {
       console.warn(`Failed to load data into table ${tableName}:`, loadError)
       // Don't fail the query if table loading fails
@@ -145,7 +143,7 @@ export async function executeSQLBlock(
 
     // Store mapping: block name/id -> fully qualified table name (catalog.schema.table)
     // DuckDB-WASM uses 'memory' as the default catalog
-    const fullTableName = `memory.report_data.${tableName}`
+    const fullTableName = `memory.${actualSchema}.${tableName}`
     if (block.metadata && 'name' in block.metadata && block.metadata.name) {
       tableMapping.set(block.metadata.name, fullTableName)
       console.log(`Mapped "${block.metadata.name}" → ${fullTableName}`)
@@ -193,7 +191,8 @@ export async function executeReportSQL(
   blocks: ParsedCodeBlock[],
   db?: DuckDBManager,
   onProgress?: (progress: number, current: number, total: number) => void,
-  templateContext?: SQLTemplateContext
+  templateContext?: SQLTemplateContext,
+  schema?: string  // Schema name for table isolation (e.g., "report_abc123")
 ): Promise<{
   results: Map<string, any>
   tableMapping: Map<string, string>
@@ -234,7 +233,7 @@ export async function executeReportSQL(
     }
 
     // Execute block and load into table
-    const execution = await executeSQLBlock(block, tableMapping, templateContext, db)
+    const execution = await executeSQLBlock(block, tableMapping, templateContext, db, schema)
 
     if (execution.success && execution.result) {
       // Store result by block ID
@@ -301,7 +300,8 @@ export async function executeReport(
   parsedBlocks: ParsedCodeBlock[],
   db?: DuckDBManager,
   onProgress?: (progress: number) => void,
-  templateContext?: SQLTemplateContext
+  templateContext?: SQLTemplateContext,
+  schema?: string  // Schema name for table isolation (e.g., "report_abc123")
 ): Promise<ReportExecutionResult & { tableMapping: Map<string, string>; dependencyAnalysis?: DependencyAnalysis }> {
   const startTime = Date.now()
   const result: ReportExecutionResult & { tableMapping: Map<string, string>; dependencyAnalysis?: DependencyAnalysis } = {
@@ -357,7 +357,7 @@ export async function executeReport(
       }
 
       // Execute block and load into table
-      const execution = await executeSQLBlock(block, result.tableMapping, templateContext, db)
+      const execution = await executeSQLBlock(block, result.tableMapping, templateContext, db, schema)
 
       if (execution.success) {
         result.executedBlocks++

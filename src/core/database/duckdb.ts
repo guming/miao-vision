@@ -29,6 +29,7 @@ export class DuckDBManager {
   private conn: duckdb.AsyncDuckDBConnection | null = null
   private logger: duckdb.ConsoleLogger
   private attachedDatabases = new Set<string>()
+  private schemas = new Set<string>(['main', 'report_data'])  // Track created schemas
 
   constructor() {
     this.logger = new duckdb.ConsoleLogger()
@@ -307,6 +308,97 @@ export class DuckDBManager {
     return this.attachedDatabases.has(WORKSPACE_ATTACH_NAME)
   }
 
+  /**
+   * Create a schema for a report
+   * Uses schema isolation instead of separate DB instances
+   *
+   * @param reportId - Report identifier
+   * @returns Schema name (e.g., "report_abc123")
+   */
+  async createReportSchema(reportId: string): Promise<string> {
+    if (!this.conn) {
+      throw new Error('Database not initialized')
+    }
+
+    const schemaName = `report_${reportId.replace(/-/g, '_')}`
+
+    if (this.schemas.has(schemaName)) {
+      console.warn(`⚠️  Schema ${schemaName} already exists`)
+      return schemaName
+    }
+
+    try {
+      await this.conn.query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`)
+      this.schemas.add(schemaName)
+      console.log(`✅ Created schema: ${schemaName}`)
+      return schemaName
+    } catch (error) {
+      console.error(`Failed to create schema ${schemaName}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Drop a report schema and all its tables
+   *
+   * @param reportId - Report identifier
+   */
+  async dropReportSchema(reportId: string): Promise<void> {
+    if (!this.conn) {
+      return
+    }
+
+    const schemaName = `report_${reportId.replace(/-/g, '_')}`
+
+    if (!this.schemas.has(schemaName) || schemaName === 'main' || schemaName === 'report_data') {
+      return
+    }
+
+    try {
+      await this.conn.query(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`)
+      this.schemas.delete(schemaName)
+      console.log(`🗑️  Dropped schema: ${schemaName} (all tables removed)`)
+    } catch (error) {
+      console.warn(`Failed to drop schema ${schemaName}:`, error)
+    }
+  }
+
+  /**
+   * List all tables in a specific schema
+   *
+   * @param schemaName - Schema name (e.g., "report_abc123")
+   * @returns Array of table names
+   */
+  async listTablesInSchema(schemaName: string): Promise<string[]> {
+    if (!this.conn) {
+      throw new Error('Database not initialized')
+    }
+
+    try {
+      const result = await this.query(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = '${schemaName}'
+          AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+      `)
+      return result.data.map((row: any) => row.table_name)
+    } catch (error) {
+      console.error(`Failed to list tables in schema ${schemaName}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Check if a schema exists
+   *
+   * @param schemaName - Schema name to check
+   * @returns true if schema exists
+   */
+  hasSchema(schemaName: string): boolean {
+    return this.schemas.has(schemaName)
+  }
+
   async close(): Promise<void> {
     if (this.conn) {
       // Detach all attached databases before closing
@@ -371,15 +463,13 @@ export const workspaceDB = new DuckDBManager()
 export const duckDBManager = workspaceDB
 
 /**
- * Create a new Memory database instance for Report execution
- * Each Report gets its own isolated database instance that doesn't persist
- *
- * @returns A new DuckDBManager instance configured for in-memory storage
+ * @deprecated Use schema-based isolation instead (createReportSchema)
+ * This function creates separate DuckDB instances which is memory-intensive.
+ * Use duckDBManager.createReportSchema(reportId) for better performance.
  */
 export async function createReportDB(): Promise<DuckDBManager> {
+  console.warn('⚠️  createReportDB() is deprecated. Use schema-based isolation instead.')
   const db = new DuckDBManager()
-  // Initialize with in-memory storage (no OPFS persistence)
   await db.initialize({ persist: false })
-  console.log('✅ Created Memory DuckDB instance for Report')
   return db
 }

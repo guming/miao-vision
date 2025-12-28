@@ -65,7 +65,8 @@ export async function reExecuteAffectedBlocks(
   tableMapping: Map<string, string>,
   templateContext: SQLTemplateContext,
   onBlockUpdate: (blockId: string, result: any, dependencies?: { inputs: string[]; blocks: string[] }) => void,
-  db?: DuckDBManager  // NEW: Database instance to use for execution
+  db?: DuckDBManager,  // NEW: Database instance to use for execution
+  schema?: string  // Schema name for table isolation (e.g., "report_abc123")
 ): Promise<void> {
   console.log(`🔄 Re-executing ${affectedBlocks.length} affected SQL blocks...`)
   console.log(`  Current tableMapping:`, Object.fromEntries(tableMapping))
@@ -81,8 +82,8 @@ export async function reExecuteAffectedBlocks(
     console.log(`  Re-executing ${block.id}...`)
 
     try {
-      // Re-execute the SQL block with the provided DB instance
-      const execution = await executeSQLBlock(parsedBlock, tableMapping, templateContext, db)
+      // Re-execute the SQL block with the provided DB instance and schema
+      const execution = await executeSQLBlock(parsedBlock, tableMapping, templateContext, db, schema)
 
       if (execution.success && execution.result) {
         console.log(`  ✅ ${block.id} re-executed successfully`)

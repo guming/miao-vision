@@ -7,18 +7,12 @@
  * while maintaining backward compatibility with the old API.
  */
 
-// Legacy DuckDB Manager (uses new WasmConnector internally)
-// Import the compat layer for backward compatibility
-import { duckDBManagerCompat } from '../connectors/compat'
-
-// Re-export as duckDBManager for backward compatibility
-export const duckDBManager = duckDBManagerCompat
-
-// Export the legacy class for type compatibility (deprecated)
-// New code should use WasmConnector from '@core/connectors'
+// Export DuckDB Manager and instances
+// Note: Now using real DuckDBManager with schema isolation support
 export {
   DuckDBManager,
   workspaceDB,
+  duckDBManager,  // Alias for workspaceDB (with schema methods)
   createReportDB,
   WORKSPACE_DB_PATH,
   WORKSPACE_ATTACH_NAME

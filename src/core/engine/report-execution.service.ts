@@ -27,7 +27,7 @@ import {
   getChangedInputs
 } from '@core/engine/reactive-executor'
 import { getInputInitializer, buildChartFromBlock } from '@core/services'
-import { coordinator, duckDBManager, createReportDB, type DuckDBManager } from '@core/database'
+import { coordinator, duckDBManager, type DuckDBManager } from '@core/database'
 import type { DependencyAnalysis } from '@core/engine/dependency-graph'
 
 /**
@@ -68,7 +68,7 @@ export type BlockUpdateCallback = (report: Report) => void
 export class ReportExecutionService {
   private executionStates = new Map<string, ReportExecutionState>()
   private reactiveUnsubscribers = new Map<string, Unsubscriber>()
-  private reportDatabases = new Map<string, DuckDBManager>()  // Memory DB instances per report
+  private reportSchemas = new Map<string, string>()  // reportId -> schema name (e.g., "report_abc123")
 
   /**
    * Execute a report
@@ -82,11 +82,11 @@ export class ReportExecutionService {
     console.log('🚀 ReportExecutionService.executeReport() called for:', report.id)
 
     try {
-      // Create a Memory DuckDB instance for this report
-      console.log('🔧 Creating Memory DuckDB instance for Report...')
-      const reportDB = await createReportDB()
-      this.reportDatabases.set(report.id, reportDB)
-      console.log('✅ Report Memory DB created')
+      // Create a schema for this report (schema isolation instead of separate DB instances)
+      console.log('🔧 Creating schema for Report...')
+      const schemaName = await duckDBManager.createReportSchema(report.id)
+      this.reportSchemas.set(report.id, schemaName)
+      console.log(`✅ Report schema created: ${schemaName}`)
 
       // Parse the markdown to extract blocks
       console.log('Parsing markdown...')
@@ -107,14 +107,15 @@ export class ReportExecutionService {
         metadata: report.metadata
       }
 
-      // Execute the report with Memory DB
-      console.log('Calling executeReportSQL() with Memory DB...')
+      // Execute the report with schema name
+      console.log(`Calling executeReportSQL() with schema: ${schemaName}...`)
       const result = await executeReportSQL(
         report,
         parsed.codeBlocks,
-        reportDB,  // ✅ Pass Memory DB instance
+        duckDBManager,  // Use shared DuckDB instance
         onProgress,
-        templateContext
+        templateContext,
+        schemaName  // Pass schema name for table isolation
       )
 
       console.log('executeReportSQL() completed:', result)
@@ -302,8 +303,8 @@ export class ReportExecutionService {
 
       console.log('🔧 Template context for reactive execution:', { inputs: newInputs })
 
-      // Get the Report's Memory DB instance
-      const reportDB = this.reportDatabases.get(report.id)
+      // Get the report's schema name
+      const schemaName = this.reportSchemas.get(report.id)
 
       await reExecuteAffectedBlocks(
         affectedBlocks,
@@ -325,7 +326,8 @@ export class ReportExecutionService {
             console.log(`✅ Block ${blockId} updated with new result`)
           }
         },
-        reportDB  // Pass Report's Memory DB instance
+        duckDBManager,  // Use shared DuckDB instance
+        schemaName  // Pass schema name
       )
 
       // Rebuild chart configs for affected charts
@@ -513,13 +515,14 @@ export class ReportExecutionService {
       this.reactiveUnsubscribers.delete(reportId)
     }
 
-    // Detach workspace if attached
-    const reportDB = this.reportDatabases.get(reportId)
-    if (reportDB && reportDB.isWorkspaceAttached()) {
-      console.log('  Detaching workspace database...')
-      reportDB.detachWorkspaceDatabase().catch(err =>
-        console.warn('  Failed to detach workspace:', err)
+    // Drop report schema (cascades to all tables)
+    const schemaName = this.reportSchemas.get(reportId)
+    if (schemaName) {
+      console.log(`  Dropping schema: ${schemaName}`)
+      duckDBManager.dropReportSchema(reportId).catch(err =>
+        console.warn('  Failed to drop schema:', err)
       )
+      this.reportSchemas.delete(reportId)
     }
 
     // Clear execution state
@@ -530,27 +533,21 @@ export class ReportExecutionService {
    * Cleanup all subscriptions and database instances
    */
   cleanup() {
-    console.log('🧹 Cleaning up all reactive subscriptions and Memory DB instances')
+    console.log('🧹 Cleaning up all reactive subscriptions and report schemas')
     for (const [_reportId, unsubscribe] of this.reactiveUnsubscribers.entries()) {
       unsubscribe()
     }
     this.reactiveUnsubscribers.clear()
     this.executionStates.clear()
 
-    // Cleanup all Report Memory DB instances
-    for (const [reportId, db] of this.reportDatabases.entries()) {
-      console.log(`  Closing Memory DB for report: ${reportId}`)
-
-      // Detach workspace before closing
-      if (db.isWorkspaceAttached()) {
-        db.detachWorkspaceDatabase().catch(err =>
-          console.warn(`  Failed to detach workspace for ${reportId}:`, err)
-        )
-      }
-
-      db.close().catch(err => console.warn(`Failed to close DB for ${reportId}:`, err))
+    // Drop all report schemas
+    for (const [reportId, _schemaName] of this.reportSchemas.entries()) {
+      console.log(`  Dropping schema for report: ${reportId}`)
+      duckDBManager.dropReportSchema(reportId).catch(err =>
+        console.warn(`  Failed to drop schema for ${reportId}:`, err)
+      )
     }
-    this.reportDatabases.clear()
+    this.reportSchemas.clear()
   }
 }
 
