@@ -130,7 +130,13 @@ export function createReportStore() {
           type: r.type || 'single',  // Migrate legacy reports to 'single' type
           createdAt: new Date(r.createdAt),
           lastModified: new Date(r.lastModified),
-          lastExecuted: r.lastExecuted ? new Date(r.lastExecuted) : undefined
+          lastExecuted: r.lastExecuted ? new Date(r.lastExecuted) : undefined,
+          // Deserialize dates in pages array
+          pages: r.pages?.map((p: any) => ({
+            ...p,
+            createdAt: new Date(p.createdAt),
+            lastModified: new Date(p.lastModified)
+          }))
         }))
         console.log(`  ✅ Loaded ${state.reports.length} reports from storage`)
       } else {
@@ -583,6 +589,16 @@ export function createReportStore() {
 
     state.currentReport.pages = [...pages, newPage]
     state.currentReport.lastModified = now
+
+    // Update the report in the reports array
+    const index = state.reports.findIndex(r => r.id === state.currentReport!.id)
+    if (index !== -1) {
+      state.reports[index] = cloneReport(state.currentReport)
+      console.log('  ✅ Updated reports[', index, '] with new page')
+    } else {
+      console.error('  ❌ Report not found in array! ID:', state.currentReport.id)
+    }
+
     saveReports()
 
     console.log('Added new page:', newPage.id, newPage.title)
@@ -616,6 +632,12 @@ export function createReportStore() {
       state.currentReport.currentPageId = state.currentReport.pages[0]?.id
     }
 
+    // Update the report in the reports array
+    const index = state.reports.findIndex(r => r.id === state.currentReport!.id)
+    if (index !== -1) {
+      state.reports[index] = cloneReport(state.currentReport)
+    }
+
     saveReports()
     console.log('Deleted page and descendants:', Array.from(toDelete))
     return true
@@ -644,6 +666,13 @@ export function createReportStore() {
     }
 
     state.currentReport.lastModified = new Date()
+
+    // Update the report in the reports array
+    const index = state.reports.findIndex(r => r.id === state.currentReport!.id)
+    if (index !== -1) {
+      state.reports[index] = cloneReport(state.currentReport)
+    }
+
     saveReports()
 
     console.log('Updated page:', pageId, updates)
@@ -666,6 +695,13 @@ export function createReportStore() {
     }
 
     state.currentReport.currentPageId = pageId
+
+    // Update the report in the reports array
+    const index = state.reports.findIndex(r => r.id === state.currentReport!.id)
+    if (index !== -1) {
+      state.reports[index] = cloneReport(state.currentReport)
+    }
+
     console.log('Selected page:', pageId, page.title)
     return true
   }
@@ -692,6 +728,13 @@ export function createReportStore() {
     }
 
     state.currentReport.lastModified = new Date()
+
+    // Update the report in the reports array
+    const index = state.reports.findIndex(r => r.id === state.currentReport!.id)
+    if (index !== -1) {
+      state.reports[index] = cloneReport(state.currentReport)
+    }
+
     saveReports()
 
     return true
