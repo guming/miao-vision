@@ -38,6 +38,9 @@
   // Multi-page report state
   let showAddPageDialog = $state(false)
 
+  // Sidebar new report menu state
+  let showSidebarNewMenu = $state(false)
+
   // Version control state
   let showVersionHistory = $state(false)
   let showVersionCompare = $state(false)
@@ -100,6 +103,25 @@
     } else {
       // For single-page reports, update the report content
       reportStore.updateContent(content, reportId)
+    }
+  }
+
+  // Sidebar new report menu handlers
+  function handleCreateReportFromSidebar(type: 'single' | 'multi-page') {
+    const defaultName = type === 'multi-page' ? 'Untitled Multi-Page Report' : 'New Report'
+    const name = prompt('Enter report name:', defaultName)
+    if (name) {
+      const report = reportStore.createReport(name, undefined, type)
+      handleSelectReport(report)
+      setTab('report')
+    }
+    showSidebarNewMenu = false
+  }
+
+  function handleClickOutsideSidebarMenu(event: MouseEvent) {
+    const target = event.target as HTMLElement
+    if (!target.closest('.sidebar-new-menu-container')) {
+      showSidebarNewMenu = false
     }
   }
 
@@ -336,6 +358,8 @@
   })
 </script>
 
+<svelte:window onclick={handleClickOutsideSidebarMenu} />
+
 <main>
   <!-- Sidebar Navigation -->
   <aside class="sidebar">
@@ -367,22 +391,34 @@
       <div class="nav-section">
         <div class="nav-section-header">
           <span class="nav-section-title">Reports</span>
-          <button
-            class="btn-new-report"
-            onclick={() => {
-              const name = prompt('Enter report name:')
-              if (name) {
-                const report = reportStore.createReport(name)
-                // createReport already sets currentReport, just need to set up handlers
-                handleSelectReport(report)
-                setTab('report')
-              }
-            }}
-            disabled={!databaseStore.state.initialized}
-            title="New Report"
-          >
-            +
-          </button>
+          <div class="sidebar-new-menu-container">
+            <button
+              class="btn-new-report"
+              onclick={() => showSidebarNewMenu = !showSidebarNewMenu}
+              disabled={!databaseStore.state.initialized}
+              title="Create New Report"
+            >
+              +
+            </button>
+            {#if showSidebarNewMenu}
+              <div class="sidebar-new-menu">
+                <button
+                  class="sidebar-menu-item"
+                  onclick={() => handleCreateReportFromSidebar('single')}
+                >
+                  <span class="menu-icon">📄</span>
+                  <span>Single Page</span>
+                </button>
+                <button
+                  class="sidebar-menu-item"
+                  onclick={() => handleCreateReportFromSidebar('multi-page')}
+                >
+                  <span class="menu-icon">📚</span>
+                  <span>Multi-Page</span>
+                </button>
+              </div>
+            {/if}
+          </div>
         </div>
 
         <div class="report-list" role="listbox" aria-label="Reports">
@@ -517,11 +553,24 @@
                   <div class="pane-header">
                     <h3>👁️ Preview</h3>
                   </div>
-                  <ReportRenderer
-                    report={reportStore.state.currentReport}
-                    inputStore={currentInputStore}
-                    tableMapping={reportStore.state.tableMapping}
-                  />
+                  {#if reportStore.state.currentReport.type === 'multi-page'}
+                    {@const currentPage = reportStore.getCurrentPage()}
+                    {@const previewReport = {
+                      ...reportStore.state.currentReport,
+                      content: currentPage?.content || ''
+                    }}
+                    <ReportRenderer
+                      report={previewReport}
+                      inputStore={currentInputStore}
+                      tableMapping={reportStore.state.tableMapping}
+                    />
+                  {:else}
+                    <ReportRenderer
+                      report={reportStore.state.currentReport}
+                      inputStore={currentInputStore}
+                      tableMapping={reportStore.state.tableMapping}
+                    />
+                  {/if}
                 </div>
               </div>
             {:else}
@@ -735,6 +784,65 @@
   .btn-new-report:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+  }
+
+  .sidebar-new-menu-container {
+    position: relative;
+  }
+
+  .sidebar-new-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: #1F2937;
+    border: 1px solid #374151;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    min-width: 160px;
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .sidebar-menu-item {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: transparent;
+    border: none;
+    color: #F3F4F6;
+    font-size: 0.8125rem;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    transition: all 0.2s;
+  }
+
+  .sidebar-menu-item:first-child {
+    border-radius: 0.5rem 0.5rem 0 0;
+  }
+
+  .sidebar-menu-item:last-child {
+    border-radius: 0 0 0.5rem 0.5rem;
+  }
+
+  .sidebar-menu-item:hover {
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  }
+
+  .sidebar-menu-item .menu-icon {
+    font-size: 1rem;
   }
 
   .report-list {
