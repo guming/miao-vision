@@ -9,12 +9,15 @@ import type {
   ReportState,
   ReportBlock,
   ReportExecutionResult,
-  ReportMetadata
+  ReportMetadata,
+  ReportType,
+  ReportPage
 } from '@/types/report'
 import {
   REPORTS_STORAGE_KEY,
   MAX_REPORTS,
-  DEFAULT_REPORT_TEMPLATE
+  DEFAULT_REPORT_TEMPLATE,
+  DEFAULT_MULTIPAGE_HOME_TEMPLATE
 } from '@/types/report'
 
 /**
@@ -124,6 +127,7 @@ export function createReportStore() {
 
         state.reports = parsed.map((r: any) => ({
           ...r,
+          type: r.type || 'single',  // Migrate legacy reports to 'single' type
           createdAt: new Date(r.createdAt),
           lastModified: new Date(r.lastModified),
           lastExecuted: r.lastExecuted ? new Date(r.lastExecuted) : undefined
@@ -156,25 +160,44 @@ export function createReportStore() {
   /**
    * Create new report
    */
-  function createReport(name?: string, template?: string): Report {
+  function createReport(name?: string, template?: string, type: ReportType = 'single'): Report {
+    const now = new Date()
+    const reportName = name || (type === 'multi-page' ? 'Untitled Multi-Page Report' : 'Untitled Report')
+
     const report: Report = {
       id: generateId(),
-      name: name || 'Untitled Report',
-      content: template || DEFAULT_REPORT_TEMPLATE,
+      name: reportName,
+      type,
+      content: type === 'single' ? (template || DEFAULT_REPORT_TEMPLATE) : '',
       metadata: {
-        title: name || 'Untitled Report',
-        date: new Date().toISOString().split('T')[0]
+        title: reportName,
+        date: now.toISOString().split('T')[0]
       },
       blocks: [],
-      createdAt: new Date(),
-      lastModified: new Date()
+      createdAt: now,
+      lastModified: now
+    }
+
+    // Initialize multi-page report with a Home page
+    if (type === 'multi-page') {
+      const homePage: ReportPage = {
+        id: generateId(),
+        title: 'Home',
+        slug: 'home',
+        content: template || DEFAULT_MULTIPAGE_HOME_TEMPLATE,
+        order: 0,
+        createdAt: now,
+        lastModified: now
+      }
+      report.pages = [homePage]
+      report.currentPageId = homePage.id
     }
 
     state.reports.unshift(report)
     state.currentReport = report
     saveReports()
 
-    console.log('Created new report:', report.id)
+    console.log('Created new report:', report.id, 'type:', type)
     return report
   }
 
@@ -201,9 +224,12 @@ export function createReportStore() {
       return {
         id: report.id,
         name: report.name,
+        type: report.type || 'single',
         content: report.content,
         metadata: report.metadata ? { ...report.metadata } : {},
         blocks: report.blocks ? [...report.blocks] : [],
+        pages: report.pages ? [...report.pages] : undefined,
+        currentPageId: report.currentPageId,
         createdAt: new Date(),
         lastModified: new Date(),
         lastExecuted: undefined
@@ -380,9 +406,12 @@ export function createReportStore() {
     const duplicate: Report = {
       id: generateId(),
       name: `${original.name} (Copy)`,
+      type: original.type,
       content: original.content,  // strings are immutable, so this is safe
       metadata: { ...original.metadata },  // shallow copy of metadata
       blocks: original.blocks.map(block => ({ ...block })),  // copy each block
+      pages: original.pages?.map(page => ({ ...page, id: generateId() })),  // copy pages with new IDs
+      currentPageId: original.pages?.[0] ? undefined : undefined,  // Reset to first page
       createdAt: new Date(),
       lastModified: new Date(),
       lastExecuted: undefined
@@ -525,6 +554,167 @@ export function createReportStore() {
     }
   }
 
+  /**
+   * Add a new page to a multi-page report
+   */
+  function addPage(title: string, slug: string, parentId?: string): ReportPage | null {
+    if (!state.currentReport || state.currentReport.type !== 'multi-page') {
+      console.error('Cannot add page: current report is not multi-page')
+      return null
+    }
+
+    const now = new Date()
+    const pages = state.currentReport.pages || []
+
+    // Calculate order (last among siblings)
+    const siblings = pages.filter(p => p.parentId === parentId)
+    const order = siblings.length > 0 ? Math.max(...siblings.map(p => p.order)) + 1 : 0
+
+    const newPage: ReportPage = {
+      id: generateId(),
+      title,
+      slug,
+      content: '',
+      parentId,
+      order,
+      createdAt: now,
+      lastModified: now
+    }
+
+    state.currentReport.pages = [...pages, newPage]
+    state.currentReport.lastModified = now
+    saveReports()
+
+    console.log('Added new page:', newPage.id, newPage.title)
+    return newPage
+  }
+
+  /**
+   * Delete a page and all its children
+   */
+  function deletePage(pageId: string): boolean {
+    if (!state.currentReport || state.currentReport.type !== 'multi-page') {
+      return false
+    }
+
+    const pages = state.currentReport.pages || []
+
+    // Find all descendant page IDs
+    function getDescendants(id: string): string[] {
+      const children = pages.filter(p => p.parentId === id)
+      const descendants = children.flatMap(child => [child.id, ...getDescendants(child.id)])
+      return descendants
+    }
+
+    const toDelete = new Set([pageId, ...getDescendants(pageId)])
+
+    state.currentReport.pages = pages.filter(p => !toDelete.has(p.id))
+    state.currentReport.lastModified = new Date()
+
+    // If deleted page was current, switch to first page
+    if (state.currentReport.currentPageId && toDelete.has(state.currentReport.currentPageId)) {
+      state.currentReport.currentPageId = state.currentReport.pages[0]?.id
+    }
+
+    saveReports()
+    console.log('Deleted page and descendants:', Array.from(toDelete))
+    return true
+  }
+
+  /**
+   * Update page metadata (title, slug, parent, order)
+   */
+  function updatePage(pageId: string, updates: Partial<Pick<ReportPage, 'title' | 'slug' | 'parentId' | 'order'>>): boolean {
+    if (!state.currentReport || state.currentReport.type !== 'multi-page') {
+      return false
+    }
+
+    const pages = state.currentReport.pages || []
+    const pageIndex = pages.findIndex(p => p.id === pageId)
+
+    if (pageIndex === -1) {
+      return false
+    }
+
+    const page = pages[pageIndex]
+    state.currentReport.pages![pageIndex] = {
+      ...page,
+      ...updates,
+      lastModified: new Date()
+    }
+
+    state.currentReport.lastModified = new Date()
+    saveReports()
+
+    console.log('Updated page:', pageId, updates)
+    return true
+  }
+
+  /**
+   * Navigate to a specific page in a multi-page report
+   */
+  function selectPage(pageId: string): boolean {
+    if (!state.currentReport || state.currentReport.type !== 'multi-page') {
+      return false
+    }
+
+    const pages = state.currentReport.pages || []
+    const page = pages.find(p => p.id === pageId)
+
+    if (!page) {
+      return false
+    }
+
+    state.currentReport.currentPageId = pageId
+    console.log('Selected page:', pageId, page.title)
+    return true
+  }
+
+  /**
+   * Update page content
+   */
+  function updatePageContent(pageId: string, content: string): boolean {
+    if (!state.currentReport || state.currentReport.type !== 'multi-page') {
+      return false
+    }
+
+    const pages = state.currentReport.pages || []
+    const pageIndex = pages.findIndex(p => p.id === pageId)
+
+    if (pageIndex === -1) {
+      return false
+    }
+
+    state.currentReport.pages![pageIndex] = {
+      ...pages[pageIndex],
+      content,
+      lastModified: new Date()
+    }
+
+    state.currentReport.lastModified = new Date()
+    saveReports()
+
+    return true
+  }
+
+  /**
+   * Get current page in multi-page report
+   */
+  function getCurrentPage(): ReportPage | null {
+    if (!state.currentReport || state.currentReport.type !== 'multi-page') {
+      return null
+    }
+
+    const pages = state.currentReport.pages || []
+    const currentPageId = state.currentReport.currentPageId
+
+    if (!currentPageId) {
+      return pages[0] || null
+    }
+
+    return pages.find(p => p.id === currentPageId) || null
+  }
+
   // Initialize: load reports from storage
   loadReports()
 
@@ -545,6 +735,14 @@ export function createReportStore() {
     updateContent,
     updateMetadata,
     updateBlock,
+
+    // Page management (multi-page reports)
+    addPage,
+    deletePage,
+    updatePage,
+    selectPage,
+    updatePageContent,
+    getCurrentPage,
 
     // Execution
     executeReport,

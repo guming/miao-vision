@@ -42,6 +42,25 @@ export interface ReportBlock {
 }
 
 /**
+ * Report type: single page or multi-page
+ */
+export type ReportType = 'single' | 'multi-page'
+
+/**
+ * Individual page in a multi-page report
+ */
+export interface ReportPage {
+  id: string
+  title: string
+  slug: string  // URL-friendly identifier
+  content: string  // Markdown content for this page
+  parentId?: string  // Parent page ID for hierarchical structure
+  order: number  // Display order among siblings
+  createdAt: Date
+  lastModified: Date
+}
+
+/**
  * Front matter metadata for reports
  */
 export interface ReportMetadata {
@@ -62,9 +81,21 @@ export interface ReportMetadata {
 export interface Report {
   id: string
   name: string
-  content: string // Raw markdown content
+  type: ReportType  // 'single' or 'multi-page'
+  content: string // Raw markdown content (for single-page reports)
   metadata: ReportMetadata
   blocks: ReportBlock[]
+
+  /**
+   * Pages for multi-page reports
+   * Empty for single-page reports
+   */
+  pages?: ReportPage[]
+
+  /**
+   * Current active page ID (for multi-page reports)
+   */
+  currentPageId?: string
 
   /**
    * Embedded data snapshots for self-contained reports
@@ -272,6 +303,29 @@ title: Value Distribution
 ## Conclusion
 
 Summary of findings.
+`
+
+/**
+ * Default multi-page report template (Home page content)
+ */
+export const DEFAULT_MULTIPAGE_HOME_TEMPLATE = `---
+title: Untitled Multi-Page Report
+author:
+date: ${new Date().toISOString().split('T')[0]}
+---
+
+# {title}
+
+**Author**: {author}
+**Date**: {date}
+
+## Welcome
+
+This is a multi-page report. Use the sidebar to navigate between pages.
+
+## Overview
+
+Add your report content here.
 `
 
 /**

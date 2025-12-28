@@ -1,6 +1,6 @@
 <script lang="ts">
   import { reportStore } from '@app/stores/report.svelte'
-  import type { Report } from '@/types/report'
+  import type { Report, ReportType } from '@/types/report'
 
   interface Props {
     onSelect?: (report: Report) => void
@@ -8,13 +8,29 @@
 
   let { onSelect }: Props = $props()
 
-  function handleNew() {
-    const name = prompt('Enter report name:')
+  let showNewMenu = $state(false)
+
+  function handleNew(type: ReportType = 'single') {
+    const defaultName = type === 'multi-page' ? 'Untitled Multi-Page Report' : 'Untitled Report'
+    const name = prompt('Enter report name:', defaultName)
     if (name) {
-      const report = reportStore.createReport(name)
+      const report = reportStore.createReport(name, undefined, type)
       if (onSelect) {
         onSelect(report)
       }
+    }
+    showNewMenu = false
+  }
+
+  function toggleNewMenu() {
+    showNewMenu = !showNewMenu
+  }
+
+  // Close menu when clicking outside
+  function handleClickOutside(event: MouseEvent) {
+    const target = event.target as HTMLElement
+    if (!target.closest('.new-menu-container')) {
+      showNewMenu = false
     }
   }
 
@@ -72,12 +88,28 @@
   }
 </script>
 
+<svelte:window onclick={handleClickOutside} />
+
 <div class="report-list">
   <div class="list-header">
     <h3>Reports</h3>
-    <button class="btn-new" onclick={handleNew} title="Create New Report">
-      + New
-    </button>
+    <div class="new-menu-container">
+      <button class="btn-new" onclick={toggleNewMenu} title="Create New Report">
+        + New ▼
+      </button>
+      {#if showNewMenu}
+        <div class="new-menu">
+          <button class="menu-item" onclick={() => handleNew('single')}>
+            <span class="menu-icon">📄</span>
+            <span>Single Page Report</span>
+          </button>
+          <button class="menu-item" onclick={() => handleNew('multi-page')}>
+            <span class="menu-icon">📚</span>
+            <span>Multi-Page Report</span>
+          </button>
+        </div>
+      {/if}
+    </div>
   </div>
 
   <div class="list-content">
@@ -99,11 +131,21 @@
             tabindex="0"
           >
             <div class="report-info">
-              <div class="report-name">{report.name}</div>
+              <div class="report-name">
+                {#if report.type === 'multi-page'}
+                  <span class="report-type-icon" title="Multi-Page Report">📚</span>
+                {/if}
+                {report.name}
+              </div>
               <div class="report-meta">
                 <span class="modified-date">
                   {formatDate(report.lastModified)}
                 </span>
+                {#if report.type === 'multi-page' && report.pages}
+                  <span class="page-count" title="Number of pages">
+                    {report.pages.length} page{report.pages.length !== 1 ? 's' : ''}
+                  </span>
+                {/if}
                 {#if report.lastExecuted}
                   <span class="executed-badge" title="Last executed">
                     ▶
@@ -174,6 +216,10 @@
     letter-spacing: 0.05em;
   }
 
+  .new-menu-container {
+    position: relative;
+  }
+
   .btn-new {
     padding: 0.5rem 0.875rem;
     /* Gemini gradient background */
@@ -185,6 +231,9 @@
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
   }
 
   .btn-new:hover {
@@ -195,6 +244,61 @@
 
   .btn-new:active {
     transform: translateY(0);
+  }
+
+  .new-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background: #1F2937;
+    border: 1px solid #374151;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    min-width: 200px;
+    animation: slideDown 0.2s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .menu-item {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    color: #F3F4F6;
+    font-size: 0.875rem;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s;
+  }
+
+  .menu-item:first-child {
+    border-radius: 0.5rem 0.5rem 0 0;
+  }
+
+  .menu-item:last-child {
+    border-radius: 0 0 0.5rem 0.5rem;
+  }
+
+  .menu-item:hover {
+    background: linear-gradient(135deg, rgba(66, 133, 244, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  }
+
+  .menu-icon {
+    font-size: 1.125rem;
   }
 
   .list-content {
@@ -257,6 +361,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .report-type-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
   }
 
   .report-meta {
@@ -269,6 +381,15 @@
 
   .modified-date {
     font-size: 0.75rem;
+  }
+
+  .page-count {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+    background: rgba(66, 133, 244, 0.15);
+    border: 1px solid rgba(66, 133, 244, 0.3);
+    border-radius: 0.25rem;
+    color: #93C5FD;
   }
 
   .executed-badge {
