@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import { HybridGNode } from '@core/engine'
   import type { HybridView } from '@core/engine'
+  import { duckDBManager } from '@core/database'
   import * as Plot from '@observablehq/plot'
 
   let gnode: HybridGNode
@@ -235,7 +236,27 @@
   async function clearData() {
     stopStreaming()
 
-    // Recreate tables
+    // Destroy old instance
+    if (gnode) {
+      gnode.destroy()
+    }
+
+    // Drop old tables from DuckDB
+    try {
+      const db = await duckDBManager.getDB()
+      const conn = await db.connect()
+
+      // Drop all related tables
+      await conn.query(`DROP TABLE IF EXISTS sales`)
+      await conn.query(`DROP TABLE IF EXISTS sales_delta`)
+      await conn.query(`DROP TABLE IF EXISTS sales_by_region_cache`)
+      await conn.query(`DROP TABLE IF EXISTS sales_by_product_cache`)
+      await conn.query(`DROP TABLE IF EXISTS top_regions_cache`)
+    } catch (error) {
+      console.error('Failed to drop tables:', error)
+    }
+
+    // Recreate everything
     await initializeGNode()
 
     totalRowsGenerated = 0
