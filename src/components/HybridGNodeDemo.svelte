@@ -41,9 +41,15 @@
 
   async function initializeGNode() {
     try {
+      // Ensure DuckDB is initialized first
+      console.log('🔄 Initializing DuckDB...')
+      await duckDBManager.initialize()
+      console.log('✅ DuckDB initialized')
+
       // Create GNode instance
       gnode = new HybridGNode()
 
+      console.log('📋 Creating sales table...')
       // Create sales table
       await gnode.createTable('sales', {
         timestamp: 'TIMESTAMP',
@@ -52,6 +58,7 @@
         quantity: 'INTEGER',
         revenue: 'DOUBLE'
       })
+      console.log('✅ Sales table created')
 
       // View 1: Sales by region
       salesByRegionView = await gnode.createView('sales_by_region', {
@@ -90,18 +97,27 @@
       salesByProductView.onUpdate(() => loadData())
       topRegionsView.onUpdate(() => loadData())
 
+      console.log('📊 Inserting initial sample data...')
       // Insert initial sample data to show charts immediately
-      const initialData = generateSalesData(100)
-      await gnode.update('sales', initialData)
-      totalRowsGenerated = 100
+      try {
+        const initialData = generateSalesData(100)
+        await gnode.update('sales', initialData)
+        totalRowsGenerated = 100
+        console.log('✅ Initial data inserted')
+      } catch (insertError) {
+        console.error('❌ Failed to insert initial data:', insertError)
+        throw insertError
+      }
 
       // Wait for views to refresh and load initial data
-      await new Promise(resolve => setTimeout(resolve, 100))
+      console.log('⏳ Waiting for views to refresh...')
+      await new Promise(resolve => setTimeout(resolve, 200))
       await loadData()
 
       console.log('✅ Hybrid GNode initialized with sample data')
     } catch (error) {
-      console.error('Failed to initialize GNode:', error)
+      console.error('❌ Failed to initialize GNode:', error)
+      throw error
     }
   }
 
