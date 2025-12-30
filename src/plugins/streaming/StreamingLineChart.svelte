@@ -11,6 +11,7 @@
     windowSize?: number  // Show last N points
     color?: string
     height?: number
+    filter?: string      // SQL WHERE clause filter (e.g., "city = 'Beijing'")
   }
 
   let {
@@ -20,7 +21,8 @@
     title = 'Real-time Data',
     windowSize = 100,
     color = '#4285F4',
-    height = 300
+    height = 300,
+    filter = ''
   }: Props = $props()
 
   let chartContainer: HTMLDivElement
@@ -28,7 +30,10 @@
   let unsubscribe: (() => void) | null = null
   let isLoading = $state(true)
 
-  onMount(() => {
+  onMount(async () => {
+    // Wait for table initialization
+    await table.waitForInit()
+
     // Initial load
     loadData()
 
@@ -44,11 +49,14 @@
 
   async function loadData() {
     try {
+      const whereClause = filter ? `WHERE ${filter}` : ''
       const sql = windowSize
-        ? `SELECT * FROM "${table.name}" ORDER BY "${xField}" DESC LIMIT ${windowSize}`
-        : `SELECT * FROM "${table.name}" ORDER BY "${xField}"`
+        ? `SELECT * FROM "${table.name}" ${whereClause} ORDER BY "${xField}" DESC LIMIT ${windowSize}`
+        : `SELECT * FROM "${table.name}" ${whereClause} ORDER BY "${xField}"`
 
       const result = await table.query(sql)
+
+      console.log(`📊 StreamingLineChart [${table.name}]: loaded ${result.length} rows`, result.slice(0, 2))
 
       // Reverse to show chronological order
       data = windowSize ? result.reverse() : result

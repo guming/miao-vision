@@ -22,6 +22,7 @@ export class StreamingTable {
   private subscribers = new Set<SubscribeCallback>()
   private isInitialized = false
   private flushThreshold = 100 // Auto-flush when buffer reaches this size
+  private initPromise: Promise<void>
 
   constructor(
     public readonly name: string,
@@ -34,7 +35,14 @@ export class StreamingTable {
       ...options
     }
 
-    this.initTable()
+    this.initPromise = this.initTable()
+  }
+
+  /**
+   * Wait for table initialization to complete
+   */
+  async waitForInit(): Promise<void> {
+    return this.initPromise
   }
 
   /**
@@ -71,8 +79,10 @@ export class StreamingTable {
     this.buffer.push(...dataArray)
 
     // Auto-flush based on configuration
-    if (this.options.autoFlush && this.buffer.length >= this.flushThreshold) {
-      this.flush()
+    if (this.options.autoFlush) {
+      // Debounce flush for better performance (batch multiple updates within 16ms)
+      if (this.flushTimer) clearTimeout(this.flushTimer)
+      this.flushTimer = setTimeout(() => this.flush(), 16)
     } else if (this.options.updateInterval && this.options.updateInterval > 0) {
       if (this.flushTimer) clearTimeout(this.flushTimer)
       this.flushTimer = setTimeout(() => this.flush(), this.options.updateInterval)
@@ -144,25 +154,34 @@ export class StreamingTable {
 
   /**
    * Apply row limit (sliding window)
+   * Uses timestamp field for ordering since DuckDB-WASM doesn't have rowid
    */
   private async applyRowLimit(conn: any) {
     try {
       const result = await conn.query(`
         SELECT COUNT(*) as cnt FROM "${this.name}"
       `)
-      const count = result.toArray()[0].cnt
+      // Convert BigInt to Number for comparison
+      const count = Number(result.toArray()[0].cnt)
 
       if (count > this.options.maxRows!) {
         const toDelete = count - this.options.maxRows!
-        await conn.query(`
-          DELETE FROM "${this.name}"
-          WHERE rowid IN (
-            SELECT rowid FROM "${this.name}"
-            ORDER BY rowid ASC
-            LIMIT ${toDelete}
-          )
-        `)
-        console.log(`🗑️  Removed ${toDelete} old rows from "${this.name}"`)
+        // Use timestamp field for ordering (assuming it exists)
+        const timestampField = Object.keys(this.schema).find(k =>
+          k.toLowerCase() === 'timestamp' || this.schema[k].toUpperCase().includes('TIMESTAMP')
+        )
+
+        if (timestampField) {
+          await conn.query(`
+            DELETE FROM "${this.name}"
+            WHERE "${timestampField}" IN (
+              SELECT "${timestampField}" FROM "${this.name}"
+              ORDER BY "${timestampField}" ASC
+              LIMIT ${toDelete}
+            )
+          `)
+          console.log(`🗑️  Removed ${toDelete} old rows from "${this.name}"`)
+        }
       }
     } catch (error) {
       console.error('Failed to apply row limit:', error)
@@ -174,6 +193,7 @@ export class StreamingTable {
    */
   subscribe(callback: SubscribeCallback): () => void {
     this.subscribers.add(callback)
+    console.log(`📌 Subscribed to "${this.name}", total subscribers: ${this.subscribers.size}`)
     return () => this.subscribers.delete(callback)
   }
 
@@ -181,6 +201,7 @@ export class StreamingTable {
    * Notify all subscribers of data update
    */
   private notifySubscribers() {
+    console.log(`🔔 Notifying ${this.subscribers.size} subscribers for "${this.name}"`)
     this.subscribers.forEach(cb => {
       try {
         cb()
@@ -198,7 +219,8 @@ export class StreamingTable {
       const db = await duckDBManager.getDB()
       const conn = await db.connect()
       const result = await conn.query(`SELECT COUNT(*) as cnt FROM "${this.name}"`)
-      return result.toArray()[0].cnt
+      // Convert BigInt to Number
+      return Number(result.toArray()[0].cnt)
     } catch (error) {
       console.error('Failed to get row count:', error)
       return 0

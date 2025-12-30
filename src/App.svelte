@@ -23,11 +23,12 @@
   import AddPageDialog from './components/report/AddPageDialog.svelte'
   import StreamingDemo from './components/StreamingDemo.svelte'
   import HybridGNodeDemo from './components/HybridGNodeDemo.svelte'
+  import WeatherStreamingDemo from './components/WeatherStreamingDemo.svelte'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
   let subtitle = $state('Local-First Analytics')
-  let activeTab = $state<'workspace' | 'connections' | 'report' | 'streaming' | 'gnode'>('workspace')
+  let activeTab = $state<'workspace' | 'connections' | 'report' | 'streaming' | 'gnode' | 'weather'>('workspace')
 
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
@@ -83,7 +84,7 @@
     }
   })
 
-  function setTab(tab: 'workspace' | 'connections' | 'report' | 'streaming' | 'gnode') {
+  function setTab(tab: 'workspace' | 'connections' | 'report' | 'streaming' | 'gnode' | 'weather') {
     activeTab = tab
   }
 
@@ -406,6 +407,14 @@
         <span class="nav-label">⚡ Hybrid GNode</span>
       </button>
 
+      <button
+        class="nav-item"
+        class:active={activeTab === 'weather'}
+        onclick={() => setTab('weather')}
+      >
+        <span class="nav-label">🌡️ Weather</span>
+      </button>
+
       <div class="nav-section">
         <div class="nav-section-header">
           <span class="nav-section-title">Reports</span>
@@ -522,6 +531,10 @@
       {:else if activeTab === 'gnode'}
         <div class="page-container gnode-page">
           <HybridGNodeDemo />
+        </div>
+      {:else if activeTab === 'weather'}
+        <div class="page-container weather-page">
+          <WeatherStreamingDemo />
         </div>
       {:else if activeTab === 'report'}
         <div class="page-container report-layout">

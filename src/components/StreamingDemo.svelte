@@ -3,10 +3,10 @@
   import { StreamingTable } from '@/plugins/streaming/StreamingTable'
   import StreamingLineChart from '@/plugins/streaming/StreamingLineChart.svelte'
 
-  // Streaming tables
-  let cpuTable: StreamingTable
-  let memoryTable: StreamingTable
-  let networkTable: StreamingTable
+  // Streaming tables (reactive for conditional rendering)
+  let cpuTable = $state<StreamingTable | null>(null)
+  let memoryTable = $state<StreamingTable | null>(null)
+  let networkTable = $state<StreamingTable | null>(null)
 
   // Control state
   let isStreaming = $state(false)
@@ -78,7 +78,11 @@
 
     // Wait for all tables to initialize
     console.log('⏳ Waiting for tables to initialize...')
-    await new Promise(resolve => setTimeout(resolve, 100))
+    await Promise.all([
+      cpuTable.waitForInit(),
+      memoryTable.waitForInit(),
+      networkTable.waitForInit()
+    ])
 
     // Subscribe to updates for stats
     cpuTable.subscribe(updateStats)

@@ -79,7 +79,7 @@ export class HybridGNode {
         ON "${id}"(_version)
       `)
 
-      // Register in dependency graph
+      // Register in dependency graph (preserve schema for column order)
       this.nodes.set(id, {
         id,
         type: 'table',
@@ -87,7 +87,8 @@ export class HybridGNode {
         dependents: new Set(),
         dirty: false,
         dirtyRows: new Set(),
-        duckdbTable: id
+        duckdbTable: id,
+        schema: schema
       })
 
       console.log(`✅ Table "${id}" created`)
@@ -218,12 +219,39 @@ export class HybridGNode {
     const timestamp = new Date().toISOString()
 
     try {
-      // Get schema
-      const schema = await this.getTableSchema(tableId)
+      // Use stored schema to preserve column order
+      const schema = node.schema
+      if (!schema) {
+        throw new Error(`Schema not found for table "${tableId}"`)
+      }
       const columnNames = Object.keys(schema)
 
-      // Build INSERT statement for delta table
-      const values = data.map((row, idx) => {
+      // Build INSERT statement for main table
+      const mainValues = data.map((row, idx) => {
+        const rowId = Date.now() + idx
+        const cols = columnNames.map(col => {
+          const val = row[col]
+          if (val === null || val === undefined) return 'NULL'
+          if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`
+          if (val instanceof Date) return `'${val.toISOString()}'`
+          return val
+        }).join(', ')
+        return `(${rowId}, ${version}, '${timestamp}', ${cols})`
+      }).join(', ')
+
+      // Column list for main table INSERT (metadata columns + user columns)
+      const mainColumnList = ['_row_id', '_version', '_timestamp', ...columnNames]
+        .map(c => `"${c}"`)
+        .join(', ')
+
+      // Write to main table (for views to query)
+      await conn.query(`
+        INSERT INTO "${tableId}" (${mainColumnList})
+        VALUES ${mainValues}
+      `)
+
+      // Also write to delta table for tracking
+      const deltaValues = data.map((row, idx) => {
         const rowId = Date.now() + idx
         const cols = columnNames.map(col => {
           const val = row[col]
@@ -235,18 +263,16 @@ export class HybridGNode {
         return `(${rowId}, ${version}, '${timestamp}', 'INSERT', ${cols})`
       }).join(', ')
 
-      // Column list for INSERT (metadata columns + user columns)
-      const columnList = ['_row_id', '_version', '_timestamp', '_op', ...columnNames]
+      const deltaColumnList = ['_row_id', '_version', '_timestamp', '_op', ...columnNames]
         .map(c => `"${c}"`)
         .join(', ')
 
-      // Fast path: write to delta table
       await conn.query(`
-        INSERT INTO "${tableId}_delta" (${columnList})
-        VALUES ${values}
+        INSERT INTO "${tableId}_delta" (${deltaColumnList})
+        VALUES ${deltaValues}
       `)
 
-      console.log(`📊 Inserted ${data.length} rows to "${tableId}_delta" (version ${version})`)
+      console.log(`📊 Inserted ${data.length} rows to "${tableId}" (version ${version})`)
 
       // Mark dependent nodes as dirty
       this.markDirty(tableId, data.map((_, idx) => Date.now() + idx))

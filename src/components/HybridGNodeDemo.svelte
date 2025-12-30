@@ -49,47 +49,47 @@
       // Create GNode instance
       gnode = new HybridGNode()
 
-      console.log('📋 Creating sales table...')
-      // Create sales table
-      await gnode.createTable('sales', {
+      console.log('📋 Creating stocks table...')
+      // Create stocks table
+      await gnode.createTable('stocks', {
         timestamp: 'TIMESTAMP',
-        region: 'VARCHAR',
-        product: 'VARCHAR',
-        quantity: 'INTEGER',
-        revenue: 'DOUBLE'
+        symbol: 'VARCHAR',
+        sector: 'VARCHAR',
+        price: 'DOUBLE',
+        volume: 'INTEGER'
       })
-      console.log('✅ Sales table created')
+      console.log('✅ Stocks table created')
 
-      // View 1: Sales by region
-      salesByRegionView = await gnode.createView('sales_by_region', {
-        source: 'sales',
-        rowPivots: ['region'],
+      // View 1: Volume by symbol
+      salesByRegionView = await gnode.createView('volume_by_symbol', {
+        source: 'stocks',
+        rowPivots: ['symbol'],
         aggregates: {
-          revenue: 'sum',
-          quantity: 'sum'
+          volume: 'sum',
+          price: 'avg'
         },
-        sort: [{ column: 'revenue_sum', direction: 'desc' }]
-      })
-
-      // View 2: Sales by product
-      salesByProductView = await gnode.createView('sales_by_product', {
-        source: 'sales',
-        rowPivots: ['product'],
-        aggregates: {
-          revenue: 'avg',
-          quantity: 'count'
-        },
-        sort: [{ column: 'revenue_avg', direction: 'desc' }]
+        sort: [{ column: 'volume_sum', direction: 'desc' }]
       })
 
-      // View 3: Top 5 regions (filtered view)
-      topRegionsView = await gnode.createView('top_regions', {
-        source: 'sales',
-        rowPivots: ['region'],
+      // View 2: Average price by sector
+      salesByProductView = await gnode.createView('price_by_sector', {
+        source: 'stocks',
+        rowPivots: ['sector'],
         aggregates: {
-          revenue: 'sum'
+          price: 'avg',
+          volume: 'sum'
         },
-        sort: [{ column: 'revenue_sum', direction: 'desc' }]
+        sort: [{ column: 'price_avg', direction: 'desc' }]
+      })
+
+      // View 3: Top symbols by volume
+      topRegionsView = await gnode.createView('top_symbols', {
+        source: 'stocks',
+        rowPivots: ['symbol'],
+        aggregates: {
+          volume: 'sum'
+        },
+        sort: [{ column: 'volume_sum', direction: 'desc' }]
       })
 
       // Subscribe to updates
@@ -100,8 +100,8 @@
       console.log('📊 Inserting initial sample data...')
       // Insert initial sample data to show charts immediately
       try {
-        const initialData = generateSalesData(100)
-        await gnode.update('sales', initialData)
+        const initialData = generateStockData(100)
+        await gnode.update('stocks', initialData)
         totalRowsGenerated = 100
         console.log('✅ Initial data inserted')
       } catch (insertError) {
@@ -158,56 +158,56 @@
       return
     }
 
-    // Region chart
+    // Volume by Symbol chart
     try {
-      const regionChart = Plot.plot({
+      const volumeChart = Plot.plot({
         marginLeft: 80,
         marginBottom: 40,
         width: regionChartContainer.clientWidth,
         height: 300,
         marks: [
           Plot.barX(regionData, {
-            y: 'region',
-            x: 'revenue_sum',
+            y: 'symbol',
+            x: 'volume_sum',
             fill: '#4285F4',
             sort: { y: 'x', reverse: true }
           }),
           Plot.ruleX([0])
         ],
-        x: { label: 'Total Revenue ($)' },
-        y: { label: 'Region' }
+        x: { label: 'Total Volume' },
+        y: { label: 'Symbol' }
       })
 
       regionChartContainer.innerHTML = ''
-      regionChartContainer.appendChild(regionChart)
+      regionChartContainer.appendChild(volumeChart)
     } catch (error) {
-      console.error('Failed to render region chart:', error)
+      console.error('Failed to render volume chart:', error)
     }
 
-    // Product chart
+    // Price by Sector chart
     try {
-      const productChart = Plot.plot({
-        marginLeft: 80,
+      const priceChart = Plot.plot({
+        marginLeft: 100,
         marginBottom: 40,
         width: productChartContainer.clientWidth,
         height: 300,
         marks: [
           Plot.barX(productData, {
-            y: 'product',
-            x: 'revenue_avg',
+            y: 'sector',
+            x: 'price_avg',
             fill: '#34A853',
             sort: { y: 'x', reverse: true }
           }),
           Plot.ruleX([0])
         ],
-        x: { label: 'Average Revenue ($)' },
-        y: { label: 'Product' }
+        x: { label: 'Average Price ($)' },
+        y: { label: 'Sector' }
       })
 
       productChartContainer.innerHTML = ''
-      productChartContainer.appendChild(productChart)
+      productChartContainer.appendChild(priceChart)
     } catch (error) {
-      console.error('Failed to render product chart:', error)
+      console.error('Failed to render price chart:', error)
     }
   }
 
@@ -227,10 +227,10 @@
 
       try {
         const batchSize = 50
-        const salesData = generateSalesData(batchSize)
+        const stockData = generateStockData(batchSize)
 
         console.log(`⚡ Inserting ${batchSize} rows...`)
-        await gnode.update('sales', salesData)
+        await gnode.update('stocks', stockData)
 
         totalRowsGenerated += batchSize
         totalUpdates++
@@ -267,17 +267,34 @@
     }
   }
 
-  function generateSalesData(count: number): any[] {
-    const regions = ['North', 'South', 'East', 'West', 'Central']
-    const products = ['iPhone', 'MacBook', 'iPad', 'AirPods', 'Watch']
+  // Stock symbols and their base prices
+  const STOCKS = [
+    { symbol: 'AAPL', sector: 'Technology', basePrice: 185 },
+    { symbol: 'GOOGL', sector: 'Technology', basePrice: 142 },
+    { symbol: 'MSFT', sector: 'Technology', basePrice: 378 },
+    { symbol: 'AMZN', sector: 'Consumer', basePrice: 178 },
+    { symbol: 'META', sector: 'Technology', basePrice: 505 },
+    { symbol: 'JPM', sector: 'Finance', basePrice: 195 },
+    { symbol: 'BAC', sector: 'Finance', basePrice: 35 },
+    { symbol: 'JNJ', sector: 'Healthcare', basePrice: 156 },
+    { symbol: 'PFE', sector: 'Healthcare', basePrice: 28 },
+    { symbol: 'XOM', sector: 'Energy', basePrice: 105 }
+  ]
 
-    return Array.from({ length: count }, () => ({
-      timestamp: new Date(),
-      region: regions[Math.floor(Math.random() * regions.length)],
-      product: products[Math.floor(Math.random() * products.length)],
-      quantity: Math.floor(Math.random() * 10) + 1,
-      revenue: (Math.random() * 1000) + 100
-    }))
+  function generateStockData(count: number): any[] {
+    // Generate deterministic data: cycle through all stocks
+    return Array.from({ length: count }, (_, i) => {
+      const stock = STOCKS[i % STOCKS.length]
+      // Add small random price variation (+/- 2%)
+      const priceVariation = stock.basePrice * (0.98 + Math.random() * 0.04)
+      return {
+        timestamp: new Date(),
+        symbol: stock.symbol,
+        sector: stock.sector,
+        price: Math.round(priceVariation * 100) / 100,
+        volume: Math.floor(Math.random() * 10000) + 1000
+      }
+    })
   }
 
   async function clearData() {
@@ -299,11 +316,11 @@
       const conn = await db.connect()
 
       // Drop all related tables
-      await conn.query(`DROP TABLE IF EXISTS sales`)
-      await conn.query(`DROP TABLE IF EXISTS sales_delta`)
-      await conn.query(`DROP TABLE IF EXISTS sales_by_region_cache`)
-      await conn.query(`DROP TABLE IF EXISTS sales_by_product_cache`)
-      await conn.query(`DROP TABLE IF EXISTS top_regions_cache`)
+      await conn.query(`DROP TABLE IF EXISTS stocks`)
+      await conn.query(`DROP TABLE IF EXISTS stocks_delta`)
+      await conn.query(`DROP TABLE IF EXISTS volume_by_symbol_cache`)
+      await conn.query(`DROP TABLE IF EXISTS price_by_sector_cache`)
+      await conn.query(`DROP TABLE IF EXISTS top_symbols_cache`)
     } catch (error) {
       console.error('Failed to drop tables:', error)
     }
@@ -322,7 +339,7 @@
 
 <div class="hybrid-gnode-demo">
   <header class="demo-header">
-    <h1>⚡ Hybrid GNode Demo</h1>
+    <h1>📈 Real-time Stock Analytics</h1>
     <p class="subtitle">
       DuckDB Storage + Perspective-style Dependency Graph
     </p>
@@ -391,34 +408,34 @@
 
   <div class="charts-section">
     <div class="chart-card">
-      <h3>Sales by Region (SUM)</h3>
-      <p class="chart-meta">{regionData.length} regions • Total aggregated</p>
+      <h3>Volume by Symbol</h3>
+      <p class="chart-meta">{regionData.length} stocks • Total volume</p>
       <div bind:this={regionChartContainer} class="chart-container"></div>
     </div>
 
     <div class="chart-card">
-      <h3>Sales by Product (AVG)</h3>
-      <p class="chart-meta">{productData.length} products • Average revenue</p>
+      <h3>Avg Price by Sector</h3>
+      <p class="chart-meta">{productData.length} sectors • Average price</p>
       <div bind:this={productChartContainer} class="chart-container"></div>
     </div>
   </div>
 
   <div class="data-section">
     <div class="data-card">
-      <h3>🏆 Top 5 Regions</h3>
+      <h3>📈 Top 5 Stocks by Volume</h3>
       <div class="data-table">
         <table>
           <thead>
             <tr>
-              <th>Region</th>
-              <th>Total Revenue</th>
+              <th>Symbol</th>
+              <th>Total Volume</th>
             </tr>
           </thead>
           <tbody>
             {#each topRegionsData as row}
               <tr>
-                <td>{row.region}</td>
-                <td>${row.revenue_sum?.toFixed(2)}</td>
+                <td>{row.symbol}</td>
+                <td>{row.volume_sum?.toLocaleString()}</td>
               </tr>
             {/each}
           </tbody>
@@ -427,22 +444,22 @@
     </div>
 
     <div class="data-card">
-      <h3>📊 All Regions</h3>
+      <h3>📊 All Stocks</h3>
       <div class="data-table">
         <table>
           <thead>
             <tr>
-              <th>Region</th>
-              <th>Revenue</th>
-              <th>Quantity</th>
+              <th>Symbol</th>
+              <th>Avg Price</th>
+              <th>Total Volume</th>
             </tr>
           </thead>
           <tbody>
             {#each regionData as row}
               <tr>
-                <td>{row.region}</td>
-                <td>${row.revenue_sum?.toFixed(2)}</td>
-                <td>{row.quantity_sum}</td>
+                <td>{row.symbol}</td>
+                <td>${row.price_avg?.toFixed(2)}</td>
+                <td>{row.volume_sum?.toLocaleString()}</td>
               </tr>
             {/each}
           </tbody>

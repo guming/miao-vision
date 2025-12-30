@@ -51,6 +51,9 @@ export interface GNodeDescriptor {
   // DuckDB metadata
   duckdbTable: string
 
+  // Table schema (preserves column order)
+  schema?: SchemaDefinition
+
   // View-specific config
   viewConfig?: ViewConfig
 
