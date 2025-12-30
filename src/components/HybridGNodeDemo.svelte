@@ -97,6 +97,11 @@
   }
 
   async function loadData() {
+    // Guard: only load if all views are initialized
+    if (!salesByRegionView || !salesByProductView || !topRegionsView) {
+      return
+    }
+
     try {
       [regionData, productData, topRegionsData] = await Promise.all([
         salesByRegionView.toArray(),
@@ -240,6 +245,11 @@
     if (gnode) {
       gnode.destroy()
     }
+
+    // Reset view references to prevent race conditions
+    salesByRegionView = null as any
+    salesByProductView = null as any
+    topRegionsView = null as any
 
     // Drop old tables from DuckDB
     try {
