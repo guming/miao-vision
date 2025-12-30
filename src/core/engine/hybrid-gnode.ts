@@ -234,9 +234,14 @@ export class HybridGNode {
         return `(${rowId}, ${version}, '${timestamp}', 'INSERT', ${cols})`
       }).join(', ')
 
+      // Column list for INSERT (metadata columns + user columns)
+      const columnList = ['_row_id', '_version', '_timestamp', '_op', ...columnNames]
+        .map(c => `"${c}"`)
+        .join(', ')
+
       // Fast path: write to delta table
       await conn.query(`
-        INSERT INTO "${tableId}_delta"
+        INSERT INTO "${tableId}_delta" (${columnList})
         VALUES ${values}
       `)
 
