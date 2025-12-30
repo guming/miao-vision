@@ -90,7 +90,16 @@
       salesByProductView.onUpdate(() => loadData())
       topRegionsView.onUpdate(() => loadData())
 
-      console.log('✅ Hybrid GNode initialized')
+      // Insert initial sample data to show charts immediately
+      const initialData = generateSalesData(100)
+      await gnode.update('sales', initialData)
+      totalRowsGenerated = 100
+
+      // Wait for views to refresh and load initial data
+      await new Promise(resolve => setTimeout(resolve, 100))
+      await loadData()
+
+      console.log('✅ Hybrid GNode initialized with sample data')
     } catch (error) {
       console.error('Failed to initialize GNode:', error)
     }
@@ -99,18 +108,23 @@
   async function loadData() {
     // Guard: only load if all views are initialized
     if (!salesByRegionView || !salesByProductView || !topRegionsView) {
+      console.warn('⏭️ loadData skipped - views not ready')
       return
     }
 
     try {
-      [regionData, productData, topRegionsData] = await Promise.all([
+      console.log('📊 Loading data from views...')
+      const [region, product, topRegions] = await Promise.all([
         salesByRegionView.toArray(),
         salesByProductView.toArray(),
         topRegionsView.toArray()
       ])
 
-      // Limit top regions to 5
-      topRegionsData = topRegionsData.slice(0, 5)
+      console.log(`📊 Loaded: ${region.length} regions, ${product.length} products, ${topRegions.length} top regions`)
+
+      regionData = region
+      productData = product
+      topRegionsData = topRegions.slice(0, 5)
 
       renderCharts()
     } catch (error) {
@@ -120,7 +134,13 @@
 
   function renderCharts() {
     if (!regionChartContainer || !productChartContainer) return
-    if (regionData.length === 0) return
+
+    // Show empty state if no data
+    if (regionData.length === 0) {
+      regionChartContainer.innerHTML = '<div class="empty-state">📊 No data yet. Click "Start Streaming" to generate data.</div>'
+      productChartContainer.innerHTML = '<div class="empty-state">📊 No data yet. Click "Start Streaming" to generate data.</div>'
+      return
+    }
 
     // Region chart
     try {
@@ -178,10 +198,13 @@
   function startStreaming() {
     if (isStreaming) return
 
+    console.log(`▶ Starting streaming with ${updateFrequency}ms frequency`)
     isStreaming = true
-    totalRowsGenerated = 0
-    totalUpdates = 0
-    updateTimes = []
+    // Don't reset totalRowsGenerated if we have initial data
+    if (totalRowsGenerated === 0) {
+      totalUpdates = 0
+      updateTimes = []
+    }
 
     streamInterval = setInterval(async () => {
       const startTime = performance.now()
@@ -190,6 +213,7 @@
         const batchSize = 50
         const salesData = generateSalesData(batchSize)
 
+        console.log(`⚡ Inserting ${batchSize} rows...`)
         await gnode.update('sales', salesData)
 
         totalRowsGenerated += batchSize
@@ -203,8 +227,10 @@
           updateTimes.shift()
         }
         avgUpdateTime = updateTimes.reduce((a, b) => a + b, 0) / updateTimes.length
+
+        console.log(`✓ Update #${totalUpdates} completed in ${elapsed.toFixed(2)}ms`)
       } catch (error) {
-        console.error('Update failed:', error)
+        console.error('❌ Update failed:', error)
       }
     }, updateFrequency)
   }
@@ -602,6 +628,17 @@
 
   .chart-container {
     min-height: 300px;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: #9CA3AF;
+    font-size: 1rem;
+    text-align: center;
+    padding: 2rem;
   }
 
   .data-section {
