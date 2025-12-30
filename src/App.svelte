@@ -21,11 +21,13 @@
   import { versionStore } from '@app/stores/version.svelte'
   import PageTreeSidebar from './components/report/PageTreeSidebar.svelte'
   import AddPageDialog from './components/report/AddPageDialog.svelte'
+  import StreamingDemo from './components/StreamingDemo.svelte'
+  import HybridGNodeDemo from './components/HybridGNodeDemo.svelte'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
   let subtitle = $state('Local-First Analytics')
-  let activeTab = $state<'workspace' | 'connections' | 'report'>('workspace')
+  let activeTab = $state<'workspace' | 'connections' | 'report' | 'streaming' | 'gnode'>('workspace')
 
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
@@ -81,7 +83,7 @@
     }
   })
 
-  function setTab(tab: 'workspace' | 'connections' | 'report') {
+  function setTab(tab: 'workspace' | 'connections' | 'report' | 'streaming' | 'gnode') {
     activeTab = tab
   }
 
@@ -388,6 +390,22 @@
         {/if}
       </button>
 
+      <button
+        class="nav-item"
+        class:active={activeTab === 'streaming'}
+        onclick={() => setTab('streaming')}
+      >
+        <span class="nav-label">🔴 Streaming</span>
+      </button>
+
+      <button
+        class="nav-item"
+        class:active={activeTab === 'gnode'}
+        onclick={() => setTab('gnode')}
+      >
+        <span class="nav-label">⚡ Hybrid GNode</span>
+      </button>
+
       <div class="nav-section">
         <div class="nav-section-header">
           <span class="nav-section-title">Reports</span>
@@ -496,6 +514,14 @@
       {:else if activeTab === 'connections'}
         <div class="page-container connections-page">
           <ConnectionsPage />
+        </div>
+      {:else if activeTab === 'streaming'}
+        <div class="page-container streaming-page">
+          <StreamingDemo />
+        </div>
+      {:else if activeTab === 'gnode'}
+        <div class="page-container gnode-page">
+          <HybridGNodeDemo />
         </div>
       {:else if activeTab === 'report'}
         <div class="page-container report-layout">
