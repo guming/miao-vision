@@ -27,6 +27,7 @@ export class HybridGNode {
   private currentVersion = 0
   private refreshTimer?: ReturnType<typeof setTimeout>
   private updateCallbacks = new Map<string, Set<UpdateCallback>>()
+  private isRefreshing = false
 
   constructor() {
     console.log('🚀 Hybrid GNode initialized')
@@ -325,6 +326,13 @@ export class HybridGNode {
    * Perform incremental refresh
    */
   private async performIncrementalRefresh(): Promise<void> {
+    // Prevent concurrent refreshes (mutex)
+    if (this.isRefreshing) {
+      console.log('⏭️  Skipping refresh - already in progress')
+      return
+    }
+
+    this.isRefreshing = true
     const startTime = performance.now()
 
     try {
@@ -349,6 +357,8 @@ export class HybridGNode {
       console.log(`⚡ Incremental refresh completed in ${elapsed.toFixed(2)}ms`)
     } catch (error) {
       console.error('Incremental refresh failed:', error)
+    } finally {
+      this.isRefreshing = false
     }
   }
 
@@ -367,9 +377,11 @@ export class HybridGNode {
       // Strategy: Full refresh for now (can optimize later)
       const sql = this.buildViewSQL(config)
 
-      // Recreate cache table
-      await conn.query(`DROP TABLE IF EXISTS "${node.duckdbTable}"`)
-      await conn.query(`CREATE TABLE "${node.duckdbTable}" AS ${sql}`)
+      // Recreate cache table atomically
+      // Use CREATE OR REPLACE to avoid race conditions
+      await conn.query(`
+        CREATE OR REPLACE TABLE "${node.duckdbTable}" AS ${sql}
+      `)
 
       if (node.incrementalState) {
         node.incrementalState.lastVersion = this.currentVersion
