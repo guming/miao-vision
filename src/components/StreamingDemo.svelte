@@ -19,8 +19,8 @@
   let memoryRowCount = $state(0)
   let networkRowCount = $state(0)
 
-  onMount(() => {
-    initializeTables()
+  onMount(async () => {
+    await initializeTables()
   })
 
   onDestroy(() => {
@@ -30,7 +30,12 @@
     networkTable?.destroy()
   })
 
-  function initializeTables() {
+  async function initializeTables() {
+    console.log('🔄 Initializing DuckDB for streaming...')
+    const { duckDBManager } = await import('@core/database')
+    await duckDBManager.initialize()
+    console.log('✅ DuckDB initialized for streaming')
+
     // CPU metrics
     cpuTable = new StreamingTable(
       'streaming_cpu_metrics',
@@ -71,10 +76,16 @@
       }
     )
 
+    // Wait for all tables to initialize
+    console.log('⏳ Waiting for tables to initialize...')
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     // Subscribe to updates for stats
     cpuTable.subscribe(updateStats)
     memoryTable.subscribe(updateStats)
     networkTable.subscribe(updateStats)
+
+    console.log('✅ Streaming tables initialized')
   }
 
   async function updateStats() {
