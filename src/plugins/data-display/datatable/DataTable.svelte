@@ -302,22 +302,41 @@
    */
   function handleDrilldownClick(row: any, rowIndex: number) {
     const drilldown = data.config.drilldown
-    if (!drilldown?.enabled || !drilldown.mappings?.length) return
+    if (!drilldown?.enabled) return
 
-    console.log('🔍 Drill-down click:', { rowIndex, row })
+    // Determine action type: explicit action, or infer from config
+    const actionType = drilldown.action ||
+      (drilldown.mappings?.length ? 'setInput' : 'modal')
+
+    // For setInput action, mappings are required
+    if (actionType === 'setInput' && !drilldown.mappings?.length) {
+      console.warn('⚠️ Drilldown setInput action requires mappings')
+      return
+    }
+
+    console.log('🔍 Drill-down click:', { actionType, rowIndex, row })
+
+    // Build action config based on type
+    const actionConfig = actionType === 'setInput'
+      ? {
+          type: 'setInput' as const,
+          mappings: drilldown.mappings!.map(m => ({
+            column: m.column,
+            inputName: m.inputName,
+            transform: m.transform
+          }))
+        }
+      : {
+          type: 'modal' as const,
+          titleTemplate: drilldown.titleTemplate,
+          displayColumns: drilldown.displayColumns
+        }
 
     // Execute drill-down action via service
     drilldownService.execute(
       {
         enabled: true,
-        action: {
-          type: 'setInput',
-          mappings: drilldown.mappings.map(m => ({
-            column: m.column,
-            inputName: m.inputName,
-            transform: m.transform
-          }))
-        },
+        action: actionConfig,
         cursor: drilldown.cursor,
         hoverHighlight: drilldown.highlight,
         tooltip: drilldown.tooltip

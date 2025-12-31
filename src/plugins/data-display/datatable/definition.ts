@@ -66,10 +66,15 @@ function parseDrilldownConfig(content: string): DrilldownConfig | undefined {
   const lines = content.split('\n')
   let inDrilldown = false
   let inMappings = false
+  let inDisplayColumns = false
   const mappings: DrilldownMapping[] = []
+  const displayColumns: string[] = []
+  let action: 'setInput' | 'modal' | undefined
+  let titleTemplate: string | undefined
   let cursor: 'pointer' | 'zoom-in' = 'pointer'
   let highlight = true
   let tooltip: string | undefined
+  let enabled = false
 
   for (const line of lines) {
     const trimmed = line.trim()
@@ -84,9 +89,11 @@ function parseDrilldownConfig(content: string): DrilldownConfig | undefined {
       continue
     }
 
-    // Stop at next top-level key
-    if (inDrilldown && !trimmed.startsWith('-') && !trimmed.startsWith(' ') && trimmed.includes(':') && !trimmed.startsWith('drilldown')) {
-      if (!trimmed.startsWith('cursor') && !trimmed.startsWith('highlight') && !trimmed.startsWith('tooltip') && !trimmed.startsWith('mappings')) {
+    // Stop at next top-level key (not indented, has colon, not a drilldown sub-key)
+    const drilldownKeys = ['enabled', 'action', 'cursor', 'highlight', 'tooltip', 'mappings', 'displayColumns', 'titleTemplate']
+    if (inDrilldown && !trimmed.startsWith('-') && !trimmed.startsWith(' ') && trimmed.includes(':')) {
+      const key = trimmed.substring(0, trimmed.indexOf(':')).trim()
+      if (!drilldownKeys.includes(key)) {
         break
       }
     }
@@ -96,6 +103,14 @@ function parseDrilldownConfig(content: string): DrilldownConfig | undefined {
     // Parse mappings list
     if (trimmed === 'mappings:') {
       inMappings = true
+      inDisplayColumns = false
+      continue
+    }
+
+    // Parse displayColumns list
+    if (trimmed === 'displayColumns:') {
+      inDisplayColumns = true
+      inMappings = false
       continue
     }
 
@@ -113,13 +128,40 @@ function parseDrilldownConfig(content: string): DrilldownConfig | undefined {
       continue
     }
 
+    // Parse displayColumns item: "- column_name"
+    if (inDisplayColumns && trimmed.startsWith('-')) {
+      const col = trimmed.substring(1).trim()
+      if (col) {
+        displayColumns.push(col)
+      }
+      continue
+    }
+
     // Parse other drilldown properties
     if (trimmed.includes(':')) {
       const colonIdx = trimmed.indexOf(':')
       const key = trimmed.substring(0, colonIdx).trim()
       const value = trimmed.substring(colonIdx + 1).trim()
 
+      // Reset list parsing when hitting a new key
+      if (key !== 'mappings' && key !== 'displayColumns') {
+        inMappings = false
+        inDisplayColumns = false
+      }
+
       switch (key) {
+        case 'enabled':
+          enabled = value === 'true'
+          break
+        case 'action':
+          if (value === 'modal' || value === 'setInput') {
+            action = value
+          }
+          break
+        case 'titleTemplate':
+          // Strip quotes from template string
+          titleTemplate = value.replace(/^["']|["']$/g, '')
+          break
         case 'cursor':
           if (value === 'pointer' || value === 'zoom-in') {
             cursor = value
@@ -135,11 +177,14 @@ function parseDrilldownConfig(content: string): DrilldownConfig | undefined {
     }
   }
 
-  // Only return config if we have mappings
-  if (mappings.length > 0) {
+  // Return config if enabled or if we have any drilldown configuration
+  if (enabled || mappings.length > 0 || action === 'modal') {
     return {
-      enabled: true,
-      mappings,
+      enabled: enabled || mappings.length > 0 || action === 'modal',
+      action,
+      mappings: mappings.length > 0 ? mappings : undefined,
+      displayColumns: displayColumns.length > 0 ? displayColumns : undefined,
+      titleTemplate,
       cursor,
       highlight,
       tooltip

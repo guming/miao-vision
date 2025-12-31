@@ -24,11 +24,16 @@
   import StreamingDemo from './components/StreamingDemo.svelte'
   import HybridGNodeDemo from './components/HybridGNodeDemo.svelte'
   import WeatherStreamingDemo from './components/WeatherStreamingDemo.svelte'
+  import CrossFilterDemo from './components/CrossFilterDemo.svelte'
+  import DrilldownModal from './components/DrilldownModal.svelte'
+  import DrilldownDemo from './components/DrilldownDemo.svelte'
+  import { drilldownStore } from '@app/stores/drilldown.svelte'
+  import { drilldownService } from '@core/engine/drilldown/drilldown-service'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
   let subtitle = $state('Local-First Analytics')
-  let activeTab = $state<'workspace' | 'connections' | 'report' | 'streaming' | 'gnode' | 'weather'>('workspace')
+  let activeTab = $state<'workspace' | 'connections' | 'report' | 'streaming' | 'gnode' | 'weather' | 'crossfilter' | 'drilldown'>('workspace')
 
   // Report tab state
   let markdownEditor = $state<MarkdownEditor | null>(null)
@@ -359,6 +364,31 @@
       unsubscribe()
     }
   })
+
+  // Wire up drilldown modal handler
+  $effect(() => {
+    drilldownService.onDrilldown('app-modal-handler', (event) => {
+      if (event.config.action.type === 'modal') {
+        const action = event.config.action as { type: 'modal'; titleTemplate?: string; displayColumns?: string[] }
+        // Interpolate title template with row data
+        let title = action.titleTemplate || 'Details'
+        title = title.replace(/\{(\w+)\}/g, (_, key) => {
+          const value = event.context.rowData[key]
+          return value !== undefined ? String(value) : `{${key}}`
+        })
+
+        drilldownStore.showModal(title, event.context.rowData, {
+          displayColumns: action.displayColumns,
+          sourceComponent: event.context.sourceComponent,
+          blockId: event.context.blockId
+        })
+      }
+    })
+
+    return () => {
+      drilldownService.offDrilldown('app-modal-handler')
+    }
+  })
 </script>
 
 <svelte:window onclick={handleClickOutsideSidebarMenu} />
@@ -413,6 +443,22 @@
         onclick={() => setTab('weather')}
       >
         <span class="nav-label">🌡️ Weather</span>
+      </button>
+
+      <button
+        class="nav-item"
+        class:active={activeTab === 'crossfilter'}
+        onclick={() => setTab('crossfilter')}
+      >
+        <span class="nav-label">🔗 CrossFilter</span>
+      </button>
+
+      <button
+        class="nav-item"
+        class:active={activeTab === 'drilldown'}
+        onclick={() => setTab('drilldown')}
+      >
+        <span class="nav-label">🔍 Drilldown</span>
       </button>
 
       <div class="nav-section">
@@ -536,6 +582,14 @@
         <div class="page-container weather-page">
           <WeatherStreamingDemo />
         </div>
+      {:else if activeTab === 'crossfilter'}
+        <div class="page-container crossfilter-page">
+          <CrossFilterDemo />
+        </div>
+      {:else if activeTab === 'drilldown'}
+        <div class="page-container drilldown-page">
+          <DrilldownDemo />
+        </div>
       {:else if activeTab === 'report'}
         <div class="page-container report-layout">
           <div class="report-container">
@@ -654,6 +708,9 @@
     </div>
   </div>
 </main>
+
+<!-- Global Drilldown Modal -->
+<DrilldownModal />
 
 <style>
   /* ========================================

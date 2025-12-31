@@ -20,6 +20,30 @@
   let bars = $derived(data.bars)
   let maxValue = $derived(data.maxValue)
 
+  // Cross-view linking
+  let selectable = $derived(data.config.selectable ?? false)
+  let selectedValues = $derived(data.selectedValues)
+  let selectionField = $derived(data.selectionField || data.config.x)
+  let onSelect = $derived(data.onSelect)
+  let hasSelection = $derived(selectedValues && selectedValues.size > 0)
+
+  // Check if a category is selected
+  function isSelected(category: string): boolean {
+    return selectedValues?.has(category) ?? false
+  }
+
+  // Check if a category should be dimmed (has selection but not selected)
+  function isDimmed(category: string): boolean {
+    return hasSelection && !isSelected(category)
+  }
+
+  // Handle bar click
+  function handleBarClick(category: string) {
+    if (selectable && onSelect && selectionField) {
+      onSelect(selectionField, category)
+    }
+  }
+
   // Configuration with defaults
   let height = $derived(config.height || 300)
   let horizontal = $derived(config.horizontal || false)
@@ -132,8 +156,15 @@
                   {#each categoryBars as bar (bar.id)}
                     <div
                       class="bar-wrapper"
+                      class:selectable
+                      class:selected={isSelected(bar.category)}
+                      class:dimmed={isDimmed(bar.category)}
                       style="width: {100 / categoryBars.length}%"
                       title="{bar.category}{bar.group ? ` - ${bar.group}` : ''}: {bar.formatted}"
+                      onclick={() => handleBarClick(bar.category)}
+                      onkeydown={(e) => e.key === 'Enter' && handleBarClick(bar.category)}
+                      role={selectable ? 'button' : undefined}
+                      tabindex={selectable ? 0 : undefined}
                     >
                       <div class="bar-column">
                         {#if showLabels && bar.value > 0}
@@ -181,7 +212,14 @@
                 {#each categoryBars as bar (bar.id)}
                   <div
                     class="bar-horizontal-wrapper"
+                    class:selectable
+                    class:selected={isSelected(bar.category)}
+                    class:dimmed={isDimmed(bar.category)}
                     title="{bar.category}{bar.group ? ` - ${bar.group}` : ''}: {bar.formatted}"
+                    onclick={() => handleBarClick(bar.category)}
+                    onkeydown={(e) => e.key === 'Enter' && handleBarClick(bar.category)}
+                    role={selectable ? 'button' : undefined}
+                    tabindex={selectable ? 0 : undefined}
                   >
                     <div
                       class="bar-horizontal"
@@ -381,6 +419,29 @@
     transform-origin: bottom;
   }
 
+  /* Cross-view linking styles */
+  .bar-wrapper.selectable {
+    cursor: pointer;
+  }
+
+  .bar-wrapper.selectable:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  .bar-wrapper.selected .bar {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+
+  .bar-wrapper.dimmed .bar {
+    opacity: 0.3;
+  }
+
+  .bar-wrapper.dimmed .bar-label {
+    opacity: 0.5;
+  }
+
   .bar-label {
     font-size: 0.625rem;
     color: var(--text-secondary, #9CA3AF);
@@ -476,6 +537,19 @@
 
   .bar-horizontal:hover {
     opacity: 0.85;
+  }
+
+  /* Cross-view linking styles for horizontal bars */
+  .bar-horizontal-wrapper.selectable {
+    cursor: pointer;
+  }
+
+  .bar-horizontal-wrapper.selected .bar-horizontal {
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+  }
+
+  .bar-horizontal-wrapper.dimmed .bar-horizontal {
+    opacity: 0.3;
   }
 
   .bar-label-horizontal {

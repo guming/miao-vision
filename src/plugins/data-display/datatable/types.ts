@@ -75,7 +75,10 @@ export interface DrilldownMapping {
  */
 export interface DrilldownConfig {
   enabled: boolean           // Enable drill-down on row click
-  mappings: DrilldownMapping[]  // Map columns to input variables
+  action?: 'setInput' | 'modal'  // Action type (default: setInput if mappings provided, modal otherwise)
+  mappings?: DrilldownMapping[]  // Map columns to input variables (for setInput action)
+  displayColumns?: string[]  // Columns to display in modal (for modal action, default: all)
+  titleTemplate?: string     // Title template for modal, e.g. "Order #{order_id}" (for modal action)
   cursor?: 'pointer' | 'zoom-in'  // Cursor style on hover (default: pointer)
   highlight?: boolean        // Highlight row on hover (default: true)
   tooltip?: string           // Tooltip text for drill-down hint

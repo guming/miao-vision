@@ -52,6 +52,14 @@ export interface BarChartConfig {
   sort?: 'none' | 'asc' | 'desc'
   /** Custom CSS class */
   class?: string
+
+  // Cross-view linking options
+  /** Enable click-to-select on bars */
+  selectable?: boolean
+  /** Field name used for selection (defaults to x column) */
+  selectionField?: string
+  /** Fields to filter by when other charts have selections */
+  linkedFields?: string[]
 }
 
 /**
@@ -92,4 +100,12 @@ export interface BarChartData {
   total: number
   /** Configuration */
   config: BarChartConfig
+
+  // Cross-view linking state
+  /** Currently selected values (for highlighting) */
+  selectedValues?: Set<string>
+  /** Selection field name */
+  selectionField?: string
+  /** Callback when a bar is clicked */
+  onSelect?: (field: string, value: string) => void
 }
