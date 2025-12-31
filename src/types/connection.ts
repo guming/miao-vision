@@ -9,7 +9,7 @@
  * Connection scope/type
  * Maps to ConnectorType in core/connectors/types.ts
  */
-export type ConnectionScope = 'wasm' | 'http' | 'motherduck'
+export type ConnectionScope = 'wasm' | 'http' | 'motherduck' | 'postgres' | 'mysql'
 
 /**
  * Connection status
@@ -47,6 +47,10 @@ export interface DatabaseConnection {
   createdAt: string
   /** Last connection attempt timestamp */
   lastConnectedAt?: string
+  /** Database port (PostgreSQL/MySQL) */
+  port?: number
+  /** SSL/TLS enabled */
+  ssl?: boolean
 }
 
 /**
@@ -62,6 +66,16 @@ export interface ConnectionFormData {
   token?: string
   /** For MotherDuck: API key */
   apiKey?: string
+  /** For PostgreSQL/MySQL: port number */
+  port?: number
+  /** For PostgreSQL/MySQL: username */
+  username?: string
+  /** For PostgreSQL/MySQL: password */
+  password?: string
+  /** For PostgreSQL/MySQL: HTTP proxy URL */
+  proxyUrl?: string
+  /** For PostgreSQL/MySQL: SSL mode */
+  ssl?: boolean
 }
 
 /**
@@ -119,6 +133,18 @@ export const CONNECTION_SCOPES: Array<{
     label: 'MotherDuck',
     description: 'MotherDuck cloud service',
     icon: '🦆'
+  },
+  {
+    value: 'postgres',
+    label: 'PostgreSQL',
+    description: 'PostgreSQL database via HTTP proxy',
+    icon: '🐘'
+  },
+  {
+    value: 'mysql',
+    label: 'MySQL',
+    description: 'MySQL database via HTTP proxy',
+    icon: '🐬'
   }
 ]
 
@@ -156,6 +182,8 @@ export function createConnection(data: ConnectionFormData): DatabaseConnection {
     environment: data.environment,
     status: 'disconnected',
     isActive: false,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    port: data.port,
+    ssl: data.ssl
   }
 }

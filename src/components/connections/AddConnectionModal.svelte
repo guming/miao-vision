@@ -19,6 +19,13 @@
   let database = $state('')
   let endpoint = $state('')
   let apiKey = $state('')
+  // PostgreSQL/MySQL specific
+  let host = $state('')
+  let port = $state('')
+  let username = $state('')
+  let password = $state('')
+  let proxyUrl = $state('')
+  let ssl = $state(false)
 
   // Test state
   let isTesting = $state(false)
@@ -43,6 +50,18 @@
       icon: '🔌',
       name: 'HTTP API',
       description: 'Connect via HTTP endpoint'
+    },
+    {
+      type: 'postgres' as ConnectionScope,
+      icon: '🐘',
+      name: 'PostgreSQL',
+      description: 'PostgreSQL via HTTP proxy'
+    },
+    {
+      type: 'mysql' as ConnectionScope,
+      icon: '🐬',
+      name: 'MySQL',
+      description: 'MySQL via HTTP proxy'
     }
   ]
 
@@ -69,15 +88,27 @@
     const formData: ConnectionFormData = {
       name,
       scope: selectedType,
-      host: selectedType === 'http' ? endpoint : 'localhost',
+      host: selectedType === 'http' ? endpoint : (selectedType === 'postgres' || selectedType === 'mysql') ? host : 'localhost',
       database: database || (selectedType === 'wasm' ? 'memory' : 'default'),
       environment: 'DEV',
       token,
-      apiKey
+      apiKey,
+      // PostgreSQL/MySQL specific
+      port: port ? parseInt(port, 10) : undefined,
+      username: username || undefined,
+      password: password || undefined,
+      proxyUrl: proxyUrl || undefined,
+      ssl
     }
 
     try {
-      const result = await connectionStore.testConnection(formData, { token, apiKey })
+      const result = await connectionStore.testConnection(formData, {
+        token,
+        apiKey,
+        password,
+        username,
+        proxyUrl
+      })
       testResult = result
     } catch (error) {
       testResult = {
@@ -98,20 +129,25 @@
       const formData: ConnectionFormData = {
         name: name.trim(),
         scope: selectedType,
-        host: selectedType === 'http' ? endpoint : 'localhost',
+        host: selectedType === 'http' ? endpoint : (selectedType === 'postgres' || selectedType === 'mysql') ? host : 'localhost',
         database: database || (selectedType === 'wasm' ? 'memory' : 'default'),
-        environment: 'DEV'
+        environment: 'DEV',
+        // PostgreSQL/MySQL specific
+        port: port ? parseInt(port, 10) : undefined,
+        username: username || undefined,
+        proxyUrl: proxyUrl || undefined,
+        ssl
       }
 
       const connection = connectionStore.addConnection(formData)
 
       // Save secrets if provided
-      if (token || apiKey) {
-        connectionStore.saveSecrets(connection.id, { token, apiKey })
+      if (token || apiKey || password || username || proxyUrl) {
+        connectionStore.saveSecrets(connection.id, { token, apiKey, password, username, proxyUrl })
       }
 
       // Connect to the new connection
-      await connectionStore.connect(connection.id, { token, apiKey })
+      await connectionStore.connect(connection.id, { token, apiKey, password, username, proxyUrl })
 
       // Refresh database store
       await databaseStore.switchConnection(connection.id)
@@ -140,7 +176,13 @@
     name.trim().length > 0 &&
     (selectedType === 'wasm' ||
      (selectedType === 'motherduck' && token.trim().length > 0) ||
-     (selectedType === 'http' && endpoint.trim().length > 0))
+     (selectedType === 'http' && endpoint.trim().length > 0) ||
+     ((selectedType === 'postgres' || selectedType === 'mysql') &&
+       proxyUrl.trim().length > 0 &&
+       host.trim().length > 0 &&
+       database.trim().length > 0 &&
+       username.trim().length > 0 &&
+       password.trim().length > 0))
   )
 </script>
 
@@ -245,6 +287,72 @@
                 bind:value={apiKey}
                 placeholder="sk_xxxxx..."
               />
+            </div>
+          {/if}
+
+          {#if selectedType === 'postgres' || selectedType === 'mysql'}
+            <div class="form-group">
+              <label for="conn-proxy">Proxy URL *</label>
+              <input
+                id="conn-proxy"
+                type="text"
+                bind:value={proxyUrl}
+                placeholder={selectedType === 'postgres' ? 'http://localhost:3001/api/postgres' : 'http://localhost:3001/api/mysql'}
+              />
+              <span class="form-hint">HTTP proxy server that connects to the database</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group flex-2">
+                <label for="conn-host">Host *</label>
+                <input
+                  id="conn-host"
+                  type="text"
+                  bind:value={host}
+                  placeholder="localhost"
+                />
+              </div>
+              <div class="form-group flex-1">
+                <label for="conn-port">Port</label>
+                <input
+                  id="conn-port"
+                  type="text"
+                  bind:value={port}
+                  placeholder={selectedType === 'postgres' ? '5432' : '3306'}
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="conn-database">Database *</label>
+              <input
+                id="conn-database"
+                type="text"
+                bind:value={database}
+                placeholder="myapp"
+              />
+            </div>
+            <div class="form-group">
+              <label for="conn-username">Username *</label>
+              <input
+                id="conn-username"
+                type="text"
+                bind:value={username}
+                placeholder="dbuser"
+              />
+            </div>
+            <div class="form-group">
+              <label for="conn-password">Password *</label>
+              <input
+                id="conn-password"
+                type="password"
+                bind:value={password}
+                placeholder="••••••••"
+              />
+            </div>
+            <div class="form-group form-checkbox">
+              <label>
+                <input type="checkbox" bind:checked={ssl} />
+                <span>Use SSL</span>
+              </label>
             </div>
           {/if}
 
@@ -357,6 +465,13 @@
     gap: 0.75rem;
   }
 
+  /* When we have more than 3 items, use auto-fit */
+  @media (min-width: 500px) {
+    .type-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+  }
+
   .type-card {
     display: flex;
     flex-direction: column;
@@ -446,6 +561,45 @@
 
   .form-group input::placeholder {
     color: #6B7280;
+  }
+
+  .form-hint {
+    font-size: 0.6875rem;
+    color: #6B7280;
+    margin-top: 2px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .form-row .form-group {
+    flex: 1;
+  }
+
+  .flex-1 {
+    flex: 1 !important;
+  }
+
+  .flex-2 {
+    flex: 2 !important;
+  }
+
+  .form-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #E5E7EB;
+  }
+
+  .form-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #4285F4;
+    cursor: pointer;
   }
 
   .test-result {

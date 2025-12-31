@@ -27,6 +27,12 @@ export interface ConnectionSecrets {
   token?: string
   /** MotherDuck API key */
   apiKey?: string
+  /** Database password (PostgreSQL/MySQL) */
+  password?: string
+  /** Database username (PostgreSQL/MySQL) */
+  username?: string
+  /** HTTP proxy URL for database connections */
+  proxyUrl?: string
 }
 
 /**

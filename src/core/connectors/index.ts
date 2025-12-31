@@ -125,6 +125,24 @@ export type {
   HttpMethod
 } from './rest'
 
+// PostgreSQL Connector
+export { PostgreSQLConnector, createPostgreSQLConnector } from './postgresql'
+export type {
+  PostgreSQLConnectorOptions,
+  PostgreSQLConnectorDeps,
+  PostgreSQLProxyRequest,
+  PostgreSQLProxyResponse
+} from './postgresql'
+
+// MySQL Connector
+export { MySQLConnector, createMySQLConnector } from './mysql'
+export type {
+  MySQLConnectorOptions,
+  MySQLConnectorDeps,
+  MySQLProxyRequest,
+  MySQLProxyResponse
+} from './mysql'
+
 // Secrets Manager
 export {
   secretsManager,
@@ -155,8 +173,12 @@ export {
 import { createWasmConnector } from './wasm'
 import { createMotherDuckConnector } from './motherduck'
 import { createHttpConnector } from './http'
+import { createPostgreSQLConnector } from './postgresql'
+import { createMySQLConnector } from './mysql'
 
 // Register all built-in connectors
 ConnectorRegistry.register('wasm', createWasmConnector, 'DuckDB-WASM (Browser)')
 ConnectorRegistry.register('motherduck', createMotherDuckConnector, 'MotherDuck Cloud')
 ConnectorRegistry.register('http', createHttpConnector, 'HTTP API')
+ConnectorRegistry.register('postgres', createPostgreSQLConnector, 'PostgreSQL (via Proxy)')
+ConnectorRegistry.register('mysql', createMySQLConnector, 'MySQL (via Proxy)')

@@ -13,7 +13,7 @@
   import type { InputStore } from '@app/stores/report-inputs'
   import { initializeMosaic } from '@core/database'
   import { reportExecutionService } from '@core/engine/report-execution.service'
-  import { htmlExportService } from '@core/export'
+  import { htmlExportService, shareService, staticSiteExporter, exportToMVR, parseMVR, MVR_EXTENSION } from '@core/export'
   import { exportToPDF } from '@/lib/export'
   import type { Report } from './types/report'
   import VersionHistory from './components/report/VersionHistory.svelte'
@@ -41,6 +41,10 @@
   let isSavingReport = $state(false)
   let isExportingReport = $state(false)
   let isExportingPDF = $state(false)
+  let isSharing = $state(false)
+  let isExportingStaticSite = $state(false)
+  let isExportingMVR = $state(false)
+  let isImportingMVR = $state(false)
   let currentInputStore = $state<InputStore | null>(null)
 
   // Multi-page report state
@@ -89,7 +93,7 @@
     }
   })
 
-  function setTab(tab: 'workspace' | 'connections' | 'report' | 'streaming' | 'gnode' | 'weather') {
+  function setTab(tab: 'workspace' | 'connections' | 'report' | 'streaming' | 'gnode' | 'weather' | 'crossfilter' | 'drilldown') {
     activeTab = tab
   }
 
@@ -292,6 +296,230 @@
       alert(`PDF export failed: ${error instanceof Error ? error.message : error}`)
     } finally {
       isExportingPDF = false
+    }
+  }
+
+  async function handleShare() {
+    if (!reportStore.state.currentReport) {
+      alert('No report to share')
+      return
+    }
+
+    const previewPane = document.querySelector('.preview-pane .report-renderer')
+    if (!previewPane) {
+      alert('Report preview not found. Please execute the report first.')
+      return
+    }
+
+    isSharing = true
+
+    try {
+      const result = await shareService.share(
+        previewPane as HTMLElement,
+        reportStore.state.currentReport,
+        {
+          title: reportStore.state.currentReport.name,
+          includeData: true,
+          darkTheme: true
+        }
+      )
+
+      if (result.success) {
+        console.log('✅ Report shared successfully via', result.method)
+        if (result.method === 'download') {
+          alert('Report downloaded as shareable HTML file')
+        }
+      } else {
+        console.warn('Share cancelled or failed:', result.error)
+      }
+    } catch (error) {
+      console.error('❌ Share failed:', error)
+      alert(`Share failed: ${error instanceof Error ? error.message : error}`)
+    } finally {
+      isSharing = false
+    }
+  }
+
+  async function handleExportStaticSite() {
+    if (!reportStore.state.currentReport) {
+      alert('No report to export')
+      return
+    }
+
+    const previewPane = document.querySelector('.preview-pane .report-renderer')
+    if (!previewPane) {
+      alert('Report preview not found. Please execute the report first.')
+      return
+    }
+
+    isExportingStaticSite = true
+
+    try {
+      await staticSiteExporter.downloadZip(
+        previewPane as HTMLElement,
+        reportStore.state.currentReport,
+        {
+          title: reportStore.state.currentReport.name,
+          description: reportStore.state.currentReport.metadata?.description,
+          darkTheme: true,
+          separateDataFiles: true,
+          includeSource: true,
+          interactive: true  // Enable drilldown, sorting, filtering
+        }
+      )
+      console.log('✅ Static site exported successfully')
+    } catch (error) {
+      console.error('❌ Static site export failed:', error)
+      alert(`Export failed: ${error instanceof Error ? error.message : error}`)
+    } finally {
+      isExportingStaticSite = false
+    }
+  }
+
+  async function handleExportMVR() {
+    if (!reportStore.state.currentReport) {
+      alert('No report to export')
+      return
+    }
+
+    isExportingMVR = true
+
+    try {
+      // Collect query results from executed blocks
+      const queryResults = new Map<string, Record<string, unknown>[]>()
+      const blocks = reportStore.state.currentReport.blocks || []
+
+      for (const block of blocks) {
+        const blockName = block.metadata?.name
+        if (block.type === 'sql' && blockName && block.sqlResult?.rows) {
+          queryResults.set(blockName, block.sqlResult.rows)
+        }
+      }
+
+      // Export to MVR format
+      const mvrContent = await exportToMVR(
+        reportStore.state.currentReport,
+        queryResults,
+        {
+          includeSql: true,
+          includeData: true,
+          compressData: false,
+          includeColumnMeta: true
+        }
+      )
+
+      // Download the file
+      const blob = new Blob([mvrContent], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${reportStore.state.currentReport.name}${MVR_EXTENSION}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      console.log('✅ MVR export successful')
+    } catch (error) {
+      console.error('❌ MVR export failed:', error)
+      alert(`Export failed: ${error instanceof Error ? error.message : error}`)
+    } finally {
+      isExportingMVR = false
+    }
+  }
+
+  async function handleImportMVR() {
+    isImportingMVR = true
+
+    try {
+      // Create file input
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = MVR_EXTENSION
+
+      const file = await new Promise<File | null>((resolve) => {
+        input.onchange = () => {
+          resolve(input.files?.[0] || null)
+        }
+        input.click()
+      })
+
+      if (!file) {
+        isImportingMVR = false
+        return
+      }
+
+      // Read file content
+      const content = await file.text()
+
+      // Parse MVR content
+      const parseResult = parseMVR(content)
+
+      if (!parseResult.success || !parseResult.report) {
+        throw new Error(parseResult.errors?.join(', ') || 'Failed to parse MVR file')
+      }
+
+      // Import report using the store's importMarkdown function
+      const report = reportStore.importMarkdown(
+        parseResult.report.content,
+        parseResult.report.metadata.name
+      )
+
+      // Get input store for the new report
+      currentInputStore = getInputStore(report.id)
+
+      // Load embedded data into DuckDB tables
+      if (parseResult.report.data.length > 0) {
+        const db = databaseStore.state.db
+        if (db) {
+          for (const dataBlock of parseResult.report.data) {
+            if (dataBlock.data.length > 0) {
+              const tableName = `mvr_${dataBlock.name}`
+              try {
+                // Create table from first row structure
+                const columns = Object.keys(dataBlock.data[0])
+                const columnDefs = columns.map(col => {
+                  const value = dataBlock.data[0][col]
+                  let sqlType = 'VARCHAR'
+                  if (typeof value === 'number') {
+                    sqlType = Number.isInteger(value) ? 'INTEGER' : 'DOUBLE'
+                  } else if (typeof value === 'boolean') {
+                    sqlType = 'BOOLEAN'
+                  }
+                  return `"${col}" ${sqlType}`
+                }).join(', ')
+
+                await db.run(`DROP TABLE IF EXISTS "${tableName}"`)
+                await db.run(`CREATE TABLE "${tableName}" (${columnDefs})`)
+
+                // Insert data
+                for (const row of dataBlock.data) {
+                  const values = columns.map(col => {
+                    const v = row[col]
+                    if (v === null || v === undefined) return 'NULL'
+                    if (typeof v === 'number') return String(v)
+                    if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'
+                    return `'${String(v).replace(/'/g, "''")}'`
+                  }).join(', ')
+                  await db.run(`INSERT INTO "${tableName}" VALUES (${values})`)
+                }
+
+                console.log(`✅ Created table: ${tableName} with ${dataBlock.data.length} rows`)
+              } catch (err) {
+                console.warn(`⚠️ Failed to create table ${tableName}:`, err)
+              }
+            }
+          }
+        }
+      }
+
+      console.log('✅ MVR import successful:', report.name)
+      alert(`Imported report: ${report.name}`)
+    } catch (error) {
+      console.error('❌ MVR import failed:', error)
+      alert(`Import failed: ${error instanceof Error ? error.message : error}`)
+    } finally {
+      isImportingMVR = false
     }
   }
 
@@ -600,12 +828,20 @@
                 onSave={handleSaveReport}
                 onExport={handleExportReport}
                 onExportPDF={handleExportPDF}
+                onShare={handleShare}
+                onExportStaticSite={handleExportStaticSite}
+                onExportMVR={handleExportMVR}
+                onImportMVR={handleImportMVR}
                 onVersionHistory={handleVersionHistory}
                 onVersionCompare={handleVersionCompare}
                 isExecuting={isExecutingReport}
                 isSaving={isSavingReport}
                 isExporting={isExportingReport}
                 isExportingPDF={isExportingPDF}
+                isSharing={isSharing}
+                isExportingStaticSite={isExportingStaticSite}
+                isExportingMVR={isExportingMVR}
+                isImportingMVR={isImportingMVR}
               />
 
               <div class="report-workspace" class:multi-page={reportStore.state.currentReport.type === 'multi-page'}>

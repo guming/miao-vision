@@ -7,12 +7,20 @@
     onSave?: () => void
     onExport?: () => void
     onExportPDF?: () => void
+    onShare?: () => void
+    onExportStaticSite?: () => void
+    onExportMVR?: () => void
+    onImportMVR?: () => void
     onVersionHistory?: () => void
     onVersionCompare?: () => void
     isExecuting?: boolean
     isSaving?: boolean
     isExporting?: boolean
     isExportingPDF?: boolean
+    isSharing?: boolean
+    isExportingStaticSite?: boolean
+    isExportingMVR?: boolean
+    isImportingMVR?: boolean
   }
 
   let {
@@ -21,12 +29,20 @@
     onSave,
     onExport,
     onExportPDF,
+    onShare,
+    onExportStaticSite,
+    onExportMVR,
+    onImportMVR,
     onVersionHistory,
     onVersionCompare,
     isExecuting = false,
     isSaving = false,
     isExporting = false,
-    isExportingPDF = false
+    isExportingPDF = false,
+    isSharing = false,
+    isExportingStaticSite = false,
+    isExportingMVR = false,
+    isImportingMVR = false
   }: Props = $props()
 
   function handleInsertSQL() {
@@ -69,6 +85,30 @@
   function handleExportPDF() {
     if (onExportPDF && !isExportingPDF) {
       onExportPDF()
+    }
+  }
+
+  function handleShare() {
+    if (onShare && !isSharing) {
+      onShare()
+    }
+  }
+
+  function handleExportStaticSite() {
+    if (onExportStaticSite && !isExportingStaticSite) {
+      onExportStaticSite()
+    }
+  }
+
+  function handleExportMVR() {
+    if (onExportMVR && !isExportingMVR) {
+      onExportMVR()
+    }
+  }
+
+  function handleImportMVR() {
+    if (onImportMVR && !isImportingMVR) {
+      onImportMVR()
     }
   }
 
@@ -171,6 +211,42 @@
     </button>
 
     <button
+      class="toolbar-btn btn-share"
+      onclick={handleShare}
+      disabled={isSharing}
+      title="Share Report"
+    >
+      {isSharing ? '🔗 Sharing...' : '🔗 Share'}
+    </button>
+
+    <button
+      class="toolbar-btn btn-static"
+      onclick={handleExportStaticSite}
+      disabled={isExportingStaticSite}
+      title="Export as Static Site"
+    >
+      {isExportingStaticSite ? '🌐 Exporting...' : '🌐 Static'}
+    </button>
+
+    <button
+      class="toolbar-btn btn-mvr-export"
+      onclick={handleExportMVR}
+      disabled={isExportingMVR}
+      title="Export as MVR (portable report with data)"
+    >
+      {isExportingMVR ? '📦 Exporting...' : '📦 MVR'}
+    </button>
+
+    <button
+      class="toolbar-btn btn-mvr-import"
+      onclick={handleImportMVR}
+      disabled={isImportingMVR}
+      title="Import MVR file"
+    >
+      {isImportingMVR ? '📂 Importing...' : '📂 Import'}
+    </button>
+
+    <button
       class="toolbar-btn btn-execute"
       onclick={handleExecute}
       disabled={isExecuting}
@@ -268,6 +344,46 @@
   .btn-export-pdf:hover:not(:disabled) {
     background-color: rgba(239, 68, 68, 0.3);
     border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  .btn-share {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-share:hover:not(:disabled) {
+    background-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .btn-static {
+    background-color: rgba(168, 85, 247, 0.2);
+    border-color: rgba(168, 85, 247, 0.3);
+  }
+
+  .btn-static:hover:not(:disabled) {
+    background-color: rgba(168, 85, 247, 0.3);
+    border-color: rgba(168, 85, 247, 0.5);
+  }
+
+  .btn-mvr-export {
+    background-color: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .btn-mvr-export:hover:not(:disabled) {
+    background-color: rgba(245, 158, 11, 0.3);
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+
+  .btn-mvr-import {
+    background-color: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+
+  .btn-mvr-import:hover:not(:disabled) {
+    background-color: rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.5);
   }
 
   .btn-execute {

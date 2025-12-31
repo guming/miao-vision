@@ -43,11 +43,15 @@ import { secretsManager, type ConnectionSecrets } from './secrets'
 export interface ConnectionData {
   id: string
   name: string
-  scope: 'wasm' | 'http' | 'motherduck'
+  scope: 'wasm' | 'http' | 'motherduck' | 'postgres' | 'mysql'
   host: string
   database: string
   /** For WASM: enable OPFS persistence */
   persist?: boolean
+  /** Database port (PostgreSQL/MySQL) */
+  port?: number
+  /** SSL/TLS enabled */
+  ssl?: boolean
 }
 
 /**
@@ -61,6 +65,10 @@ function scopeToConnectorType(scope: ConnectionData['scope']): ConnectorType {
       return 'http'
     case 'motherduck':
       return 'motherduck'
+    case 'postgres':
+      return 'postgres'
+    case 'mysql':
+      return 'mysql'
     default:
       return 'wasm'
   }
@@ -93,6 +101,26 @@ function buildConnectorConfig(
     case 'motherduck':
       options.token = secrets?.apiKey || secrets?.token
       options.database = connection.database
+      break
+
+    case 'postgres':
+      options.host = connection.host
+      options.port = connection.port || 5432
+      options.database = connection.database
+      options.username = secrets?.username
+      options.password = secrets?.password
+      options.ssl = connection.ssl ?? false
+      options.proxyUrl = secrets?.proxyUrl
+      break
+
+    case 'mysql':
+      options.host = connection.host
+      options.port = connection.port || 3306
+      options.database = connection.database
+      options.username = secrets?.username
+      options.password = secrets?.password
+      options.ssl = connection.ssl ?? false
+      options.proxyUrl = secrets?.proxyUrl
       break
   }
 
@@ -216,6 +244,16 @@ class ConnectorManager {
 
     if (connection.scope === 'http' && !connection.host) {
       return err(connectorError('INVALID_CONFIG', 'Host URL is required'))
+    }
+
+    // Validate PostgreSQL/MySQL connections
+    if (connection.scope === 'postgres' || connection.scope === 'mysql') {
+      if (!connection.host) {
+        return err(connectorError('INVALID_CONFIG', 'Host is required'))
+      }
+      if (!secrets.proxyUrl) {
+        return err(connectorError('INVALID_CONFIG', 'HTTP Proxy URL is required for database connections'))
+      }
     }
 
     // Build config

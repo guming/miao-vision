@@ -38,3 +38,36 @@ export {
   type ConnectorConfig,
   type QueryResult as ConnectorQueryResult
 } from '../connectors'
+
+// Schema analysis utilities
+export {
+  SchemaAnalyzer,
+  createSchemaAnalyzer,
+  type IQueryExecutor
+} from './schema-analyzer'
+
+// Pagination utilities
+export {
+  PaginationService,
+  createPaginationService,
+  wrapWithPagination,
+  wrapWithCount,
+  wrapWithCursorPagination,
+  PAGE_SIZES,
+  DEFAULT_PAGINATION,
+  type PaginationOptions,
+  type PaginatedResult,
+  type CursorPaginationOptions,
+  type CursorPaginatedResult,
+  type QueryExecutor
+} from './pagination'
+
+// Query cache utilities
+export {
+  QueryCache,
+  createQueryCache,
+  getQueryCache,
+  createCachedExecutor,
+  type CacheConfig,
+  type CacheStats
+} from './query-cache'

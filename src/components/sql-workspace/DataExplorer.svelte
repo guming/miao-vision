@@ -2,22 +2,26 @@
   import { databaseStore } from '@app/stores/database.svelte'
   import { queryWorkspaceStore } from '@app/stores/query-workspace.svelte'
   import ConnectionSelector from '@/components/connections/ConnectionSelector.svelte'
+  import ColumnStatsPopover from './ColumnStatsPopover.svelte'
+  import { createSchemaAnalyzer, type IQueryExecutor } from '@core/database'
+  import type { ColumnSchema, TableSchema } from '@/types/schema'
+  import { getTypeCategory, getTypeIcon, formatRowCount as formatRowCountUtil } from '@/types/schema'
 
-  interface TableColumn {
-    column_name: string
-    column_type: string
-    null?: string
-    key?: string
-    default?: string
-    extra?: string
+  // Create schema analyzer using databaseStore as query executor
+  const queryExecutor: IQueryExecutor = {
+    query: (sql: string) => databaseStore.executeQuery(sql),
+    listTables: () => databaseStore.listTables()
   }
+  const schemaAnalyzer = createSchemaAnalyzer(queryExecutor)
 
   let tables = $state<string[]>([])
   let expandedTable = $state<string | null>(null)
-  let tableSchemas = $state<Record<string, TableColumn[]>>({})
+  let tableSchemas = $state<Record<string, TableSchema>>({})
   let tableRowCounts = $state<Record<string, number>>({})
   let isLoading = $state(false)
   let searchQuery = $state('')
+  let hoveredColumn = $state<{ table: string; column: string } | null>(null)
+  let columnStatsLoading = $state<string | null>(null)
 
   // Import functionality
   let fileInput: HTMLInputElement
@@ -141,9 +145,7 @@
 
   function formatRowCount(count: number | undefined): string {
     if (count === undefined) return ''
-    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M rows`
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}K rows`
-    return `${count} rows`
+    return formatRowCountUtil(count) + ' rows'
   }
 
   async function toggleTable(tableName: string) {
@@ -154,15 +156,84 @@
 
     expandedTable = tableName
 
-    // Load schema if not cached
+    // Load enhanced schema with stats if not cached
     if (!tableSchemas[tableName]) {
       try {
-        const schema = await databaseStore.getTableSchema(tableName)
+        const schema = await schemaAnalyzer.getTableSchema(tableName, {
+          includeStats: true,
+          sampleSize: 10000,
+          detectForeignKeys: true,
+          includeTopValues: true,
+          topValuesCount: 3
+        })
         tableSchemas = { ...tableSchemas, [tableName]: schema }
+        tableRowCounts = { ...tableRowCounts, [tableName]: schema.rowCount }
       } catch (e) {
         console.error('Failed to load schema:', e)
+        // Fallback to basic schema
+        try {
+          const basicSchema = await databaseStore.getTableSchema(tableName)
+          const columns: ColumnSchema[] = basicSchema.map((row: any) => ({
+            name: row.column_name || row.name,
+            type: row.column_type || row.type,
+            typeCategory: getTypeCategory(row.column_type || row.type),
+            nullable: row.null !== 'NO',
+            isPrimaryKey: false,
+            isForeignKey: false
+          }))
+          tableSchemas = { ...tableSchemas, [tableName]: {
+            name: tableName,
+            rowCount: tableRowCounts[tableName] || 0,
+            columns,
+            primaryKey: [],
+            foreignKeys: []
+          }}
+        } catch {
+          // Ignore fallback errors
+        }
       }
     }
+  }
+
+  async function loadColumnStats(tableName: string, column: ColumnSchema) {
+    if (column.stats) return // Already loaded
+
+    const key = `${tableName}:${column.name}`
+    if (columnStatsLoading === key) return
+
+    columnStatsLoading = key
+    try {
+      const stats = await schemaAnalyzer.getColumnStats(
+        tableName,
+        column.name,
+        column.type,
+        tableSchemas[tableName]?.rowCount || 0
+      )
+      // Update the column stats in the cached schema
+      const schema = tableSchemas[tableName]
+      if (schema) {
+        const updatedColumns = schema.columns.map(c =>
+          c.name === column.name ? { ...c, stats } : c
+        )
+        tableSchemas = { ...tableSchemas, [tableName]: { ...schema, columns: updatedColumns } }
+      }
+    } catch (e) {
+      console.error('Failed to load column stats:', e)
+    } finally {
+      columnStatsLoading = null
+    }
+  }
+
+  function handleColumnHover(tableName: string, column: ColumnSchema) {
+    hoveredColumn = { table: tableName, column: column.name }
+    // Load stats on hover if not already loaded
+    if (!column.stats) {
+      loadColumnStats(tableName, column)
+    }
+  }
+
+  function handleColumnLeave() {
+    hoveredColumn = null
   }
 
   function insertTableName(tableName: string, e: MouseEvent) {
@@ -183,36 +254,37 @@
     }))
   }
 
-  function getColumnName(col: TableColumn): string {
-    return col.column_name || (col as any).name || 'unknown'
-  }
-
-  function getColumnType(col: TableColumn): string {
-    return col.column_type || (col as any).type || 'unknown'
-  }
-
   function previewTable(tableName: string, e: MouseEvent) {
     e.stopPropagation()
     const sql = `SELECT * FROM ${tableName} LIMIT 100;`
     queryWorkspaceStore.createTab(sql)
   }
 
-  function getTypeIcon(type: string | undefined): string {
-    if (!type) return '?'
-    const t = type.toLowerCase()
-    if (t.includes('int') || t.includes('float') || t.includes('double') || t.includes('decimal') || t.includes('bigint')) {
-      return '#'
+  function getColumnTypeIcon(column: ColumnSchema): string {
+    return getTypeIcon(column.typeCategory)
+  }
+
+  function getColumnBadges(column: ColumnSchema): string[] {
+    const badges: string[] = []
+    if (column.isPrimaryKey) badges.push('PK')
+    if (column.isForeignKey) badges.push('FK')
+    if (column.stats?.isUnique && !column.isPrimaryKey) badges.push('UQ')
+    return badges
+  }
+
+  function getColumnTooltip(column: ColumnSchema): string {
+    const parts = [column.type]
+    if (column.isPrimaryKey) parts.push('Primary Key')
+    if (column.isForeignKey && column.foreignKeyRef) {
+      parts.push(`→ ${column.foreignKeyRef.refTable}.${column.foreignKeyRef.refColumn}`)
     }
-    if (t.includes('varchar') || t.includes('text') || t.includes('char') || t.includes('string')) {
-      return 'T'
+    if (column.stats) {
+      parts.push(`${column.stats.distinctCount} distinct`)
+      if (column.stats.nullPercent > 0) {
+        parts.push(`${column.stats.nullPercent.toFixed(1)}% null`)
+      }
     }
-    if (t.includes('date') || t.includes('time') || t.includes('timestamp')) {
-      return 'D'
-    }
-    if (t.includes('bool')) {
-      return 'B'
-    }
-    return '?'
+    return parts.join(' | ')
   }
 
   // Handle connection change - refresh tables
@@ -329,20 +401,46 @@
 
           {#if expandedTable === table && tableSchemas[table]}
             <div class="columns-list">
-              {#each tableSchemas[table] as column}
-                {@const colName = getColumnName(column)}
-                {@const colType = getColumnType(column)}
-                <button
-                  class="column-item"
-                  onclick={(e) => insertColumnName(colName, e)}
-                  title={`${colType} - Click to insert`}
+              {#each tableSchemas[table].columns as column}
+                {@const badges = getColumnBadges(column)}
+                {@const isHovered = hoveredColumn?.table === table && hoveredColumn?.column === column.name}
+                <div
+                  class="column-item-wrapper"
+                  role="group"
+                  onmouseenter={() => handleColumnHover(table, column)}
+                  onmouseleave={handleColumnLeave}
                 >
-                  <span class="type-icon" data-type={colType}>
-                    {getTypeIcon(colType)}
-                  </span>
-                  <span class="column-name">{colName}</span>
-                  <span class="column-type">{colType}</span>
-                </button>
+                  <button
+                    class="column-item"
+                    class:has-fk={column.isForeignKey}
+                    class:has-pk={column.isPrimaryKey}
+                    onclick={(e) => insertColumnName(column.name, e)}
+                    title={getColumnTooltip(column)}
+                  >
+                    <span class="type-icon" data-type={column.typeCategory}>
+                      {getColumnTypeIcon(column)}
+                    </span>
+                    <span class="column-name">{column.name}</span>
+                    {#if badges.length > 0}
+                      <span class="column-badges">
+                        {#each badges as badge}
+                          <span class="badge" class:pk={badge === 'PK'} class:fk={badge === 'FK'} class:uq={badge === 'UQ'}>{badge}</span>
+                        {/each}
+                      </span>
+                    {/if}
+                    <span class="column-type">{column.type}</span>
+                  </button>
+
+                  {#if isHovered}
+                    <div class="stats-popover-container">
+                      <ColumnStatsPopover
+                        stats={column.stats}
+                        columnType={column.type}
+                        typeCategory={column.typeCategory}
+                      />
+                    </div>
+                  {/if}
+                </div>
               {/each}
             </div>
           {/if}
@@ -606,6 +704,10 @@
     padding: 0.25rem 0 0.5rem 1.5rem;
   }
 
+  .column-item-wrapper {
+    position: relative;
+  }
+
   .column-item {
     width: 100%;
     display: flex;
@@ -625,6 +727,16 @@
   .column-item:hover {
     background: #1F2937;
     color: #F3F4F6;
+  }
+
+  .column-item.has-pk {
+    border-left: 2px solid #F59E0B;
+    padding-left: calc(0.75rem - 2px);
+  }
+
+  .column-item.has-fk {
+    border-left: 2px solid #8B5CF6;
+    padding-left: calc(0.75rem - 2px);
   }
 
   .type-icon {
@@ -647,9 +759,47 @@
     white-space: nowrap;
   }
 
+  .column-badges {
+    display: flex;
+    gap: 0.125rem;
+    flex-shrink: 0;
+  }
+
+  .column-badges .badge {
+    padding: 0.0625rem 0.25rem;
+    border-radius: 3px;
+    font-size: 0.5625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .column-badges .badge.pk {
+    background: rgba(245, 158, 11, 0.2);
+    color: #FBBF24;
+  }
+
+  .column-badges .badge.fk {
+    background: rgba(139, 92, 246, 0.2);
+    color: #A78BFA;
+  }
+
+  .column-badges .badge.uq {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6EE7B7;
+  }
+
   .column-type {
     font-size: 0.6875rem;
     color: #6B7280;
     font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+
+  .stats-popover-container {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 0.5rem;
+    z-index: 100;
   }
 </style>

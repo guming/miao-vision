@@ -218,7 +218,9 @@ export function createConnectionStore() {
           name: connection.name,
           scope: connection.scope,
           host: connection.host,
-          database: connection.database
+          database: connection.database,
+          port: connection.port,
+          ssl: connection.ssl
         },
         secrets
       )
@@ -290,13 +292,18 @@ export function createConnectionStore() {
       name: data.name,
       scope: data.scope,
       host: data.host,
-      database: data.database
+      database: data.database,
+      port: data.port,
+      ssl: data.ssl
     }
 
     // Build secrets from form data
     const testSecrets: ConnectionSecrets = {
       token: secrets?.token || data.token,
-      apiKey: secrets?.apiKey || data.apiKey
+      apiKey: secrets?.apiKey || data.apiKey,
+      password: secrets?.password || data.password,
+      username: secrets?.username || data.username,
+      proxyUrl: secrets?.proxyUrl || data.proxyUrl
     }
 
     try {
