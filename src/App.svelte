@@ -29,6 +29,7 @@
   import DrilldownDemo from './components/DrilldownDemo.svelte'
   import { drilldownStore } from '@app/stores/drilldown.svelte'
   import { drilldownService } from '@core/engine/drilldown/drilldown-service'
+  import AIGenerateDialog from './components/AIGenerateDialog.svelte'
 
   // Svelte 5 Runes mode
   let appTitle = $state('Miao Vision')
@@ -56,6 +57,9 @@
   // Version control state
   let showVersionHistory = $state(false)
   let showVersionCompare = $state(false)
+
+  // AI generate dialog state
+  let showAIGenerateDialog = $state(false)
 
   onMount(async () => {
     // Initialize database on mount
@@ -533,6 +537,17 @@
     showVersionCompare = true
   }
 
+  function handleAIGenerate() {
+    console.log('✨ Opening AI generate dialog')
+    showAIGenerateDialog = true
+  }
+
+  function handleAIInsert(content: string) {
+    if (markdownEditor) {
+      markdownEditor.insertText(content)
+    }
+  }
+
   function handleSelectReport(report: Report) {
     console.log('Selected report:', report.id)
 
@@ -832,6 +847,7 @@
                 onExportStaticSite={handleExportStaticSite}
                 onExportMVR={handleExportMVR}
                 onImportMVR={handleImportMVR}
+                onAIGenerate={handleAIGenerate}
                 onVersionHistory={handleVersionHistory}
                 onVersionCompare={handleVersionCompare}
                 isExecuting={isExecutingReport}
@@ -947,6 +963,13 @@
 
 <!-- Global Drilldown Modal -->
 <DrilldownModal />
+
+<!-- AI Generate Dialog -->
+<AIGenerateDialog
+  visible={showAIGenerateDialog}
+  onClose={() => showAIGenerateDialog = false}
+  onInsert={handleAIInsert}
+/>
 
 <style>
   /* ========================================
