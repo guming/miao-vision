@@ -27,6 +27,8 @@
   let isUpdatingProgrammatically = false  // Flag to ignore programmatic changes
   let isSilentEdit = false  // Flag for edits that shouldn't trigger onChange (e.g., AI command cleanup)
   let lastKnownReportId = ''  // Tracks which report is currently in editor
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null  // Debounce timer for onChange
+  const DEBOUNCE_DELAY = 500  // ms - delay before triggering onChange after user stops typing
 
   onMount(async () => {
     if (!editorContainer) {
@@ -177,16 +179,24 @@
         }
       })
 
-      // Listen to content changes
+      // Listen to content changes (debounced to avoid clearing SQL results on every keystroke)
       editor.onDidChangeModelContent(() => {
         // Ignore changes while programmatically updating (e.g., switching reports)
         // or during silent edits (e.g., AI command cleanup)
         if (isUpdatingProgrammatically || isSilentEdit) return
 
-        const currentValue = editor?.getValue() || ''
-        if (onChange && lastKnownReportId) {
-          onChange(currentValue, lastKnownReportId)
+        // Clear existing debounce timer
+        if (debounceTimer) {
+          clearTimeout(debounceTimer)
         }
+
+        // Debounce onChange to avoid triggering report re-execution on every keystroke
+        debounceTimer = setTimeout(() => {
+          const currentValue = editor?.getValue() || ''
+          if (onChange && lastKnownReportId) {
+            onChange(currentValue, lastKnownReportId)
+          }
+        }, DEBOUNCE_DELAY)
       })
 
       // Track initial report
@@ -197,6 +207,11 @@
   })
 
   onDestroy(() => {
+    // Clean up debounce timer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer)
+      debounceTimer = null
+    }
     editor?.dispose()
     editor = null
   })
