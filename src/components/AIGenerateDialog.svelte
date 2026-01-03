@@ -29,20 +29,27 @@
     const dataSources: AIContext['dataSources'] = []
 
     if (report?.blocks) {
-      for (const block of report.blocks) {
-        if (block.type === 'sql' && block.metadata?.name && block.sqlResult?.rows) {
-          const rows = block.sqlResult.rows
-          const columns = block.sqlResult.columns || []
+      for (let i = 0; i < report.blocks.length; i++) {
+        const block = report.blocks[i]
+        const sqlResult = block.sqlResult
 
-          dataSources.push({
-            name: block.metadata.name,
-            columns: columns.map((col: string) => ({
-              name: col,
-              type: inferColumnType(rows[0]?.[col])
-            })),
-            rowCount: rows.length,
-            sample: rows.slice(0, 3)
-          })
+        // Check for SQL blocks with results (QueryResult uses 'data' not 'rows')
+        if (block.type === 'sql' && sqlResult) {
+          const rows = sqlResult.data || []
+          const columns = sqlResult.columns || (rows.length > 0 ? Object.keys(rows[0]) : [])
+          const name = block.metadata?.name || `query_${i + 1}`
+
+          if (Array.isArray(rows) && rows.length > 0) {
+            dataSources.push({
+              name,
+              columns: columns.map((col: string) => ({
+                name: col,
+                type: inferColumnType(rows[0]?.[col])
+              })),
+              rowCount: rows.length,
+              sample: rows.slice(0, 3)
+            })
+          }
         }
       }
     }
