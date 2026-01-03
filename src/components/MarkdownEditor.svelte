@@ -9,6 +9,7 @@
     readOnly?: boolean
     height?: string
     reportId?: string  // Track which report we're editing
+    onAIGenerate?: () => void  // Callback when AI generate is requested
   }
 
   let {
@@ -16,7 +17,8 @@
     onChange,
     readOnly = false,
     height = '600px',
-    reportId = ''
+    reportId = '',
+    onAIGenerate
   }: Props = $props()
 
   let editorContainer = $state<HTMLDivElement>()
@@ -68,6 +70,108 @@
         matchBrackets: 'always',
         // Format on paste
         formatOnPaste: true
+      })
+
+      // Register slash command completion provider
+      monaco.languages.registerCompletionItemProvider('markdown', {
+        triggerCharacters: ['/'],
+        provideCompletionItems: (model, position) => {
+          const lineContent = model.getLineContent(position.lineNumber)
+          const textBeforeCursor = lineContent.substring(0, position.column - 1)
+
+          // Only show suggestions if "/" is at the start of line or after whitespace
+          if (!textBeforeCursor.match(/(?:^|\s)\/$/)) {
+            return { suggestions: [] }
+          }
+
+          const range = {
+            startLineNumber: position.lineNumber,
+            startColumn: position.column - 1,
+            endLineNumber: position.lineNumber,
+            endColumn: position.column
+          }
+
+          const suggestions: Monaco.languages.CompletionItem[] = [
+            {
+              label: '/ai',
+              kind: monaco!.languages.CompletionItemKind.Function,
+              insertText: '',
+              range,
+              detail: 'AI 生成图表',
+              documentation: '使用 AI 根据数据自动生成图表配置',
+              sortText: '0',
+              command: {
+                id: 'miao.aiGenerate',
+                title: 'AI Generate'
+              }
+            },
+            {
+              label: '/sql',
+              kind: monaco!.languages.CompletionItemKind.Snippet,
+              insertText: '```sql ${1:query_name}\nSELECT * FROM ${2:table}\n```',
+              insertTextRules: monaco!.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+              detail: '插入 SQL 查询块',
+              documentation: '创建一个新的 SQL 查询块'
+            },
+            {
+              label: '/chart',
+              kind: monaco!.languages.CompletionItemKind.Snippet,
+              insertText: '```chart\ntype: ${1|bar,line,pie,area,scatter|}\ndata: ${2:query_name}\nx: ${3:column_x}\ny: ${4:column_y}\ntitle: ${5:Chart Title}\n```',
+              insertTextRules: monaco!.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+              detail: '插入图表块',
+              documentation: '创建一个新的图表配置块'
+            },
+            {
+              label: '/table',
+              kind: monaco!.languages.CompletionItemKind.Snippet,
+              insertText: '```datatable\nquery: ${1:query_name}\nsearchable: true\nsortable: true\n```',
+              insertTextRules: monaco!.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+              detail: '插入数据表格',
+              documentation: '创建一个交互式数据表格'
+            },
+            {
+              label: '/bigvalue',
+              kind: monaco!.languages.CompletionItemKind.Snippet,
+              insertText: '```bigvalue\nquery: ${1:query_name}\nvalue: ${2:column}\ntitle: ${3:Title}\nformat: ${4|number,currency,percent|}\n```',
+              insertTextRules: monaco!.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+              detail: '插入大数值展示',
+              documentation: '创建一个突出显示的数值卡片'
+            },
+            {
+              label: '/dropdown',
+              kind: monaco!.languages.CompletionItemKind.Snippet,
+              insertText: '```dropdown\nname: ${1:filter_name}\nlabel: ${2:Select Option}\noptions:\n  - ${3:Option 1}\n  - ${4:Option 2}\n```',
+              insertTextRules: monaco!.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range,
+              detail: '插入下拉选择器',
+              documentation: '创建一个下拉筛选控件'
+            }
+          ]
+
+          return { suggestions }
+        }
+      })
+
+      // Register AI generate command
+      monaco.editor.registerCommand('miao.aiGenerate', () => {
+        if (onAIGenerate) {
+          // Remove the "/" that was typed
+          const position = editor?.getPosition()
+          if (position && editor) {
+            const range = {
+              startLineNumber: position.lineNumber,
+              startColumn: position.column - 1,
+              endLineNumber: position.lineNumber,
+              endColumn: position.column
+            }
+            editor.executeEdits('', [{ range, text: '' }])
+          }
+          onAIGenerate()
+        }
       })
 
       // Listen to content changes

@@ -100,22 +100,23 @@
 
       const context = getContext()
 
-      // Use streaming for preview
+      // Use streaming - the generator returns the final parsed result
       const generator = chartGenerator.generateStream({
         prompt: prompt.trim(),
         context
       })
 
-      for await (const chunk of generator) {
-        streamContent = chunk.partial
-        if (chunk.done) break
-      }
+      // Iterate through stream chunks
+      let streamResult: IteratorResult<{ partial: string; done: boolean }, ChartGenerationResult>
+      do {
+        streamResult = await generator.next()
+        if (!streamResult.done && streamResult.value) {
+          streamContent = streamResult.value.partial
+        }
+      } while (!streamResult.done)
 
-      // Get final result
-      result = await chartGenerator.generate({
-        prompt: prompt.trim(),
-        context
-      })
+      // Get the final result from generator return value
+      result = streamResult.value
     } catch (error) {
       result = {
         success: false,
@@ -172,6 +173,7 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="ai-dialog-title"
+    tabindex="-1"
   >
     <div class="dialog-container">
       <header class="dialog-header">
@@ -238,8 +240,18 @@
           <!-- Preview -->
           {#if streamContent || result}
             <div class="preview-section">
-              <h3>预览</h3>
-              <pre class="preview-content">{result?.chartConfig || streamContent}</pre>
+              <div class="preview-header">
+                <h3>预览</h3>
+                {#if isGenerating}
+                  <span class="status-badge generating">
+                    <span class="pulse-dot"></span>
+                    生成中...
+                  </span>
+                {:else if result?.success}
+                  <span class="status-badge success">✓ 完成</span>
+                {/if}
+              </div>
+              <pre class="preview-content" class:streaming={isGenerating}>{result?.chartConfig || streamContent}{#if isGenerating}<span class="cursor">▌</span>{/if}</pre>
 
               {#if result && !result.success}
                 <div class="error-message">
@@ -512,11 +524,56 @@
     gap: 0.5rem;
   }
 
+  .preview-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
   .preview-section h3 {
     margin: 0;
     font-size: 0.875rem;
     font-weight: 500;
     color: #9CA3AF;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .status-badge.generating {
+    background: rgba(99, 102, 241, 0.15);
+    color: #A5B4FC;
+  }
+
+  .status-badge.success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #6EE7B7;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #A5B4FC;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(0.8);
+    }
   }
 
   .preview-content {
@@ -530,6 +587,26 @@
     font-size: 0.8125rem;
     white-space: pre-wrap;
     overflow-x: auto;
+    min-height: 100px;
+    transition: border-color 0.2s;
+  }
+
+  .preview-content.streaming {
+    border-color: #6366F1;
+  }
+
+  .preview-content .cursor {
+    color: #6366F1;
+    animation: blink 0.8s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
   }
 
   .error-message {

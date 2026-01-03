@@ -92,6 +92,24 @@
         }
         console.log('🔧 Debug tools available: window.__DEBUG__')
       }
+
+      // Global keyboard shortcuts
+      function handleGlobalKeydown(e: KeyboardEvent) {
+        // Cmd+G (Mac) or Ctrl+G (Windows) - AI Generate
+        if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
+          e.preventDefault()
+          if (activeTab === 'report' && reportStore.state.currentReport) {
+            showAIGenerateDialog = true
+          }
+        }
+      }
+
+      window.addEventListener('keydown', handleGlobalKeydown)
+
+      // Cleanup on unmount
+      return () => {
+        window.removeEventListener('keydown', handleGlobalKeydown)
+      }
     } catch (error) {
       console.error('Failed to initialize application:', error)
     }
@@ -889,6 +907,7 @@
                         : reportStore.state.currentReport.content}
                       reportId={reportStore.state.currentReport.id}
                       onChange={handleReportContentChange}
+                      onAIGenerate={handleAIGenerate}
                       height="calc(100vh - 300px)"
                     />
                   {/key}
