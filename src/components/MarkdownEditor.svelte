@@ -25,6 +25,7 @@
   let editor: Monaco.editor.IStandaloneCodeEditor | null = null
   let monaco: typeof Monaco | null = null
   let isUpdatingProgrammatically = false  // Flag to ignore programmatic changes
+  let isSilentEdit = false  // Flag for edits that shouldn't trigger onChange (e.g., AI command cleanup)
   let lastKnownReportId = ''  // Tracks which report is currently in editor
 
   onMount(async () => {
@@ -159,7 +160,7 @@
       // Register AI generate command
       monaco.editor.registerCommand('miao.aiGenerate', () => {
         if (onAIGenerate) {
-          // Remove the "/" that was typed
+          // Remove the "/" that was typed (silent edit to avoid triggering preview refresh)
           const position = editor?.getPosition()
           if (position && editor) {
             const range = {
@@ -168,7 +169,9 @@
               endLineNumber: position.lineNumber,
               endColumn: position.column
             }
-            editor.executeEdits('', [{ range, text: '' }])
+            isSilentEdit = true
+            editor.executeEdits('ai-cleanup', [{ range, text: '' }])
+            isSilentEdit = false
           }
           onAIGenerate()
         }
@@ -177,7 +180,8 @@
       // Listen to content changes
       editor.onDidChangeModelContent(() => {
         // Ignore changes while programmatically updating (e.g., switching reports)
-        if (isUpdatingProgrammatically) return
+        // or during silent edits (e.g., AI command cleanup)
+        if (isUpdatingProgrammatically || isSilentEdit) return
 
         const currentValue = editor?.getValue() || ''
         if (onChange && lastKnownReportId) {
