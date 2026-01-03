@@ -37,6 +37,46 @@ function generateId(): string {
 }
 
 /**
+ * Simple code block info extracted from markdown
+ */
+interface SimpleCodeBlock {
+  language: string
+  content: string
+  meta?: string
+}
+
+/**
+ * Extract code blocks from markdown content (sync, for quick comparison)
+ * Uses a simple regex approach - doesn't need full markdown parsing
+ */
+function extractCodeBlocksSimple(content: string): SimpleCodeBlock[] {
+  const blocks: SimpleCodeBlock[] = []
+  // Match ```language meta\ncontent\n```
+  const codeBlockRegex = /```(\w+)?(?:\s+([^\n]*))?\n([\s\S]*?)```/g
+  let match
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    blocks.push({
+      language: match[1] || 'text',
+      meta: match[2]?.trim(),
+      content: match[3].trim()
+    })
+  }
+
+  return blocks
+}
+
+/**
+ * Create a unique key for a code block based on its type and content
+ */
+function createBlockKey(block: { type?: string; language?: string; content: string; metadata?: any }): string {
+  const type = block.type || block.language || 'unknown'
+  const name = block.metadata?.name || ''
+  // Use type + name + content hash for matching
+  return `${type}:${name}:${block.content}`
+}
+
+/**
  * Migrate and clean up legacy localStorage keys
  * Merges reports from old keys into the current key and removes duplicates
  */
@@ -316,13 +356,34 @@ export function createReportStore() {
     const contentChanged = state.currentReport.content !== content
 
     if (contentChanged) {
-      console.log('  Content changed - clearing old execution results')
+      console.log('  Content changed - using smart block preservation')
       console.log('  Old content length:', state.currentReport.content.length)
       console.log('  New content length:', content.length)
 
-      // IMPORTANT: Clear blocks when content changes
-      // This prevents showing stale results for modified SQL/Chart blocks
-      state.currentReport.blocks = []
+      // SMART BLOCK PRESERVATION:
+      // Instead of clearing all blocks, we preserve results for blocks whose content hasn't changed
+      // This allows users to edit markdown without losing their SQL query results
+
+      const oldBlocks = state.currentReport.blocks
+      const newCodeBlocks = extractCodeBlocksSimple(content)
+
+      // Create a map of new blocks by their content signature
+      const newBlockKeys = new Set(
+        newCodeBlocks.map(b => createBlockKey({ language: b.language, content: b.content, metadata: { name: b.meta } }))
+      )
+
+      // Keep blocks whose content still exists in the new markdown
+      const preservedBlocks = oldBlocks.filter(block => {
+        const key = createBlockKey(block)
+        const shouldKeep = newBlockKeys.has(key)
+        if (shouldKeep && block.sqlResult) {
+          console.log(`  ✅ Preserving SQL result for block: ${block.metadata?.name || block.id}`)
+        }
+        return shouldKeep
+      })
+
+      console.log(`  Preserved ${preservedBlocks.length}/${oldBlocks.length} blocks with results`)
+      state.currentReport.blocks = preservedBlocks
     }
 
     state.currentReport.content = content
