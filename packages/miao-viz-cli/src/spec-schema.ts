@@ -136,6 +136,30 @@ const insightSchema = z.union([
   })
 ])
 
+const cssColorSchema = z.string().min(1).refine(
+  value => /^(#[0-9a-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/i.test(value),
+  'Expected a CSS color value.'
+)
+
+const chartStyleSchema = z.object({
+  width: z.number().positive().optional(),
+  height: z.number().positive().optional(),
+  xDomainMin: z.number().finite().optional(),
+  xDomainMax: z.number().finite().optional(),
+  yDomainMin: z.number().finite().optional(),
+  yDomainMax: z.number().finite().optional(),
+  barMode: z.literal('stacked').optional(),
+  divergingSort: z.enum(['asc', 'desc', 'none']).optional(),
+  rowHeight: z.number().min(16).max(80).optional(),
+  showGrid: z.boolean().optional(),
+  showValueLabels: z.boolean().optional(),
+  positiveColor: cssColorSchema.optional(),
+  negativeColor: cssColorSchema.optional(),
+  valueDecimals: z.number().int().min(0).max(6).optional(),
+  valueSuffix: z.string().max(12).optional(),
+  axisTitle: z.string().max(160).optional()
+}).catchall(z.unknown())
+
 export const chartSpecSchema: z.ZodType<AgentChartSpec> = z.object({
   id: z.string().min(1).optional(),
   type: z.enum(MVP_CHART_TYPES),
@@ -163,7 +187,7 @@ export const chartSpecSchema: z.ZodType<AgentChartSpec> = z.object({
   colorScale: colorScaleSchema.optional(),
   placement: placementSchema.optional(),
   quality: qualitySchema.optional(),
-  style: z.record(z.string(), z.unknown()).optional()
+  style: chartStyleSchema.optional()
 }).strict()
 
 export const reportSpecSchema: z.ZodType<AgentReportSpec> = z.object({

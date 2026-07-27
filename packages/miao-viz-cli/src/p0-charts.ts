@@ -1,6 +1,7 @@
 import type { AgentChartSpec } from './types'
 import type { SvgTheme } from './themes/types'
 import { escapeHtml, markAttrs, numberStyle, renderUnsupported, svgFrame } from './svg-renderer-utils'
+import { computeDivergingBarLayout, scaleDivergingValue } from './diverging-bar-layout'
 
 interface RenderOptions { chartId?: string }
 
@@ -91,17 +92,46 @@ export function renderRangeChart(chart: AgentChartSpec, rows: Record<string, unk
 }
 
 export function renderDivergingBarChart(chart: AgentChartSpec, rows: Record<string, unknown>[], theme: SvgTheme, options: RenderOptions): string {
-  const category = chart.encoding?.x?.field ?? ''; const measure = chart.encoding?.y?.field ?? ''
-  const data = rows.map((row, index) => ({ row, index, value: numeric(row, measure) })).filter((item): item is typeof item & { value: number } => item.value !== null)
-  if (!category || data.length === 0) return renderUnsupported(chart)
-  const width = numberStyle(chart, 'width', 720); const height = numberStyle(chart, 'height', 420)
-  const margin = { top: 28, right: 40, bottom: 52, left: 120 }; const plotW = width - margin.left - margin.right; const plotH = height - margin.top - margin.bottom
-  const bound = Math.max(...data.map(item => Math.abs(item.value)), 1); const zero = margin.left + plotW / 2; const scale = (v: number) => zero + (v / bound) * plotW / 2
-  const step = plotH / data.length; const bars = data.map((item, i) => {
-    const end = scale(item.value); const x = Math.min(zero, end); const y = margin.top + i * step + step * 0.16
-    return `<g ${markAttrs(options.chartId, category, item.row[category], item.index, `${String(item.row[category])}: ${item.value}`)}><rect x="${x}" y="${y}" width="${Math.abs(end - zero)}" height="${step * 0.68}" fill="${item.value >= 0 ? theme.palette[0] : '#dc2626'}" /><text x="${margin.left - 8}" y="${y + step * 0.43}" text-anchor="end" fill="${theme.labelColor}" font-size="11">${escapeHtml(String(item.row[category] ?? '—'))}</text></g>`
+  const category = chart.encoding?.x?.field ?? ''
+  const layout = computeDivergingBarLayout(chart, rows)
+  if (!category || !layout) return renderUnsupported(chart)
+  const positiveColor = String(chart.style?.positiveColor ?? '#9bd66d')
+  const negativeColor = String(chart.style?.negativeColor ?? '#e79ac8')
+  const decimals = Math.max(0, Math.min(6, Number(chart.style?.valueDecimals ?? 1)))
+  const suffix = String(chart.style?.valueSuffix ?? (chart.encoding?.y?.unit === 'percentage' ? '%' : ''))
+  const showValues = chart.style?.showValueLabels !== false
+  const format = (value: number) => `${value > 0 ? '+' : value < 0 ? '−' : ''}${Math.abs(value).toFixed(decimals)}${suffix}`
+  const grid = chart.style?.showGrid === false ? '' : layout.ticks.map(tick => {
+    const x = scaleDivergingValue(layout, tick)
+    return `<line x1="${x}" y1="${layout.margin.top - 8}" x2="${x}" y2="${layout.margin.top + layout.plotHeight}" stroke="#ffffff" stroke-width="1" />`
   }).join('')
-  return svgFrame(width, height, theme.background, `<line x1="${zero}" y1="${margin.top}" x2="${zero}" y2="${margin.top + plotH}" stroke="${theme.labelColor}" />${bars}`)
+  const axis = layout.ticks.map(tick => {
+    const x = scaleDivergingValue(layout, tick)
+    return `<line x1="${x}" y1="${layout.margin.top - 13}" x2="${x}" y2="${layout.margin.top - 5}" stroke="${theme.axisColor}" />
+      <text x="${x}" y="${layout.margin.top - 20}" text-anchor="middle" fill="${theme.labelColor}" font-size="11">${escapeHtml(format(tick))}</text>`
+  }).join('')
+  const bars = layout.data.map((item, index) => {
+    const end = scaleDivergingValue(layout, item.value)
+    const x = Math.min(layout.zeroX, end)
+    const y = layout.margin.top + index * layout.step + layout.step * 0.12
+    const barHeight = layout.step * 0.76
+    const stateX = layout.zeroX + (item.value < 0 ? 8 : -8)
+    const stateAnchor = item.value < 0 ? 'start' : 'end'
+    const valueX = end + (item.value < 0 ? -7 : 7)
+    const valueAnchor = item.value < 0 ? 'end' : 'start'
+    return `<g ${markAttrs(options.chartId, category, item.row[category], item.index, `${item.label}: ${format(item.value)}`)}>
+      <rect x="${x}" y="${y}" width="${Math.abs(end - layout.zeroX)}" height="${barHeight}" fill="${item.value < 0 ? negativeColor : positiveColor}" />
+      <text x="${stateX}" y="${y + barHeight * 0.68}" text-anchor="${stateAnchor}" fill="${theme.labelColor}" font-size="11">${escapeHtml(item.label)}</text>
+      ${showValues ? `<text x="${valueX}" y="${y + barHeight * 0.68}" text-anchor="${valueAnchor}" fill="${theme.labelColor}" font-size="10">${escapeHtml(format(item.value))}</text>` : ''}
+    </g>`
+  }).join('')
+  const title = String(chart.style?.axisTitle ?? chart.title ?? '← decrease · change · increase →')
+  return svgFrame(layout.width, layout.height, theme.background, `<g class="miao-diverging-bar">
+    <text x="${layout.zeroX}" y="20" text-anchor="middle" fill="${theme.labelColor}" font-size="12">${escapeHtml(title)}</text>
+    ${grid}${axis}
+    <line x1="${layout.zeroX}" y1="${layout.margin.top - 8}" x2="${layout.zeroX}" y2="${layout.margin.top + layout.plotHeight}" stroke="${theme.labelColor}" />
+    ${bars}
+  </g>`)
 }
 
 export function renderHorizontalBarChart(chart: AgentChartSpec, rows: Record<string, unknown>[], theme: SvgTheme, options: RenderOptions): string {

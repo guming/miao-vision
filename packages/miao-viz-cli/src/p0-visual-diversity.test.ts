@@ -30,12 +30,44 @@ describe('P0 visual diversity contracts', () => {
     [{ type: 'dot', variant: 'standard', encoding: { x: { field: 'category' }, y: { field: 'actual' } } }, '<circle'],
     [{ type: 'dot', variant: 'lollipop', encoding: { x: { field: 'category' }, y: { field: 'actual' } } }, '<line'],
     [{ type: 'dot', variant: 'dumbbell', encoding: { x: { field: 'category' }, start: { field: 'actual' }, end: { field: 'target' } } }, '→'],
-    [{ type: 'bar', variant: 'diverging', encoding: { x: { field: 'category' }, y: { field: 'value' } } }, '#dc2626'],
+    [{ type: 'bar', variant: 'diverging', encoding: { x: { field: 'category' }, y: { field: 'value' } } }, '#e79ac8'],
     [{ type: 'bullet', encoding: { value: { field: 'actual' }, target: { field: 'target' } } }, '<rect'],
     [{ type: 'range', encoding: { x: { field: 'period' }, lower: { field: 'low' }, upper: { field: 'high' } } }, '<path']
   ] as Array<[AgentChartSpec, string]>)('renders %s', (chart, marker) => {
     expect(renderChartSvg(chart, rows)).toContain(marker)
     expect(renderChartSvg(chart, rows)).not.toContain('not implemented yet')
+  })
+
+  it('renders Observable-style diverging bars around a zero axis', () => {
+    const chart: AgentChartSpec = {
+      type: 'bar',
+      variant: 'diverging',
+      encoding: { x: { field: 'category' }, y: { field: 'value' } },
+      style: {
+        positiveColor: '#9bd66d',
+        negativeColor: '#e79ac8',
+        valueSuffix: '%',
+        axisTitle: '← decrease · Change (%) · increase →'
+      }
+    }
+    const svg = renderChartSvg(chart, rows)
+    expect(svg).toContain('class="miao-diverging-bar"')
+    expect(svg).toContain('#9bd66d')
+    expect(svg).toContain('#e79ac8')
+    expect(svg).toContain('−20.0%')
+    expect(svg).toContain('+35.0%')
+    expect(svg.indexOf('华东')).toBeLessThan(svg.indexOf('华北'))
+    expect(svg.indexOf('华北')).toBeLessThan(svg.indexOf('华南'))
+  })
+
+  it('grows diverging chart height to preserve dense category labels', () => {
+    const denseRows = Array.from({ length: 52 }, (_, index) => ({ category: `State ${index}`, value: index - 10 }))
+    const svg = renderChartSvg({
+      type: 'bar',
+      variant: 'diverging',
+      encoding: { x: { field: 'category' }, y: { field: 'value' } }
+    }, denseRows)
+    expect(svg).toContain('viewBox="0 0 720 1378"')
   })
 
   it('renders references, deterministic annotations, and facet panels into SVG', () => {

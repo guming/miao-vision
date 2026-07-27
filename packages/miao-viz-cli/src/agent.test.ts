@@ -10,7 +10,7 @@ import { queryDataset } from './data-query'
 import { renderStaticHtml } from './html-export'
 import { renderChartSvg } from './svg-renderer'
 import { CLIENT_DATA_ENGINE_JS } from './client-data-engine'
-import { MVP_CHART_TYPES } from './spec-schema'
+import { chartSpecSchema, MVP_CHART_TYPES } from './spec-schema'
 import { applyEncodingAggregates } from './data-transform'
 import { applyInteractiveFilters, selectDetailRows, shouldEnableInteractiveRuntime } from './interactive-runtime'
 import { validateReportSpec, collectValidationWarnings, validateEvidencePaths, collectVerifyWarnings, strictVerifyError } from './spec-validator'
@@ -2665,6 +2665,44 @@ describe('renderChartSvg — all MVP_CHART_TYPES have a renderer (no renderUnsup
     expect(output).toContain('fill="#123456"')
     expect(output).toContain('fill="#faf0e6"')
     expect(output).toContain('fill="#654321"')
+  })
+
+  it('keeps diverging geometry and semantic colors during interactive redraws', () => {
+    const browserWindow: {
+      miaoData?: {
+        renderDivergingBar: (spec: any, data: any[], id: string) => string
+      }
+    } = {}
+    Function('window', CLIENT_DATA_ENGINE_JS)(browserWindow)
+    const output = browserWindow.miaoData?.renderDivergingBar({
+      type: 'bar',
+      variant: 'diverging',
+      encoding: { x: { field: 'state' }, y: { field: 'change' } },
+      style: { positiveColor: '#9bd66d', negativeColor: '#e79ac8', valueSuffix: '%' }
+    }, [
+      { state: 'Increase', change: 8 },
+      { state: 'Decrease', change: -4 }
+    ], 'change-chart') ?? ''
+    expect(output).toContain('class="miao-diverging-bar"')
+    expect(output).toContain('#9bd66d')
+    expect(output).toContain('#e79ac8')
+    expect(output).toContain('+8.0%')
+    expect(output.indexOf('Decrease')).toBeLessThan(output.indexOf('Increase'))
+  })
+
+  it('validates typed diverging bar style options', () => {
+    expect(chartSpecSchema.safeParse({
+      type: 'bar',
+      variant: 'diverging',
+      encoding: { x: { field: 'state' }, y: { field: 'change' } },
+      style: { divergingSort: 'asc', rowHeight: 25, positiveColor: '#9bd66d', valueDecimals: 1 }
+    }).success).toBe(true)
+    expect(chartSpecSchema.safeParse({
+      type: 'bar',
+      variant: 'diverging',
+      encoding: { x: { field: 'state' }, y: { field: 'change' } },
+      style: { divergingSort: 'sideways', rowHeight: 4, positiveColor: 'not a color!' }
+    }).success).toBe(false)
   })
 })
 

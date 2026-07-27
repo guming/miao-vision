@@ -233,6 +233,7 @@ export const INTERACTIVE_JS = `
     }
     var chartRows = md.prepareRows(data, chart);
     if (!chartRows.length) slot.innerHTML = md.renderNoData();
+    else if (chart.type === 'bar' && chart.variant === 'diverging') slot.innerHTML = md.renderDivergingBar(chart, chartRows, chartId);
     else if (chart.type === 'bar') slot.innerHTML = md.renderBar(chart, chartRows, chartId);
     else if (['line','area','scatter'].indexOf(chart.type) !== -1) slot.innerHTML = md.renderXY(chart, chartRows, chartId);
     else if (chart.type === 'pie') slot.innerHTML = md.renderPie(chart, chartRows, chartId);

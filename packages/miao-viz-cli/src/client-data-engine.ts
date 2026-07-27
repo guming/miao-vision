@@ -1,4 +1,5 @@
 import { CATEGORY_AXIS_LAYOUT_DEFAULTS } from './category-axis-layout'
+import { CLIENT_DIVERGING_BAR_JS } from './client-diverging-bar'
 
 export const CLIENT_DATA_ENGINE_CSS = `
 .miao-chart-svg [data-miao-mark] { cursor: pointer; transition: opacity 0.15s ease, stroke-width 0.15s ease; }
@@ -255,6 +256,8 @@ export const CLIENT_DATA_ENGINE_JS = `
       ' L ' + fixed(innerS.x) + ' ' + fixed(innerS.y) +
       ' A ' + fixed(innerR) + ' ' + fixed(innerR) + ' 0 ' + largeArc + ' 1 ' + fixed(innerE.x) + ' ' + fixed(innerE.y) + ' Z';
   };
+
+${CLIENT_DIVERGING_BAR_JS}
 
   miaoData.renderBar = function(chart, chartRows, chartId) {
     var xField = (chart.encoding && chart.encoding.x && chart.encoding.x.field) || '';

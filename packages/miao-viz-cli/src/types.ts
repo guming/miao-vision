@@ -281,6 +281,26 @@ export type AgentInsight =
       severity?: 'info' | 'warning'
     }
 
+export interface AgentChartStyle {
+  width?: number
+  height?: number
+  xDomainMin?: number
+  xDomainMax?: number
+  yDomainMin?: number
+  yDomainMax?: number
+  barMode?: 'stacked'
+  divergingSort?: 'asc' | 'desc' | 'none'
+  rowHeight?: number
+  showGrid?: boolean
+  showValueLabels?: boolean
+  positiveColor?: string
+  negativeColor?: string
+  valueDecimals?: number
+  valueSuffix?: string
+  axisTitle?: string
+  [key: string]: unknown
+}
+
 export interface AgentChartSpec {
   id?: string
   type: VizType
@@ -309,7 +329,7 @@ export interface AgentChartSpec {
   colorScale?: AgentColorScale
   placement?: AgentChartPlacement
   quality?: AgentQualityEncoding
-  style?: Record<string, unknown>
+  style?: AgentChartStyle
 }
 
 export interface AgentReportSpec {
