@@ -8,12 +8,12 @@
     "maximumClarificationQuestions": 1
   },
   "decisions": {
-    "R01": { "action": "route", "route": "article", "references": ["references/article-infographic.md", "references/composition-playbook.md"] },
-    "R02": { "action": "route", "route": "report", "references": ["references/data-report.md", "references/report-intelligence.md", "references/chart-selection.md", "references/anti-patterns.md"] },
-    "R03": { "action": "route", "route": "deck", "references": ["references/browser-deck.md"] },
-    "R04": { "action": "route", "route": "chart-selection", "references": ["references/chart-selection.md", "references/anti-patterns.md"] },
-    "R05": { "action": "route", "route": "spec-validation", "references": ["references/vizspec.md", "references/data-report.md"] },
-    "R06": { "action": "route", "route": "spec-validation", "references": ["references/vizspec.md", "references/browser-deck.md"] },
+    "R01": { "action": "route", "route": "article", "references": ["references/article.md"] },
+    "R02": { "action": "route", "route": "report", "references": ["references/report.md"] },
+    "R03": { "action": "route", "route": "deck", "references": ["references/deck.md"] },
+    "R04": { "action": "stop" },
+    "R05": { "action": "route", "route": "spec-validation", "references": ["references/report.md"] },
+    "R06": { "action": "route", "route": "spec-validation", "references": ["references/deck.md"] },
     "S01": { "action": "stop" },
     "S02": { "action": "stop" },
     "S03": { "action": "stop" },
