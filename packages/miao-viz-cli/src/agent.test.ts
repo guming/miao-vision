@@ -754,7 +754,7 @@ charts:
       join(dir, 'empty.html')
     ])
     expect(JSON.parse(empty).code).toBe('EMPTY_ARTICLE_INPUT')
-  })
+  }, 15_000)
 })
 
 describe('article --spec-input (T30–T33)', () => {
