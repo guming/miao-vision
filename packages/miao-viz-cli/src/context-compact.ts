@@ -44,6 +44,8 @@ export function toCompactAnalyzeContext(ctx: AnalyzeContext): CompactAnalyzeCont
       blockedBlocks: ctx.catalog.blockedBlocks?.map(b => [b.id, b.reason]),
       templates: ctx.catalog.templates?.map(t => [t.id, t.score, t.density, t.blocks, t.requiredEvidence ?? null]),
       blockedTemplates: ctx.catalog.blockedTemplates?.map(t => [t.id, t.reason])
+      ,scenes: ctx.catalog.scenes?.map(scene => [scene.id, scene.score, scene.templates, scene.blocks])
+      ,blockedScenes: ctx.catalog.blockedScenes?.map(scene => [scene.id, scene.reason, scene.missing ?? null])
       ,deckPatterns: ctx.catalog.deckPatterns?.map(p => [p.id, p.score, p.density, p.blocks])
       ,slideBlocks: ctx.catalog.slideBlocks?.map(b => [b.id, b.score, b.requiredRoles, b.requiredEvidence])
       ,blockedSlideBlocks: ctx.catalog.blockedSlideBlocks?.map(b => [b.id, b.reasonCode, b.reason])
@@ -125,6 +127,13 @@ export function fromCompactAnalyzeContext(ctx: CompactAnalyzeContext): AnalyzeCo
         ...(requiredEvidence?.length ? { requiredEvidence } : {})
       })),
       blockedTemplates: ctx.catalog.blockedTemplates?.map(([id, reason]) => ({ id, reason }))
+      ,scenes: ctx.catalog.scenes?.map(([id, score, templates, blocks]) => ({
+        id, score, templates, blocks, name: id, description: '', keywords: [],
+        requiredRoles: [], metricSemantics: []
+      }))
+      ,blockedScenes: ctx.catalog.blockedScenes?.map(([id, reason, missing]) => ({
+        id, reason, ...(missing?.length ? { missing } : {})
+      }))
       ,deckPatterns: ctx.catalog.deckPatterns?.map(([id, score, density, blocks]) => ({ id, score, density, blocks }))
       ,slideBlocks: ctx.catalog.slideBlocks?.map(([id, score, requiredRoles, requiredEvidence]) => ({ id, score, requiredRoles, requiredEvidence }))
       ,blockedSlideBlocks: ctx.catalog.blockedSlideBlocks?.map(([id, reasonCode, reason]) => ({ id, reasonCode, reason }))

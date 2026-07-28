@@ -29,8 +29,7 @@ export const projectSchema = z.object({
 })
 export type ReportProject = z.infer<typeof projectSchema>
 
-export const runManifestSchema = z.object({
-  schemaVersion: z.literal(1),
+const runManifestBaseSchema = z.object({
   id: z.string().min(1),
   status: z.enum(['running', 'ready', 'needs_review', 'failed']),
   input: z.object({ path: z.string(), sha256: z.string(), sheet: z.string().optional(), copiedPath: z.string().optional() }),
@@ -44,6 +43,20 @@ export const runManifestSchema = z.object({
   artifacts: z.record(z.string(), z.string()).default({}),
   error: z.object({ code: z.string(), message: z.string() }).optional()
 })
+const runManifestV1Schema = runManifestBaseSchema.extend({ schemaVersion: z.literal(1) })
+const runManifestV2Schema = runManifestBaseSchema.extend({
+  schemaVersion: z.literal(2),
+  baselineRunId: z.string().nullable().optional(),
+  changes: z.object({
+    status: z.enum(['no_baseline', 'ready', 'partial']),
+    metrics: z.number().int().nonnegative(),
+    rankings: z.number().int().nonnegative(),
+    anomaliesAdded: z.number().int().nonnegative(),
+    anomaliesRemoved: z.number().int().nonnegative(),
+    notComparable: z.number().int().nonnegative()
+  }).optional()
+})
+export const runManifestSchema = z.union([runManifestV1Schema, runManifestV2Schema])
 export type RunManifest = z.infer<typeof runManifestSchema>
 
 export interface EvidencePlanEntry { id: string; recipe: QueryRecipe }

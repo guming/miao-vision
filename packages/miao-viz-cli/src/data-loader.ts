@@ -7,6 +7,7 @@ import type { AgentResult, LoadedDataset } from './types'
 interface LoadOptions {
   sheet?: string
   limit?: number
+  fieldMap?: Record<string, string>
 }
 
 export function loadDataset(filePath: string, options: LoadOptions = {}): AgentResult<LoadedDataset> {
@@ -21,7 +22,7 @@ export function loadDataset(filePath: string, options: LoadOptions = {}): AgentR
     if (ext === '.csv' || ext === '.tsv') {
       const delimiter = ext === '.tsv' ? '\t' : ','
       const text = readFileSync(absolutePath, 'utf8')
-      return ok(createDataset(absolutePath, parseDelimited(text, delimiter), options.limit))
+      return ok(createDataset(absolutePath, applyFieldMap(parseDelimited(text, delimiter), options.fieldMap), options.limit))
     }
 
     if (ext === '.json') {
@@ -29,7 +30,7 @@ export function loadDataset(filePath: string, options: LoadOptions = {}): AgentR
       if (!Array.isArray(parsed)) {
         return agentError('INVALID_JSON_SHAPE', 'JSON input must be an array of objects.', { file: filePath })
       }
-      return ok(createDataset(absolutePath, normalizeRows(parsed), options.limit))
+      return ok(createDataset(absolutePath, applyFieldMap(normalizeRows(parsed), options.fieldMap), options.limit))
     }
 
     if (ext === '.xlsx' || ext === '.xls') {
@@ -44,7 +45,7 @@ export function loadDataset(filePath: string, options: LoadOptions = {}): AgentR
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
         defval: null
       })
-      return ok({ ...createDataset(absolutePath, rows, options.limit), sheet: sheetName })
+      return ok({ ...createDataset(absolutePath, applyFieldMap(rows, options.fieldMap), options.limit), sheet: sheetName })
     }
 
     return agentError('UNSUPPORTED_FILE_TYPE', `Unsupported file type: ${ext || '(none)'}`, {
@@ -56,6 +57,45 @@ export function loadDataset(filePath: string, options: LoadOptions = {}): AgentR
       file: filePath
     })
   }
+}
+
+export function loadDatasets(filePaths: string[], options: LoadOptions = {}): AgentResult<LoadedDataset> {
+  if (!filePaths.length) return agentError('MISSING_INPUT', 'At least one input file is required.')
+  const loaded: LoadedDataset[] = []
+  for (const file of filePaths) {
+    const result = loadDataset(file, { ...options, limit: undefined })
+    if (!result.ok) return agentError('MULTI_FILE_LOAD_FAILED', `Could not load '${file}'.`, { file, cause: result })
+    loaded.push(result.value)
+  }
+  const expected = loaded[0].columns
+  const expectedTypes = columnTypes(loaded[0].rows, expected)
+  const issues = loaded.slice(1).flatMap(dataset => {
+    const columnsMatch = sameSet(expected, dataset.columns)
+    const actualTypes = columnTypes(dataset.rows, dataset.columns)
+    const typeMismatches = expected.filter(column =>
+      actualTypes[column] && expectedTypes[column] && actualTypes[column] !== expectedTypes[column]
+    )
+    return columnsMatch && !typeMismatches.length ? [] : [{
+      file: dataset.file,
+      missing: expected.filter(column => !dataset.columns.includes(column)),
+      extra: dataset.columns.filter(column => !expected.includes(column)),
+      typeMismatches: typeMismatches.map(column => ({
+        field: column, expected: expectedTypes[column], actual: actualTypes[column]
+      }))
+    }]
+  })
+  if (issues.length) {
+    return agentError('MULTI_FILE_SCHEMA_MISMATCH', 'Input files are not schema-compatible after field mapping.', {
+      referenceFile: loaded[0].file, issues
+    })
+  }
+  const rows = loaded.flatMap(dataset => dataset.rows)
+  return ok({
+    file: loaded.map(dataset => dataset.file).join(','),
+    rows: typeof options.limit === 'number' ? rows.slice(0, options.limit) : rows,
+    columns: expected,
+    ...(options.sheet ? { sheet: options.sheet } : {})
+  })
 }
 
 function createDataset(file: string, rows: Record<string, unknown>[], limit?: number): LoadedDataset {
@@ -139,4 +179,31 @@ function coerceCell(value: string): unknown {
   const numeric = Number(trimmed)
   if (!Number.isNaN(numeric) && trimmed !== '') return numeric
   return trimmed
+}
+
+function applyFieldMap(rows: Record<string, unknown>[], fieldMap?: Record<string, string>): Record<string, unknown>[] {
+  if (!fieldMap) return rows
+  return rows.map(row => {
+    const mapped: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(row)) {
+      const target = fieldMap[key] ?? key
+      if (target in mapped && target !== key) {
+        throw new Error(`Field mapping creates duplicate target '${target}'.`)
+      }
+      mapped[target] = value
+    }
+    return mapped
+  })
+}
+
+function sameSet(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every(value => right.includes(value))
+}
+
+function columnTypes(rows: Record<string, unknown>[], columns: string[]): Record<string, string> {
+  return Object.fromEntries(columns.map(column => {
+    const value = rows.map(row => row[column]).find(item => item !== null && item !== undefined)
+    const type = value instanceof Date ? 'date' : typeof value
+    return [column, type]
+  }))
 }

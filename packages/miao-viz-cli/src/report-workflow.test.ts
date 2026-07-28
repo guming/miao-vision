@@ -86,7 +86,10 @@ describe('report workflow smoke', () => {
     expect(runCli(['report', 'init', project, '--input', fixture, '--spec', specPath, '--context', contextPath, '--period', '2026-W28']))
       .toMatchObject({ ok: true, value: { status: 'ready' } })
     expect(runCli(['report', 'update', project, '--input', fixture, '--period', '2026-W29']))
-      .toMatchObject({ ok: true, value: { status: 'ready' } })
+      .toMatchObject({ ok: true, value: { status: 'ready', changes: { status: 'ready' } } })
+    expect(existsSync(join(project, 'runs', '2026-W29', 'evidence.json'))).toBe(true)
+    expect(existsSync(join(project, 'runs', '2026-W29', 'changes.json'))).toBe(true)
+    expect(readFileSync(join(project, 'runs', '2026-W29', 'report.html'), 'utf8')).toContain('Period changes')
     const history = runCli(['report', 'history', project]) as { value: Array<{ specHash: string; evidencePlanHash: string }> }
     expect(history.value).toHaveLength(2)
     expect(new Set(history.value.map(run => run.specHash)).size).toBe(1)

@@ -2,6 +2,8 @@ import { z } from 'zod'
 import type { VisualIntentFamily, VizType } from './types'
 import { MVP_CHART_TYPES } from './spec-schema'
 import { queryRecipeSchema, type QueryRecipe } from './query-recipe'
+import { blockedSceneEntrySchema, catalogSceneEntrySchema, type BlockedSceneEntry, type CatalogSceneEntry, type CatalogSceneSummary } from './context-scene-schema'
+export type { BlockedSceneEntry, CatalogSceneEntry, CatalogSceneSummary } from './context-scene-schema'
 const fieldRoleValues = ['measure', 'dimension', 'time', 'id', 'status', 'score', 'flag', 'text', 'geo', 'unknown'] as const
 const chartUsageValues = ['recommended', 'allowed', 'discouraged', 'forbidden'] as const
 // Compact field descriptor — only fields useful for spec writing, not full ColumnProfile
@@ -91,7 +93,6 @@ export interface BlockedDeckSlideBlockEntry {
 
 export type CatalogBlockSummary = [id: string, score: number, density: 'compact' | 'medium' | 'full', charts: string[]]
 export type CatalogTemplateSummary = [id: string, score: number, density: 'compact' | 'medium' | 'full', blocks: string[]]
-
 export interface AnalyzeCatalog {
   charts: string[]      // allowed chart types for this dataset/intent
   blockedCharts: Array<{
@@ -107,6 +108,8 @@ export interface AnalyzeCatalog {
   blockedBlocks?: BlockedBlockEntry[]
   templates?: CatalogTemplateEntry[]
   blockedTemplates?: BlockedTemplateEntry[]
+  scenes?: CatalogSceneEntry[]
+  blockedScenes?: BlockedSceneEntry[]
   deckPatterns?: DeckPatternEntry[]
   slideBlocks?: DeckSlideBlockEntry[]
   blockedSlideBlocks?: BlockedDeckSlideBlockEntry[]
@@ -221,6 +224,8 @@ export interface CompactAnalyzeContext {
     blockedBlocks?: Array<[string, string]>
     templates?: Array<[string, number, 'compact' | 'medium' | 'full', string[], (string[] | null)?]>
     blockedTemplates?: Array<[string, string]>
+    scenes?: CatalogSceneSummary[]
+    blockedScenes?: Array<[string, string, (string[] | null)?]>
     deckPatterns?: DeckPatternSummary[]
     slideBlocks?: DeckSlideBlockSummary[]
     blockedSlideBlocks?: BlockedDeckSlideBlockSummary[]
@@ -355,6 +360,8 @@ const analyzeCatalogSchema = z.object({
   blockedBlocks: z.array(blockedBlockEntrySchema).optional(),
   templates: z.array(catalogTemplateEntrySchema).optional(),
   blockedTemplates: z.array(blockedTemplateEntrySchema).optional()
+  ,scenes: z.array(catalogSceneEntrySchema).optional()
+  ,blockedScenes: z.array(blockedSceneEntrySchema).optional()
   ,deckPatterns: z.array(deckPatternEntrySchema).optional()
   ,slideBlocks: z.array(deckSlideBlockEntrySchema).optional()
   ,blockedSlideBlocks: z.array(blockedDeckSlideBlockEntrySchema).optional()
@@ -473,6 +480,8 @@ export const compactAnalyzeContextSchema: z.ZodType<CompactAnalyzeContext> = z.o
     blockedBlocks: z.array(z.tuple([z.string(), z.string()])).optional(),
     templates: z.array(z.tuple([z.string(), z.number(), z.enum(['compact', 'medium', 'full']), z.array(z.string()), z.array(z.string()).nullable().optional()])).optional(),
     blockedTemplates: z.array(z.tuple([z.string(), z.string()])).optional()
+    ,scenes: z.array(z.tuple([z.string(), z.number(), z.array(z.string()), z.array(z.string())])).optional()
+    ,blockedScenes: z.array(z.tuple([z.string(), z.string(), z.array(z.string()).nullable().optional()])).optional()
     ,deckPatterns: z.array(z.tuple([z.enum(['executive-brief', 'business-review']), z.number(), z.enum(['compact', 'medium']), z.array(z.string())])).optional()
     ,slideBlocks: z.array(z.tuple([z.string(), z.number(), z.array(z.string()), z.array(z.string())])).optional()
     ,blockedSlideBlocks: z.array(z.tuple([z.string(), z.string(), z.string()])).optional()

@@ -1,0 +1,3 @@
+variant,outcome,sample_count,conversion_rate
+control,converted,1000,0.12
+treatment,converted,1020,0.15

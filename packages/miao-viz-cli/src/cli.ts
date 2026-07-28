@@ -2,7 +2,7 @@
 
 import packageJson from '../package.json'
 import { agentError, isAgentError } from './errors'
-import { loadDataset } from './data-loader'
+import { loadDataset, loadDatasets } from './data-loader'
 import { profileDataset, profileSummary } from './data-profiler'
 import { queryDataset } from './data-query'
 import { renderStaticHtml } from './html-export'
@@ -18,6 +18,9 @@ import { generatePatchHints, collectWarningPatches } from './patch-hints'
 import { printHelp } from './cli-help'
 import { runCatalog, runBlock } from './cli-block'
 import { runTemplate } from './cli-template'
+import { runScene } from './cli-scene'
+import { runSummary } from './cli-summary'
+import { runSpecDiff } from './cli-spec-diff'
 import { runInspect } from './cli-inspect'
 import { runDeckCommand, runDeckRender } from './cli-deck'
 import {
@@ -33,6 +36,7 @@ import type { AgentReportSpec } from './types'
 import { runReportCommand } from './cli-report'
 import { exportHtmlToPdf } from './pdf-export'
 import { join } from 'node:path'
+import { exportHtmlToPng } from './png-export'
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
@@ -114,13 +118,22 @@ function runSpec(args: CliArgs): void {
     case 'template':
       printJson(runTemplate(args))
       return
+    case 'scene':
+      printJson(runScene(args))
+      return
+    case 'summary':
+      printJson(runSummary(args))
+      return
+    case 'diff':
+      printJson(runSpecDiff(args))
+      return
     case 'inspect':
       printJson(runInspect(args))
       return
     default:
       printJson(fail(agentError('UNKNOWN_SUBCOMMAND',
-        `Unknown spec subcommand: ${args.subcommand ?? '(none)'}. Available: validate, catalog, block, template, inspect`,
-        { subcommand: args.subcommand, available: ['validate', 'catalog', 'block', 'template', 'inspect'] }
+        `Unknown spec subcommand: ${args.subcommand ?? '(none)'}. Available: validate, catalog, block, template, scene, summary, diff, inspect`,
+        { subcommand: args.subcommand, available: ['validate', 'catalog', 'block', 'template', 'scene', 'summary', 'diff', 'inspect'] }
       )))
   }
 }
@@ -145,13 +158,10 @@ async function runRenderGroup(args: CliArgs): Promise<void> {
 }
 
 function runProfile(args: CliArgs): unknown {
-  const file = args.positional[0]
+  const file = args.positional[0] ?? firstInput(args)
   if (!file) return fail(agentError('MISSING_INPUT', 'Usage: miao-viz data profile <file> [--summary] [--columns col1,col2] [--reliable-only] [--sheet <name>] [--limit <rows>]'))
 
-  const dataset = loadDataset(file, {
-    sheet: stringFlag(args, 'sheet'),
-    limit: numberFlag(args, 'limit')
-  })
+  const dataset = loadCliDataset(args, file)
   if (isAgentError(dataset)) return fail(dataset)
 
   if (args.flags['summary'] === true) {
@@ -253,7 +263,7 @@ function runValidate(args: CliArgs): unknown {
 }
 
 async function runRender(args: CliArgs): Promise<unknown> {
-  const input = requiredFlag(args, 'input')
+  const input = stringFlag(args, 'input') ?? firstInput(args) ?? agentError('MISSING_FLAG', 'Missing --input <file> or --inputs <a,b,...>.')
   const specPath = requiredFlag(args, 'spec')
   if (isAgentError(input)) return fail(input)
   if (isAgentError(specPath)) return fail(specPath)
@@ -265,10 +275,7 @@ async function runRender(args: CliArgs): Promise<unknown> {
   if (formats.length > 1 && !outputDir) return fail(agentError('MISSING_FLAG', 'Multiple formats require --output-dir <directory>.'))
   if (formats.length === 1 && !output) return fail(agentError('MISSING_FLAG', 'Missing required flag --output.'))
 
-  const dataset = loadDataset(input, {
-    sheet: stringFlag(args, 'sheet'),
-    limit: numberFlag(args, 'limit')
-  })
+  const dataset = loadCliDataset(args, input)
   if (isAgentError(dataset)) return fail(dataset)
 
   const profile = profileDataset(dataset.value)
@@ -323,6 +330,17 @@ async function runRender(args: CliArgs): Promise<unknown> {
       if (!result.ok) return fail(result)
       written.push(pdfPath)
       warnings.push(...result.value.warnings.map(issue => issue.message))
+    } else if (format === 'png') {
+      const pngPath = outputDir ? join(outputDir, 'report.png') : formatOutputPath(output!, 'png', false)
+      const result = await exportHtmlToPng(html, pngPath, {
+        width: numberFlag(args, 'viewport-width'),
+        height: numberFlag(args, 'viewport-height'),
+        scale: numberFlag(args, 'scale'),
+        timeout: numberFlag(args, 'png-timeout'),
+        keepTemp: args.flags['keep-temp'] === true
+      })
+      if (!result.ok) return fail(result)
+      written.push(pngPath)
     } else if (format === 'svg') {
       const svgPath = outputDir ? join(outputDir, 'report.svg') : formatOutputPath(output!, 'svg', false)
       if (validation.value.charts.length !== 1) {
@@ -332,7 +350,7 @@ async function runRender(args: CliArgs): Promise<unknown> {
       written.push(svgPath)
     } else {
       return fail(agentError('OUTPUT_FORMAT_NOT_IMPLEMENTED', `Output format '${format}' is not implemented yet.`, {
-        implementedFormats: ['html', 'svg', 'pdf']
+        implementedFormats: ['html', 'svg', 'png', 'pdf']
       }))
     }
   }
@@ -341,10 +359,10 @@ async function runRender(args: CliArgs): Promise<unknown> {
 }
 
 function runQuery(args: CliArgs): unknown {
-  const file = args.positional[0]
+  const file = args.positional[0] ?? firstInput(args)
   if (!file) return fail(agentError('MISSING_INPUT', 'Usage: miao-viz data query <file> [--groupby cols] [--measure "fn(col) as alias"] [--filter col=val] [--orderby "col desc"] [--limit n]'))
 
-  const dataset = loadDataset(file, { sheet: stringFlag(args, 'sheet') })
+  const dataset = loadCliDataset(args, file, false)
   if (isAgentError(dataset)) return fail(dataset)
 
   const result = queryDataset(dataset.value.rows, {
@@ -359,16 +377,13 @@ function runQuery(args: CliArgs): unknown {
 }
 
 async function runAnalyze(args: CliArgs): Promise<void> {
-  const file = args.positional[0]
+  const file = args.positional[0] ?? firstInput(args)
   if (!file) {
     printJson(fail(agentError('MISSING_INPUT', 'Usage: miao-viz data analyze <file> [--intent "..."] [--output context.json] [--extra-query "..."] [--correct-assumption "primary_measure=col"] [--sheet <name>] [--limit <n>]')))
     return
   }
 
-  const dataset = loadDataset(file, {
-    sheet: stringFlag(args, 'sheet'),
-    limit: numberFlag(args, 'limit')
-  })
+  const dataset = loadCliDataset(args, file)
   if (isAgentError(dataset)) { printJson(fail(dataset)); return }
 
   const context = analyzeDataset(dataset.value, {
@@ -389,3 +404,28 @@ async function runAnalyze(args: CliArgs): Promise<void> {
 }
 
 main()
+
+function loadCliDataset(args: CliArgs, fallback: string, applyInputLimit = true) {
+  const mappingPath = stringFlag(args, 'field-map')
+  let fieldMap: Record<string, string> | undefined
+  if (mappingPath) {
+    const raw = readJson<unknown>(mappingPath)
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw) || Object.values(raw).some(value => typeof value !== 'string')) {
+      return agentError('INVALID_FIELD_MAP', 'Field map must be a JSON object of source-field to canonical-field strings.', {
+        fieldMap: mappingPath
+      })
+    }
+    fieldMap = raw as Record<string, string>
+  }
+  const options = {
+    sheet: stringFlag(args, 'sheet'),
+    limit: applyInputLimit ? numberFlag(args, 'limit') : undefined,
+    fieldMap
+  }
+  const inputs = stringFlag(args, 'inputs')?.split(',').map(value => value.trim()).filter(Boolean)
+  return inputs?.length ? loadDatasets(inputs, options) : loadDataset(fallback, options)
+}
+
+function firstInput(args: CliArgs): string | undefined {
+  return stringFlag(args, 'inputs')?.split(',').map(value => value.trim()).find(Boolean)
+}

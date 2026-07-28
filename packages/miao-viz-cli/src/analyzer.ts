@@ -18,6 +18,8 @@ import { buildClarificationQuestions } from './analyze-clarifications'
 import { parseIntent } from './analyzer-intent'
 import { CHART_THRESHOLDS } from './chart-catalog-thresholds'
 import { buildDeckCatalog } from './deck-knowledge-registry'
+import { buildSceneCatalog } from './report-scene-registry'
+import { buildAbTestEvidence } from './analyzer-ab-test'
 
 export interface AnalyzerOptions {
   intent?: string
@@ -32,6 +34,8 @@ export function analyzeDataset(dataset: LoadedDataset, options: AnalyzerOptions 
   const intent = parseIntent(options.intent ?? '', fields, options.correctAssumption)
   const sampleWarnings = buildSampleWarnings(profile.rows, fields)
   const evidence = runStandardQueries(dataset, fields, sampleWarnings)
+  const abEvidence = buildAbTestEvidence(dataset, fields, options.intent ?? '')
+  if (abEvidence) evidence.push(abEvidence)
 
   if (options.extraQuery) {
     const extra = runExtraQuery(dataset, options.extraQuery, evidence.length)
@@ -45,9 +49,13 @@ export function analyzeDataset(dataset: LoadedDataset, options: AnalyzerOptions 
   const clarificationQuestions = buildClarificationQuestions(fields, options.intent ?? '')
 
   const context: AnalyzeContext = { intent, fields, evidence, catalog, sampleWarnings, promptRules, metricCandidates, clarificationQuestions }
+  Object.assign(context.catalog, buildSceneCatalog({
+    fields, evidence, catalog, sampleWarnings, metricCandidates
+  }))
   Object.assign(context.catalog, buildDeckCatalog(context))
   return context
 }
+
 
 function addP0Recommendations(catalog: AnalyzeCatalog, intent: AnalyzeContext['intent'], fields: AnalyzeField[]): void {
   const dimensions = fields.filter(field => ['dimension', 'status', 'flag', 'geo'].includes(field.role))

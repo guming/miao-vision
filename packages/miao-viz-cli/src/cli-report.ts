@@ -22,6 +22,7 @@ import { resolveDirectives } from './directive-resolver'
 import { mapInsightText } from './insight-utils'
 import { renderStaticHtml } from './html-export'
 import { exportHtmlToPdf } from './pdf-export'
+import { compareEvidence, injectChangesHtml, type EvidenceChangeSet } from './report-changes'
 import type { CliArgs } from './cli-utils'
 import type { AgentError, AgentReportSpec, LoadedDataset } from './types'
 
@@ -105,7 +106,17 @@ async function reportUpdate(args: CliArgs): Promise<unknown> {
   const contractIssues = validateDataContract(dataset.value, loaded.contract)
   if (contractIssues.length) {
     return fail(agentError('REPORT_DATA_CONTRACT_MISMATCH', 'The new input does not satisfy the saved report contract.', {
-      issues: contractIssues
+      issues: contractIssues,
+      patches: contractIssues.flatMap(issue => issue.field && issue.candidates?.length
+        ? [{ op: 'replace', path: `/fieldMappings/${issue.field}`, value: issue.candidates[0] }]
+        : issue.expected.startsWith('sheet:')
+          ? [{ op: 'replace', path: '/input/sheet', value: issue.expected.slice('sheet:'.length) }]
+          : []),
+      repairs: contractIssues.map(issue => issue.actual === 'missing'
+        ? `Map '${issue.candidates?.[0] ?? 'a compatible source field'}' to required field '${issue.field ?? issue.expected}'.`
+        : issue.expected.startsWith('sheet:')
+          ? `Select saved ${issue.expected}.`
+          : `Convert '${issue.field ?? 'input'}' from ${issue.actual} to compatible type ${issue.expected} before update.`)
     }))
   }
   const previous = latestContext(loaded.root)
@@ -133,7 +144,8 @@ async function reportUpdate(args: CliArgs): Promise<unknown> {
     copyInput: args.flags['copy-input'] === true, inputPath: input,
     formats: parseReportFormats(stringFlag(args, 'format')),
     pdfTimeout: Number(stringFlag(args, 'pdf-timeout') ?? 30_000),
-    keepTemp: args.flags['keep-temp'] === true
+    keepTemp: args.flags['keep-temp'] === true,
+    baseline: { runId: readLatest(loaded.root)?.runId ?? null, evidence: previous.evidence }
   })
 }
 
@@ -147,6 +159,7 @@ function reportInfo(args: CliArgs): unknown {
     project: loaded.root, name: loaded.project.name, projectVersion: loaded.project.projectVersion,
     contract: { requiredFields: loaded.contract.requiredFields, sheet: loaded.contract.sheet, minimumRows: loaded.contract.minimumRows },
     evidenceCount: loaded.plan.queries.length, specHash: loaded.project.specHash, latest,
+    latestChanges: latest ? manifestChanges(readRunManifest(join(loaded.root, 'runs', latest.runId, 'manifest.json'))) : undefined,
     healthIssues: latest ? [] : ['No ready run is recorded.']
   } }
 }
@@ -186,18 +199,28 @@ async function createRun(
   context: AnalyzeContext,
   spec: AgentReportSpec,
   period: string,
-  options: { copyInput: boolean; inputPath: string; formats: Array<'html' | 'pdf'>; pdfTimeout?: number; keepTemp?: boolean }
+  options: {
+    copyInput: boolean
+    inputPath: string
+    formats: Array<'html' | 'pdf'>
+    pdfTimeout?: number
+    keepTemp?: boolean
+    baseline?: { runId: string | null; evidence: AnalyzeContext['evidence'] }
+  }
 ): Promise<unknown> {
   const runRoot = join(root, 'runs', period)
   mkdirSync(runRoot, { recursive: true })
   const now = new Date().toISOString()
   const inputHash = hashFile(options.inputPath)
+  const changes = compareEvidence(options.baseline?.evidence ?? null, context.evidence, options.baseline?.runId ?? null)
   const manifest: RunManifest = {
-    schemaVersion: 1, id: period, status: 'running',
+    schemaVersion: 2, id: period, status: 'running',
     input: { path: resolve(options.inputPath), sha256: inputHash, ...(dataset.sheet ? { sheet: dataset.sheet } : {}) },
     projectVersion: project.projectVersion, inputHash, specHash: project.specHash,
     evidencePlanHash: project.evidencePlanHash, evidenceResultHash: hashValue(context.evidence),
-    createdAt: now, updatedAt: now, artifacts: {}
+    createdAt: now, updatedAt: now, artifacts: {},
+    baselineRunId: changes.baselineRunId,
+    changes: changeSummary(changes)
   }
   atomicWriteJson(join(runRoot, 'manifest.json'), manifest)
   if (options.copyInput) {
@@ -206,8 +229,12 @@ async function createRun(
     manifest.input.copiedPath = relative(runRoot, copiedPath)
   }
   atomicWriteJson(join(runRoot, 'context.json'), context)
+  atomicWriteJson(join(runRoot, 'evidence.json'), { schemaVersion: 1, evidence: context.evidence })
+  atomicWriteJson(join(runRoot, 'changes.json'), changes)
+  manifest.artifacts.evidence = 'evidence.json'
+  manifest.artifacts.changes = 'changes.json'
   const theme = readPreferences(root).theme as Parameters<typeof renderStaticHtml>[3]
-  const html = renderStaticHtml(spec, profileDataset(dataset), dataset.rows, theme, { enabled: true })
+  const html = injectChangesHtml(renderStaticHtml(spec, profileDataset(dataset), dataset.rows, theme, { enabled: true }), changes)
   if (options.formats.includes('html')) {
     writeOutput(join(runRoot, 'report.html'), html)
     manifest.artifacts.html = 'report.html'
@@ -232,7 +259,8 @@ async function createRun(
   atomicWriteJson(join(root, 'latest.json'), { schemaVersion: 1, runId: period, manifest: `runs/${period}/manifest.json` })
   return { ok: true, value: {
     project: root, runId: period, status: 'ready',
-    artifacts: Object.fromEntries(Object.entries(manifest.artifacts).map(([key, value]) => [key, join(runRoot, value)])), warnings: []
+    artifacts: Object.fromEntries(Object.entries(manifest.artifacts).map(([key, value]) => [key, join(runRoot, value)])),
+    changes: manifest.changes, warnings: []
   } }
 }
 
@@ -242,7 +270,7 @@ function failedRun(root: string, project: { projectVersion: number; specHash: st
   const now = new Date().toISOString()
   const inputHash = hashFile(input)
   atomicWriteJson(join(runRoot, 'manifest.json'), {
-    schemaVersion: 1, id: period, status: 'failed',
+    schemaVersion: 2, id: period, status: 'failed',
     input: { path: resolve(input), sha256: inputHash, ...(dataset.sheet ? { sheet: dataset.sheet } : {}) },
     projectVersion: project.projectVersion, inputHash, specHash: project.specHash,
     evidencePlanHash: project.evidencePlanHash, createdAt: now, updatedAt: now, artifacts: {},
@@ -318,4 +346,17 @@ function validateRunId(value: string): AgentError | null {
   return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)
     ? null
     : agentError('INVALID_ARGUMENT', 'Run period must be a safe identifier without path separators.', { period: value })
+}
+
+function changeSummary(changes: EvidenceChangeSet): NonNullable<Extract<RunManifest, { schemaVersion: 2 }>['changes']> {
+  return {
+    status: changes.baselineRunId === null ? 'no_baseline' : changes.notComparable.length ? 'partial' : 'ready',
+    metrics: changes.metrics.length, rankings: changes.rankings.length,
+    anomaliesAdded: changes.anomalies.added.length, anomaliesRemoved: changes.anomalies.removed.length,
+    notComparable: changes.notComparable.length
+  }
+}
+
+function manifestChanges(manifest: RunManifest | null): Extract<RunManifest, { schemaVersion: 2 }>['changes'] | undefined {
+  return manifest?.schemaVersion === 2 ? manifest.changes : undefined
 }

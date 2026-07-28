@@ -12,6 +12,8 @@ Options:
   --extra-query <expr>          Custom query: "groupby=col;measure=sum(x) as y;filter=col>=val"
   --correct-assumption <expr>   Override an assumption: "primary_measure=orders", "primary_dimension=region", or "time_field=date"
   --sheet <name>                Sheet name (Excel only)
+  --inputs <a,b,...>            Append schema-compatible local files
+  --field-map <json>            Map source field names to canonical field names
   --limit <n>                   Max rows to read
 `,
   'data.profile': `Usage: miao-viz data profile <file> [options]
@@ -57,6 +59,23 @@ Instantiate a report block using full or compact analyze context.
 
 List, inspect, or instantiate report templates using full or compact analyze context.
 `,
+  'spec.scene': `Usage:
+  miao-viz spec scene list
+  miao-viz spec scene inspect <scene-id>
+  miao-viz spec scene instantiate <scene-id> --context <context.json> [--output <file>]
+
+List, inspect, or instantiate business report scenes. Scenes compile to existing report templates and blocks.
+`,
+  'spec.summary': `Usage:
+  miao-viz spec summary instantiate --spec <file> --context <context.json> [--output <file>]
+
+Derive an executive-summary spec from a verified report without introducing new evidence.
+`,
+  'spec.diff': `Usage:
+  miao-viz spec diff --before <file> --after <file> --context <context.json>
+
+Return JSON Pointer changes, affected charts/insights/evidence, recompute requirements, and edit risks.
+`,
   'spec.inspect': `Usage: miao-viz spec inspect --input <file> --spec <file> --context <context.json> --output <file>
 
 Inspect chart transform pipelines and evidence usage for debugging.
@@ -69,13 +88,19 @@ Options:
   --input <file>    Path to data file
   --spec <file>     Path to vizspec YAML/JSON
   --output <file>   Output file path
-  --format <fmt>    Output format: html, svg (default: html)
+  --format <fmt>    Output format: html, svg, png, pdf (default: html)
   --theme <name>    Theme: standard-white, magazine, standard-dark, minimal, nyt, bloomberg, tableau
   --context <file>  Path to context.json (output of "analyze") — resolves $evidence: directives in insights[]
   --interactive     Explicitly enable the interactive runtime (HTML default)
   --no-interactive  Disable the runtime and force static HTML output
   --sheet <name>    Sheet name (Excel only)
   --limit <n>       Max rows to read
+  --inputs <a,b,...> Append schema-compatible files before rendering
+  --field-map <json> Apply source-to-canonical field names before validation
+  --viewport-width <px>  PNG viewport width (default: 1440)
+  --viewport-height <px> PNG viewport height (default: 900)
+  --scale <n>       PNG device scale factor (default: 1)
+  --png-timeout <ms> PNG render timeout (default: 30000)
 `,
   'render.deck': `Usage: miao-viz render deck --input <file> --spec <file> --output <file> [options]
 
@@ -197,6 +222,9 @@ Commands:
   catalog   List all available chart types and infographic templates
   block     Instantiate report blocks from analyze context
   template  List, inspect, or instantiate report templates
+  scene     List, inspect, or instantiate business report scenes
+  summary   Derive an evidence-preserving executive summary
+  diff      Inspect the impact of a minimal spec edit
   inspect   Inspect chart transforms and evidence usage
 `,
   report: `
