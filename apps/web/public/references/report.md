@@ -26,7 +26,11 @@ miao-viz data profile /path/to/data.csv \
   > /tmp/miao-vision/profile.json
 ```
 
-Read `context.json`; treat the profile only as validation input. Follow `promptRules[]`, surface `sampleWarnings[]`, use only `fields[]`, `metricCandidates[]`, `catalog.charts`, and `catalog.blocks/templates`, and reject anything in `catalog.blockedCharts` or `catalog.blockedBlocks`. Ask at most one question, and only when `clarificationQuestions[]` identifies a blocking ambiguity.
+Read `context.json`; treat the profile only as validation input. Follow `promptRules[]`, surface
+`sampleWarnings[]`, use only `fields[]`, `metricCandidates[]`, `catalog.charts`,
+`catalog.scenes`, and `catalog.blocks/templates`. Reject anything in `catalog.blockedCharts`,
+`catalog.blockedScenes`, or `catalog.blockedBlocks`. Ask at most one question, and only when
+`clarificationQuestions[]` or a blocked Scene identifies a blocking ambiguity.
 
 If the primary field assumption is wrong, rerun analyze with `--correct-assumption`. Add `--extra-query` only for a required aggregation missing from the standard evidence. Do not run `spec catalog --for-llm` unless compact context lacks a necessary rule.
 
@@ -53,6 +57,13 @@ Review field names, variables, generated insights, evidence ids, and quality che
 Use `miao-viz spec scene list` to discover business scenes. If the selected scene returns
 `SCENE_NOT_APPLICABLE`, surface its missing semantics and clarification questions; never guess
 which field represents revenue, cost, campaign response, or experiment outcome.
+
+Supported Scene ids are `business-overview`, `sales-analysis`, `marketing-performance`,
+`financial-summary`, `survey-analysis`, `ab-test`, and `data-quality-audit`.
+
+For `ab-test`, use `ab_test_significance` only when it exists in `context.evidence`. Its
+two-proportion result requires exactly two variants plus valid sample-count and conversion-rate
+fields. Without that evidence, keep the report descriptive and do not claim significance.
 
 4. Validate:
 
@@ -161,6 +172,16 @@ miao-viz report update /path/to/project \
 ```
 
 Replay the saved spec and evidence recipes. Do not redesign, change evidence ids, or guess mappings. Treat data-contract, evidence-plan, validation, and PDF errors as failed runs. Run `report clean` only when the user explicitly requests deletion: show the preview, then obtain confirmation for the exact project and retention count before `--confirm`.
+
+After a successful update, inspect `runs/<period>/changes.json` and preserve its distinctions:
+
+- `metrics`: absolute and percentage changes from comparable Evidence;
+- `rankings`: entries, exits, and rank movement;
+- `anomalies.added/removed`: newly observed and resolved anomaly records;
+- `notComparable`: changed recipes, absent Evidence, zero-information rows, or no baseline.
+
+Do not describe a `notComparable` item as unchanged. If the data contract fails, present the
+returned field mapping, Sheet, or type-conversion repairs instead of retrying with guessed fields.
 
 ## Edit And Final Check
 
