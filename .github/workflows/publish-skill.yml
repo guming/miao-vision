@@ -29,8 +29,14 @@ jobs:
       - name: Build native CLI binaries
         run: npm run build:cli:native
 
-      - name: Pack skill ZIP
-        run: npm run pack:skill
+      - name: Validate plugin release metadata
+        run: npm run validate:plugin
+
+      - name: Test shared CLI runtime
+        run: npm run test:skill-runtime
+
+      - name: Pack plugin and compatibility skill ZIP
+        run: npm run pack:plugin && npm run pack:skill
 
       - name: Extract version from tag
         id: version
@@ -39,31 +45,25 @@ jobs:
       - name: Verify release versions
         run: |
           test "$(node -p "require('./packages/miao-viz-cli/package.json').version")" = "${{ steps.version.outputs.version }}"
+          test "$(node -p "require('./skills/miao-vision/cli-compatibility.json').pluginVersion")" = "${{ steps.version.outputs.version }}"
+          test "$(node -p "require('./skills/miao-vision/cli-compatibility.json').releaseTag")" = "${GITHUB_REF_NAME}"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Miao Vision Skill v${{ steps.version.outputs.version }}"
+          name: "Miao Vision Plugin v${{ steps.version.outputs.version }}"
           tag_name: ${{ github.ref_name }}
           body: |
             ## Install
 
-            Install the skill, then let it download the matching private CLI binary into `bin/miao-viz` on first use.
+            Install `miao-vision-plugin.zip` in Codex, Claude Code, or OpenClaw.
+            On first use, approve the matching CLI download into `~/.miao-vision/bin`.
+            Plugin upgrades and uninstalls leave the shared CLI intact.
 
-            For Claude Code:
-            ```bash
-            mkdir -p ~/.claude/skills
-            unzip miao-vision-skill.zip -d ~/.claude/skills/
-            ```
-
-            For Codex:
-            ```bash
-            mkdir -p ~/.codex/skills
-            unzip miao-vision-skill.zip -d ~/.codex/skills/
-            ```
-
-            See `install/claude.md` and `install/codex.md` inside the ZIP for full instructions.
+            `miao-vision-skill.zip` is retained as a lightweight compatibility
+            channel for this release. See the install documents inside the bundle.
           files: |
+            dist/plugins/miao-vision-plugin.zip
             dist/skills/miao-vision-skill.zip
             dist/native/miao-viz-*
           draft: false

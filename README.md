@@ -1,22 +1,22 @@
 # Miao Vision
 
-> From data file to shareable visual report — one command, or one sentence to your AI agent.
+> From data file to shareable visual report: one command, or one sentence to your AI agent.
 
 [![npm](https://img.shields.io/npm/v/@miao-vision/cli)](https://www.npmjs.com/package/@miao-vision/cli)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
 
 <table>
 <tr>
-<td><img src="docs/assets/demo-report.png" alt="Data report — KPI cards, charts, and AI-written insights" width="480"/></td>
-<td><img src="docs/assets/demo-deck.png" alt="Presentation deck — editorial slides with keyboard navigation" width="480"/></td>
+<td><img src="docs/assets/demo-report.png" alt="Data report: KPI cards, charts, and AI-written insights" width="480"/></td>
+<td><img src="docs/assets/demo-deck.png" alt="Presentation deck: editorial slides with keyboard navigation" width="480"/></td>
 </tr>
 <tr>
-<td align="center"><em>Data report — KPI cards, charts, written insights</em></td>
-<td align="center"><em>Presentation deck — keyboard navigation, print-to-PDF</em></td>
+<td align="center"><em>Data report: KPI cards, charts, written insights</em></td>
+<td align="center"><em>Presentation deck: keyboard navigation, print-to-PDF</em></td>
 </tr>
 </table>
 
-Give Miao Vision a CSV, spreadsheet, or article. It inspects the schema, runs aggregation queries, and renders a self-contained HTML or PDF artifact — KPI cards, charts, tables, insights — ready to open, share, print, or email. No server. No login. No expiry.
+Give Miao Vision a CSV, spreadsheet, or article. It inspects the schema, runs aggregation queries, and renders a self-contained HTML or PDF artifact: KPI cards, charts, tables, insights: ready to open, share, print, or email. No server. No login. No expiry.
 
 Built for **analysts and developers** who want a polished output in minutes, not a dashboard to maintain forever.
 
@@ -24,13 +24,13 @@ Built for **analysts and developers** who want a polished output in minutes, not
 
 ## What you get
 
-**Data report** — KPI cards, bar charts, line trends, tables, and written insights in self-contained HTML or printable PDF.
+**Data report**: KPI cards, bar charts, line trends, tables, and written insights in self-contained HTML or printable PDF.
 
-**Recurring report** — save a verified report project once, then replay the same metrics, evidence recipes, layout, and theme on each new period’s data.
+**Recurring report**: save a verified report project once, then replay the same metrics, evidence recipes, layout, and theme on each new period’s data.
 
-**Presentation deck** — browser slides with keyboard navigation and fullscreen, plus direct 16:9 PDF export. No PowerPoint required.
+**Presentation deck**: browser slides with keyboard navigation and fullscreen, plus direct 16:9 PDF export. No PowerPoint required.
 
-**Article infographic** — paste in an article URL or Markdown file; get back a static visual summary you can drop into any document.
+**Article infographic**: paste in an article URL or Markdown file; get back a static visual summary you can drop into any document.
 
 HTML remains the default. Reports and decks can also be exported directly to PDF for printing and archival.
 
@@ -38,7 +38,7 @@ HTML remains the default. Reports and decks can also be exported directly to PDF
 
 ## Inspect and query your data
 
-Before rendering, you can understand your data locally — no upload, no backend. Three commands read files in-process:
+Before rendering, you can understand your data locally: no upload, no backend. Three commands read files in-process:
 
 ```bash
 miao-viz data profile ./sales.csv      # fields, types, distributions, correlations, quality
@@ -52,25 +52,43 @@ miao-viz data analyze ./sales.csv \     # evidence pack + chart catalog for grou
   --output /tmp/context.json
 ```
 
-- **`profile`** — reveals column types, roles, statistics (min/max/mean/median/stddev/skewness), outliers, correlations, data-quality issues, and auto-suggested chart shapes. `--summary` for a lightweight schema peek.
-- **`query`** — runs real aggregations (`sum`/`count`/`avg`/`min`/`max`) with filter, groupBy, orderby, and limit. Returns computed values **plus a generated SQL string** for traceability.
-- **`analyze`** — pre-computes a structured `context.json`: citable evidence IDs, derived metric candidates, a deterministic chart allowlist (with *blocked* charts and reasons), sample-size warnings, and prompt rules.
+- **`profile`**: reveals column types, roles, statistics (min/max/mean/median/stddev/skewness), outliers, correlations, data-quality issues, and auto-suggested chart shapes. `--summary` for a lightweight schema peek.
+- **`query`**: runs real aggregations (`sum`/`count`/`avg`/`min`/`max`) with filter, groupBy, orderby, and limit. Returns computed values **plus a generated SQL string** for traceability.
+- **`analyze`**: pre-computes a structured `context.json`: citable evidence IDs, derived metric candidates, a deterministic chart allowlist (with *blocked* charts and reasons), sample-size warnings, and prompt rules.
 
-Supported formats: **CSV, TSV, XLSX, JSON** — all read locally. Reports cite pre-computed evidence via `$evidence:` directives, so insights are grounded in real numbers, not invented ones.
+Supported formats: **CSV, TSV, XLSX, JSON**: all read locally. Reports cite pre-computed evidence via `$evidence:` directives, so insights are grounded in real numbers, not invented ones.
 
 ---
 
 ## Get started
 
-### Option A — Via AI agent (recommended)
+### Option A: Install the cross-host plugin (recommended)
 
-Ask your agent (Claude, Codex, or any agent with shell access):
+Download `miao-vision-plugin.zip` from
+[GitHub Releases](https://github.com/miaoshou-dev/miao-vision/releases). It is
+one bundle with one Skill and one CLI compatibility contract:
 
-```
-Read https://miaoshou.dev/SKILL.md and follow the instructions to install or upgrade miao-viz for your AI agent.
-```
+| Host | Installation |
+|---|---|
+| Codex | Install `miao-vision-plugin.zip` through the Codex plugin surface |
+| Claude Code | Add `miaoshou-dev/miao-vision` as a marketplace, then install `miao-vision@miao-vision` |
+| OpenClaw | Run `openclaw plugins install ./miao-vision-plugin.zip`, then enable `miao-vision` |
 
-The agent installs the CLI and skill in one shot, then you can immediately ask it to analyze your data and generate reports. No manual steps.
+OpenClaw reads the bundle through its Codex-compatible layout. It does not
+require a separate native OpenClaw plugin.
+
+On first use, Miao Vision checks these locations in order:
+
+1. `$MIAO_VISION_HOME/bin/miao-viz`, when `MIAO_VISION_HOME` is set
+2. `~/.miao-vision/bin/miao-viz`
+3. A compatible `miao-viz` already on `PATH`
+
+If none is compatible, the plugin asks permission to download the matching,
+checksum-verified CLI release. Data stays local. Plugin upgrades and uninstalls
+do not remove the shared CLI or generated artifacts. Delete
+`~/.miao-vision` separately only when you want to remove the shared CLI.
+Browser dependencies for PDF export remain optional and are not bundled with
+the plugin.
 
 Once installed, just describe what you want:
 
@@ -82,31 +100,34 @@ Once installed, just describe what you want:
 | "turn this into a deck for Monday's meeting" | Browser slide deck |
 | "make an infographic from this article" | Static infographic HTML |
 
-**Manual install** — install the skill for your agent:
+**Lightweight compatibility install:** install only the Skill:
 
 ```bash
 # Global install: choose the agent explicitly
 npx skills add miaoshou-dev/miao-vision -g -a codex -y
 # or: npx skills add miaoshou-dev/miao-vision -g -a claude-code -y
 
-# Or from GitHub Releases ZIP
+# Or use the compatibility ZIP from GitHub Releases
 # Download miao-vision-skill.zip from https://github.com/miaoshou-dev/miao-vision/releases
-npm install -g @miao-vision/cli
 mkdir -p ~/.claude/skills
 unzip miao-vision-skill.zip -d ~/.claude/skills/
 ```
 
+The standalone Skill ZIP remains available for one compatibility cycle. It
+uses the same shared CLI directory and does not install a private executable
+inside the Skill.
+
 ---
 
-### Option B — Manual install
+### Option B: Install only the CLI
 
-**Step 1 — Install the CLI**
+**Step 1: Install the CLI**
 
 ```bash
 npm install -g @miao-vision/cli
 ```
 
-**Step 2 — Run on your data**
+**Step 2: Run on your data**
 
 ```bash
 miao-viz data profile ./sales.csv
@@ -118,7 +139,7 @@ open ./output/report.html
 
 ## Built for AI agents
 
-Most tools treat AI as an afterthought. Miao Vision is designed from the ground up as a visualization backend that AI agents can drive reliably. Every command returns structured, machine-readable output. The spec format is compact by design — agents write a few dozen lines of YAML, not hundreds of lines of chart code.
+Most tools treat AI as an afterthought. Miao Vision is designed from the ground up as a visualization backend that AI agents can drive reliably. Every command returns structured, machine-readable output. The spec format is compact by design: agents write a few dozen lines of YAML, not hundreds of lines of chart code.
 
 ### The problem with naive AI visualization
 
@@ -133,7 +154,7 @@ The result wastes tokens, requires manual review, and still fails on complex dat
 
 ### How Miao Vision solves this
 
-A four-step pipeline that constrains the agent to what it's good at — reasoning — and delegates everything else to the CLI:
+A four-step pipeline that constrains the agent to what it's good at: reasoning: and delegates everything else to the CLI:
 
 ```
 1. Analyze    miao-viz data analyze   → CLI inspects data, pre-computes summaries and evidence
@@ -148,7 +169,7 @@ The agent never generates chart code. It writes a spec. The CLI renders it.
 
 #### 1. Fewer tokens
 
-The `analyze` command pre-computes everything the agent needs — field roles, grouped aggregates, time periods, ranked results — as a structured JSON briefing. The agent reads the briefing and writes the spec. It doesn't spend tokens exploring the data:
+The `analyze` command pre-computes everything the agent needs: field roles, grouped aggregates, time periods, ranked results: as a structured JSON briefing. The agent reads the briefing and writes the spec. It doesn't spend tokens exploring the data:
 
 ```bash
 miao-viz data analyze ./sales.csv \
@@ -156,7 +177,7 @@ miao-viz data analyze ./sales.csv \
   --output /tmp/context.json
 ```
 
-Output includes `fields[]`, `evidence[]`, `catalog`, and `promptRules[]` — a complete decision package, not raw rows to reason over.
+Output includes `fields[]`, `evidence[]`, `catalog`, and `promptRules[]`: a complete decision package, not raw rows to reason over.
 
 #### 2. More accurate output
 
@@ -166,16 +187,16 @@ Every insight in the spec uses `$evidence:` directives that bind to pre-computed
 
 ```yaml
 insights:
-  - "East contributed $evidence:by_region.rows[0].total — the largest region in this dataset."
+  - "East contributed $evidence:by_region.rows[0].total: the largest region in this dataset."
 ```
 
-The CLI resolves every `$evidence:` path during `spec validate`. If a path doesn't exist, the agent gets `EVIDENCE_PATH_NOT_FOUND` — a hard error — before any HTML is produced. Hallucinated statistics fail fast, not silently.
+The CLI resolves every `$evidence:` path during `spec validate`. If a path doesn't exist, the agent gets `EVIDENCE_PATH_NOT_FOUND`: a hard error: before any HTML is produced. Hallucinated statistics fail fast, not silently.
 
 `spec validate --verify` adds a second layer: it flags forbidden language (`trend`, `significant`, `strong correlation`) used without statistical backing, and catches missing caveats when sample sizes are small.
 
 #### 3. Machine-readable fixes
 
-When `validate` finds problems, it returns structured `patches[]` the agent can apply directly — no free-form error messages to interpret:
+When `validate` finds problems, it returns structured `patches[]` the agent can apply directly: no free-form error messages to interpret:
 
 ```json
 {
@@ -194,7 +215,7 @@ The agent applies the patch, re-validates, and renders. No human intervention re
 
 | | |
 |---|---|
-| **AI-native pipeline** | Every CLI command returns structured JSON. Agents read briefings, not raw data. Specs are compact YAML — never raw chart code. |
+| **AI-native pipeline** | Every CLI command returns structured JSON. Agents read briefings, not raw data. Specs are compact YAML: never raw chart code. |
 | **Evidence-grounded output** | Insights cite pre-computed evidence via `$evidence:` directives. Every path is validated before rendering. Hallucinated statistics fail fast. |
 | **Machine-readable fixes** | `spec validate --patch-hints` returns `patches[]` the agent applies directly. No retry loops, no free-form error parsing. |
 | **Your data stays local** | Nothing leaves your machine. No upload, no API call with your data. |
@@ -221,7 +242,7 @@ miao-viz data profile ./sales.csv
 miao-viz render report --input ./sales.csv --spec ./sales-dashboard.yaml --output ./report.html
 ```
 
-You get: KPI cards, bar charts, trend lines, and data tables — styled and ready to share.
+You get: KPI cards, bar charts, trend lines, and data tables: styled and ready to share.
 
 ---
 
@@ -255,7 +276,7 @@ You get: immutable run history, stable Evidence IDs and Spec hashes, data-contra
 
 ### 3. Presentation deck
 
-You have data and you need slides for a meeting — not a chart dump, but an actual narrative deck.
+You have data and you need slides for a meeting: not a chart dump, but an actual narrative deck.
 
 Ask your AI agent:
 ```
@@ -274,7 +295,7 @@ You get: a browser-based slide deck with cover, metrics, charts, and an ending s
 
 ### 4. Article infographic
 
-You have an article URL or a Markdown file and you want a visual summary — not just a wall of text.
+You have an article URL or a Markdown file and you want a visual summary: not just a wall of text.
 
 Ask your AI agent:
 ```
@@ -439,7 +460,7 @@ Supported layouts: `cover`, `title-only`, `text-points`, `text-chart`, `metrics-
 
 Commands are organized into four groups:
 
-### data — Inspect and query data files
+### data: Inspect and query data files
 
 | Command | What it does |
 |---|---|
@@ -447,7 +468,7 @@ Commands are organized into four groups:
 | `miao-viz data query <file>` | Run ad-hoc aggregation queries |
 | `miao-viz data analyze <file>` | Pre-compute evidence pack and catalog for agent consumption |
 
-### spec — Author, validate, and debug specs
+### spec: Author, validate, and debug specs
 
 | Command | What it does |
 |---|---|
@@ -457,7 +478,7 @@ Commands are organized into four groups:
 | `miao-viz spec template` | List, inspect, or instantiate report templates |
 | `miao-viz spec inspect` | Debug chart transform pipelines and evidence usage |
 
-### report — Reuse verified reports
+### report: Reuse verified reports
 
 | Command | What it does |
 |---|---|
@@ -467,7 +488,7 @@ Commands are organized into four groups:
 | `miao-viz report history` | List prior runs |
 | `miao-viz report clean` | Preview or remove old runs while protecting the latest run |
 
-### render — Generate artifacts
+### render: Generate artifacts
 
 | Command | What it does |
 |---|---|
@@ -498,7 +519,9 @@ npm run check        # TypeScript and Svelte diagnostics
 npm run test         # Run unit tests
 ```
 
-The web app is a preview and debugging surface. The main product path is the CLI, optionally driven by an agent skill.
+The web app is a preview and distribution surface. The main product path is the
+cross-host plugin backed by the deterministic `miao-viz` CLI. The standalone
+CLI remains available for scripts, CI, and direct use.
 
 ---
 

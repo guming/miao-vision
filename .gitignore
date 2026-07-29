@@ -41,6 +41,6 @@ test-results/
 
 videos/
 
-# Skill-private CLI downloaded on first use
+# Legacy skill-private CLI downloaded by versions before 0.2.0
 skills/miao-vision/bin/miao-viz
 skills/miao-vision/bin/miao-viz.exe

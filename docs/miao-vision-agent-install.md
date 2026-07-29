@@ -1,9 +1,9 @@
 # Miao Vision Agent Installation
 
-Miao Vision ships as two installable pieces:
+Miao Vision ships as a cross-host plugin backed by one local CLI:
 
 - `miao-viz` CLI: local data profiling, spec validation, and HTML rendering.
-- `miao-vision` skill: reusable instructions for Codex, Claude, and compatible Agent Skills environments.
+- `miao-vision` plugin: shared Skill and metadata for Codex, Claude Code, and OpenClaw.
 
 ## Requirements
 
@@ -11,23 +11,14 @@ Miao Vision ships as two installable pieces:
 - npm
 - An agent environment that can run local shell commands for local-file workflows
 
-## Install CLI
+## Shared CLI
 
-```bash
-npm install -g @miao-vision/cli
-```
+The plugin resolves `$MIAO_VISION_HOME/bin/miao-viz`, then
+`~/.miao-vision/bin/miao-viz`, then `PATH`. With approval, its versioned
+installer downloads a checksum-verified CLI into the shared user directory.
+Global npm installation remains optional.
 
-Verify:
-
-```bash
-miao-viz spec catalog
-```
-
-Installing or updating the skill does not update this global npm executable.
-Run `npm install -g @miao-vision/cli@latest` whenever you want the `miao-viz`
-command on `PATH` upgraded as well.
-
-## Quick Install
+## Lightweight Skill Compatibility Install
 
 ```bash
 # Codex
@@ -40,6 +31,10 @@ npx skills add miaoshou-dev/miao-vision --global --agent claude-code --yes
 For another agent, pass its explicit `--agent` id only if it supports global
 skills. Otherwise omit `--global` and install at project scope. In particular,
 PromptScript does not support global skill installation.
+
+The main GitHub Release artifact is `miao-vision-plugin.zip`. See the install
+documents inside `skills/miao-vision/install/` for Codex, Claude Code, and
+OpenClaw commands.
 
 ## Install for Codex
 
@@ -94,9 +89,9 @@ miao-viz render report --input ~/data/sales.csv --spec /tmp/miao-vision/report.y
 
 ## Common Errors
 
-### `miao-viz: command not found`
+### No compatible `miao-viz` found
 
-Install the CLI:
+Approve the plugin's platform installer, or install the CLI globally:
 
 ```bash
 npm install -g @miao-vision/cli

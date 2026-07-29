@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { mkdirSync, rmSync, cpSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { relative, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
 const repoRoot = resolve(import.meta.dirname, '..')
@@ -13,7 +13,15 @@ const zipPath = resolve(distRoot, 'miao-vision-skill.zip')
 mkdirSync(distRoot, { recursive: true })
 rmSync(distSkill, { recursive: true, force: true })
 rmSync(zipPath, { force: true })
-cpSync(source, distSkill, { recursive: true })
+cpSync(source, distSkill, {
+  recursive: true,
+  filter: (path) => {
+    const child = relative(source, path)
+    return child !== 'bin' &&
+      !child.startsWith(`bin${process.platform === 'win32' ? '\\' : '/'}`) &&
+      !child.endsWith('.test.mjs')
+  }
+})
 
 const zip = spawnSync('zip', ['-qr', zipPath, 'miao-vision-skill'], {
   cwd: distRoot,

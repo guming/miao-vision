@@ -1,28 +1,33 @@
-# Install Miao Vision Skill for Codex
+# Install Miao Vision Plugin for Codex
 
-## 1. Quick Install (Recommended)
+## 1. Install the plugin (recommended)
+
+Install `miao-vision-plugin.zip` using the Codex plugin installation surface,
+or load the repository root as a local plugin during development.
+
+The standalone Skill remains available as a temporary compatibility channel:
 
 ```bash
 npx skills add miaoshou-dev/miao-vision --global --agent codex --yes
 ```
 
-## 2. Local Checkout Install
+## 2. Shared CLI
 
-```bash
-mkdir -p ~/.codex/skills
-cp -R skills/miao-vision ~/.codex/skills/miao-vision
-```
+On first use, Miao Vision checks `MIAO_VISION_HOME`, then
+`~/.miao-vision/bin/miao-viz`, then `PATH`. If none is compatible, approve the
+request to download the matching release binary into the shared user directory.
+Uninstalling or upgrading the plugin does not remove the CLI.
 
-## 3. Install the private CLI
-
-On first use, the skill reuses an existing global `miao-viz` when available. Otherwise, approve its request to download and verify the matching release binary into `bin/miao-viz`. A global npm installation is optional and is not duplicated.
-
-## 4. Restart Codex
+## 3. Restart Codex
 
 Restart Codex or open a new thread.
 
-## 5. Use
+## 4. Use
 
 ```text
 Use miao-vision to analyze ~/data/sales.csv and generate an HTML visualization report.
 ```
+
+Data remains local. PDF browser dependencies are installed separately only
+when requested. Fully removing the shared CLI requires deleting
+`~/.miao-vision`.

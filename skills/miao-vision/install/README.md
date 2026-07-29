@@ -1,18 +1,23 @@
-# Miao Vision Skill Installation
+# Miao Vision Plugin Installation
 
-Install the skill for your agent:
+The cross-host plugin bundle is the recommended installation. It contains the
+same source skill for Codex, Claude Code, and OpenClaw:
 
-- **Codex (global):** `npx skills add miaoshou-dev/miao-vision -g -a codex -y`
-- **Claude Code (global):** `npx skills add miaoshou-dev/miao-vision -g -a claude-code -y`
-- **Other agents:** use `-a <agent-id>` only when that agent supports global skills; otherwise omit `-g` for a project install.
-
-`npx skills add` does not update a globally installed npm CLI. Upgrade that
-separately with `npm install -g @miao-vision/cli@latest`, or let the skill install
-its matching private CLI on first use.
 - Codex: see `codex.md`
-- Claude: see `claude.md`
+- Claude Code: see `claude.md`
+- OpenClaw: see `openclaw.md`
 
-On first use, the skill prefers its private `bin/miao-viz`, then reuses a global `miao-viz` on `PATH`. Only when neither exists does it ask to download a checksum-verified private binary. A global npm installation is optional and is not duplicated.
+The standalone Skill ZIP remains a lightweight compatibility channel for one
+release cycle.
+
+On first use, the plugin resolves the CLI from `MIAO_VISION_HOME` when set,
+then `~/.miao-vision/bin/miao-viz`, then `PATH`. Only when no compatible CLI
+exists does it ask permission to download the versioned, checksum-verified
+binary. Plugin upgrades and uninstalls do not remove this shared CLI.
+
+All source data stays local. PDF browser dependencies are optional and are not
+downloaded with the plugin. To remove the shared CLI explicitly, delete
+`~/.miao-vision`; plugin uninstall intentionally leaves it intact.
 
 ## Try It
 

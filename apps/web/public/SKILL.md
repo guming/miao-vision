@@ -34,11 +34,11 @@ Do not use this skill for text-only work, raster-image generation, native `.pptx
 
 ## CLI
 
-Resolve the executable only after selecting a workflow. Prefer `bin/miao-viz`; otherwise reuse a compatible `miao-viz` on `PATH`. Run `scripts/check-miao-viz.mjs` only when the executable or required capability is unavailable. If installation is required, request approval before running the platform installer in `scripts/`, then verify:
+Resolve the executable only after selecting a workflow. Prefer `$MIAO_VISION_HOME/bin/miao-viz` when `MIAO_VISION_HOME` is set, then `~/.miao-vision/bin/miao-viz`, then a compatible `miao-viz` on `PATH`. A skill-local `bin/miao-viz` is a temporary legacy fallback only. Run `scripts/check-miao-viz.mjs --print-path` to resolve and lock the executable for the task. If installation is required, request approval before running the platform installer in `scripts/`, then verify the returned absolute path:
 
 ```bash
-./bin/miao-viz --version
-./bin/miao-viz spec catalog
+~/.miao-vision/bin/miao-viz --version
+~/.miao-vision/bin/miao-viz spec catalog
 ```
 
 Use the same executable throughout the task. In workflow examples, `miao-viz` means that resolved executable.
