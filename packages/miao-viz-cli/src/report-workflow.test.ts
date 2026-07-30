@@ -90,10 +90,21 @@ describe('report workflow smoke', () => {
     expect(existsSync(join(project, 'runs', '2026-W29', 'evidence.json'))).toBe(true)
     expect(existsSync(join(project, 'runs', '2026-W29', 'changes.json'))).toBe(true)
     expect(readFileSync(join(project, 'runs', '2026-W29', 'report.html'), 'utf8')).toContain('Period changes')
-    const history = runCli(['report', 'history', project]) as { value: Array<{ specHash: string; evidencePlanHash: string }> }
+    const history = runCli(['report', 'history', project]) as {
+      value: Array<{
+        specHash: string
+        evidencePlanHash: string
+        lineageHash?: string
+        coverage?: { objectCoverage: number; claimCheckCoverage: number }
+      }>
+    }
     expect(history.value).toHaveLength(2)
     expect(new Set(history.value.map(run => run.specHash)).size).toBe(1)
     expect(new Set(history.value.map(run => run.evidencePlanHash)).size).toBe(1)
+    expect(history.value.every(run => Boolean(run.lineageHash))).toBe(true)
+    expect(history.value.every(run =>
+      run.coverage?.objectCoverage === 1 && run.coverage.claimCheckCoverage === 1
+    )).toBe(true)
     expect(runCli(['report', 'info', project])).toMatchObject({ ok: true, value: { evidenceCount: 3 } })
     expect(runCli(['report', 'clean', project, '--keep', '1'])).toMatchObject({ ok: true, value: { dryRun: true } })
     expect(existsSync(join(project, 'runs', '2026-W28'))).toBe(true)

@@ -38,6 +38,13 @@ const runManifestBaseSchema = z.object({
   specHash: z.string(),
   evidencePlanHash: z.string(),
   evidenceResultHash: z.string().optional(),
+  lineageHash: z.string().optional(),
+  coverage: z.object({
+    objectCoverage: z.number(),
+    claimCheckCoverage: z.number(),
+    eligibleObjects: z.number().int().nonnegative(),
+    coveredObjects: z.number().int().nonnegative()
+  }).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   artifacts: z.record(z.string(), z.string()).default({}),

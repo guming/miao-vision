@@ -71,12 +71,33 @@ const chartInteractionSchema = z.object({
   select: z.enum(['filter', 'detail']).optional()
 })
 
+const insightTypeSchema = z.enum(['total', 'rank', 'share', 'trend', 'delta', 'correlation', 'distribution', 'data_quality'])
+const insightCheckSchema = z.enum(['evidence_ref_exists', 'value_match', 'rank_position', 'delta_formula', 'trend_periods', 'share_formula', 'benchmark_present', 'sample_size', 'caveat_present'])
+const insightClaimArgsSchema = z.object({
+  expected: z.union([z.string(), z.number()]).optional(), value: z.string().optional(), rows: z.string().optional(), series: z.string().optional(),
+  subjectField: z.string().optional(), valueField: z.string().optional(), subject: z.string().optional(), expectedRank: z.number().int().positive().optional(),
+  order: z.enum(['asc', 'desc']).optional(), from: z.string().optional(), to: z.string().optional(), mode: z.enum(['absolute', 'percent', 'percentage-point']).optional(),
+  minimumPeriods: z.number().int().positive().optional(), direction: z.enum(['up', 'down', 'flat']).optional(), numerator: z.string().optional(), denominator: z.string().optional(),
+  benchmark: z.string().optional(), tolerance: z.number().positive().optional()
+}).strict()
+const provenanceDetailSchema = z.object({
+  evidence: z.array(z.string().min(1)).optional(),
+  derivedFrom: z.array(z.string().min(1)).optional(),
+  check: insightCheckSchema.optional(),
+  claimArgs: insightClaimArgsSchema.optional(),
+  exemption: z.enum(['decorative', 'methodology']).optional()
+}).strict()
+export const provenanceSchema = z.union([
+  z.string().regex(/^\$evidence:[A-Za-z0-9_-]+\..+$/, 'Provenance shorthand must be one complete $evidence:<id>.<path> reference.'),
+  provenanceDetailSchema
+])
+
 const referenceValueSchema = z.union([z.number(), z.string().min(1)])
 const referenceLayerSchema = z.object({
   id: z.string().min(1).optional(), type: z.enum(['line', 'band']), axis: z.enum(['x', 'y']),
   value: referenceValueSchema.optional(), from: referenceValueSchema.optional(), to: referenceValueSchema.optional(),
   field: z.string().min(1).optional(), aggregate: z.enum(['sum', 'avg', 'count', 'min', 'max']).optional(),
-  label: z.string().optional(), evidence: z.string().min(1).optional()
+  label: z.string().optional(), evidence: z.string().min(1).optional(), provenance: provenanceSchema.optional()
 }).strict()
 
 const annotationSelectorSchema = z.union([
@@ -89,7 +110,7 @@ const annotationSelectorSchema = z.union([
 
 const chartAnnotationSchema = z.object({
   type: z.enum(['point', 'rule']), selector: annotationSelectorSchema, text: z.string().min(1),
-  evidence: z.string().min(1).optional(), priority: z.number().optional()
+  evidence: z.string().min(1).optional(), priority: z.number().optional(), provenance: provenanceSchema.optional()
 }).strict()
 
 const facetSchema = z.object({
@@ -112,16 +133,6 @@ const qualitySchema = z.object({
   lowSampleThreshold: z.number().nonnegative().optional(), missingRateThreshold: z.number().min(0).max(1).optional()
 }).strict()
 
-const insightTypeSchema = z.enum(['total', 'rank', 'share', 'trend', 'delta', 'correlation', 'distribution', 'data_quality'])
-const insightCheckSchema = z.enum(['evidence_ref_exists', 'value_match', 'rank_position', 'delta_formula', 'trend_periods', 'share_formula', 'benchmark_present', 'sample_size', 'caveat_present'])
-const insightClaimArgsSchema = z.object({
-  expected: z.union([z.string(), z.number()]).optional(), value: z.string().optional(), rows: z.string().optional(), series: z.string().optional(),
-  subjectField: z.string().optional(), valueField: z.string().optional(), subject: z.string().optional(), expectedRank: z.number().int().positive().optional(),
-  order: z.enum(['asc', 'desc']).optional(), from: z.string().optional(), to: z.string().optional(), mode: z.enum(['absolute', 'percent', 'percentage-point']).optional(),
-  minimumPeriods: z.number().int().positive().optional(), direction: z.enum(['up', 'down', 'flat']).optional(), numerator: z.string().optional(), denominator: z.string().optional(),
-  benchmark: z.string().optional(), tolerance: z.number().positive().optional()
-})
-
 const insightSchema = z.union([
   z.string(),
   z.object({
@@ -132,7 +143,8 @@ const insightSchema = z.union([
     check: insightCheckSchema.optional(),
     claimArgs: insightClaimArgsSchema.optional(),
     caveat: z.string().optional(),
-    severity: z.enum(['info', 'warning']).optional()
+    severity: z.enum(['info', 'warning']).optional(),
+    provenance: provenanceSchema.optional()
   })
 ])
 
@@ -187,7 +199,8 @@ export const chartSpecSchema: z.ZodType<AgentChartSpec> = z.object({
   colorScale: colorScaleSchema.optional(),
   placement: placementSchema.optional(),
   quality: qualitySchema.optional(),
-  style: chartStyleSchema.optional()
+  style: chartStyleSchema.optional(),
+  provenance: provenanceSchema.optional()
 }).strict()
 
 export const reportSpecSchema: z.ZodType<AgentReportSpec> = z.object({

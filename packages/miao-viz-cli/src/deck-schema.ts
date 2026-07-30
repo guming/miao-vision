@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { chartSpecSchema, globalFilterSchema } from './spec-schema'
+import { chartSpecSchema, globalFilterSchema, provenanceSchema } from './spec-schema'
 import type { DeckSpec, SlideMetric, SlideSpec } from './deck-types'
 
 const SLIDE_LAYOUTS = [
@@ -66,7 +66,8 @@ const slideMetricSchema: z.ZodType<SlideMetric> = z.object({
   format: z.string().optional(),
   data: z.object({
     transform: z.array(metricTransformSchema).optional()
-  }).optional()
+  }).optional(),
+  provenance: provenanceSchema.optional()
 })
 
 const slideSpecSchema: z.ZodType<SlideSpec> = z.object({

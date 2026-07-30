@@ -61,6 +61,12 @@ Default to `magazine` when the user has no theme preference. Supported themes ar
 
 Use factual claims only when they declare `claimType`, `evidence`, `derivedFrom`, and `check`. Descriptive, ranking, delta, trend, share, comparative, and evaluative claims need structured grounding. Evaluative claims also require a benchmark, target, baseline, or historical comparison.
 
+Every chart and KPI metric also needs `provenance`. KPI metrics require an exact
+single-value path plus `value_match`; ordinary charts require evidence ids and the
+chart-ready `rows` path but no claim check unless the title makes a ranking, trend,
+share, or change claim. Strict validation requires both provenance coverage values
+to equal `1`.
+
 Block causal and predictive claims. An `analytical-next-step` may propose more analysis; an `operational-recommendation` requires evidence, derived paths, and a caveat. Do not generate strategic decisions, budget commitments, staffing actions, or deterministic forecasts from descriptive data.
 
 Required slide roles:

@@ -21,12 +21,14 @@ export function parseEvidenceRefs(text: string): EvidenceRef[] {
 }
 
 function getNestedValue(obj: unknown, path: string): unknown {
-  const parts = path.replace(/\[(\d+|last)\]/g, '.$1').split('.').filter(Boolean)
+  const parts = path.replace(/\[(\d+|last|penultimate)\]/g, '.$1').split('.').filter(Boolean)
   let cur: unknown = obj
   for (const part of parts) {
     if (cur === null || cur === undefined) return undefined
     if (Array.isArray(cur) && part === 'last') {
       cur = cur[cur.length - 1]
+    } else if (Array.isArray(cur) && part === 'penultimate') {
+      cur = cur[cur.length - 2]
     } else {
       cur = (cur as Record<string, unknown>)[part]
     }

@@ -87,8 +87,18 @@ function instantiateSlide(id: DeckSlideBlockKnowledge['id'], context: AnalyzeCon
   if (id === 'cover-claim') return buildCover(context, measureKey)
   if (id === 'kpi-snapshot' && measure) return {
     layout: 'metrics-chart', slideRole: id, eyebrow: 'Snapshot', title: 'Current scale',
-    metrics: [{ label: measure.name, data: { transform: [{ type: 'aggregate', measures: [{ field: measure.name, op: 'sum', as: measureKey }] }] }, format: ',.2f' }],
-    charts: dimension ? [rankingChart(dimension.name, measure.name, measureKey)] : time ? [trendChart(time.name, measure.name, measureKey)] : [{ id: 'summary', type: 'bigvalue', data: { transform: [{ type: 'aggregate', measures: [{ field: measure.name, op: 'sum', as: measureKey }] }] }, encoding: { value: { field: measureKey } } }]
+    metrics: [{
+      label: measure.name,
+      data: { transform: [{ type: 'aggregate', measures: [{ field: measure.name, op: 'sum', as: measureKey }] }] },
+      format: ',.2f',
+      provenance: kpiProvenance(measureKey)
+    }],
+    charts: dimension ? [rankingChart(dimension.name, measure.name, measureKey)] : time ? [trendChart(time.name, measure.name, measureKey)] : [{
+      id: 'summary', type: 'bigvalue',
+      data: { transform: [{ type: 'aggregate', measures: [{ field: measure.name, op: 'sum', as: measureKey }] }] },
+      encoding: { value: { field: measureKey } },
+      provenance: kpiProvenance(measureKey)
+    }]
   }
   if (id === 'trend-overview-slide' && measure && time) {
     const evidence = evidenceById(context.evidence, 'by_time')
@@ -122,11 +132,16 @@ function buildCover(context: AnalyzeContext, measureKey: string): SlideSpec {
 }
 
 function rankingChart(dimension: string, measure: string, measureKey: string) {
-  return { id: 'ranking', type: 'bar' as const, title: `${measure} by ${dimension}`, data: { transform: [{ type: 'aggregate' as const, groupBy: [dimension], measures: [{ field: measure, op: 'sum' as const, as: measureKey }] }, { type: 'sort' as const, field: measureKey, order: 'desc' as const }, { type: 'limit' as const, value: 10 }] }, encoding: { x: { field: dimension }, y: { field: measureKey } }, interaction: { tooltip: true } }
+  return { id: 'ranking', type: 'bar' as const, title: `${measure} by ${dimension}`, data: { transform: [{ type: 'aggregate' as const, groupBy: [dimension], measures: [{ field: measure, op: 'sum' as const, as: measureKey }] }, { type: 'sort' as const, field: measureKey, order: 'desc' as const }, { type: 'limit' as const, value: 10 }] }, encoding: { x: { field: dimension }, y: { field: measureKey } }, interaction: { tooltip: true }, provenance: { evidence: ['by_dimension'], derivedFrom: ['$evidence:by_dimension.rows'] } }
 }
 
 function trendChart(time: string, measure: string, measureKey: string) {
-  return { id: 'trend', type: 'line' as const, title: `${measure} over ${time}`, data: { transform: [{ type: 'aggregate' as const, groupBy: [time], measures: [{ field: measure, op: 'sum' as const, as: measureKey }] }, { type: 'sort' as const, field: time, order: 'asc' as const }] }, encoding: { x: { field: time }, y: { field: measureKey } }, interaction: { tooltip: true } }
+  return { id: 'trend', type: 'line' as const, title: `${measure} over ${time}`, data: { transform: [{ type: 'aggregate' as const, groupBy: [time], measures: [{ field: measure, op: 'sum' as const, as: measureKey }] }, { type: 'sort' as const, field: time, order: 'asc' as const }] }, encoding: { x: { field: time }, y: { field: measureKey } }, interaction: { tooltip: true }, provenance: { evidence: ['by_time'], derivedFrom: ['$evidence:by_time.rows'] } }
+}
+
+function kpiProvenance(measureKey: string) {
+  const value = `$evidence:total.values.${measureKey}`
+  return { evidence: ['total'], derivedFrom: [value], check: 'value_match' as const, claimArgs: { value, expected: value } }
 }
 
 function evidenceById(evidence: AnalyzeEvidence[], id: string): AnalyzeEvidence | undefined { return evidence.find(item => item.id === id) }

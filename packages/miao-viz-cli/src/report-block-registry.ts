@@ -2,6 +2,7 @@ import type { AnalyzeContext, AnalyzeField, CatalogBlockEntry, MetricCandidate }
 import type { AgentChartSpec, AgentInsight } from './types'
 import { insightTotal, insightTrend, insightTopN, insightPeriodChange } from './block-insight-generator'
 import { buildKpiChart, buildBarChart, buildLineChart, buildPieChart, buildTableChart } from './block-chart-builders'
+import { blockProvenanceRecipes, type BlockProvenanceRecipe } from './report-block-provenance'
 
 // Subset of AnalyzeContext available when block matching runs (catalog is being built)
 export interface BlockMatchContext {
@@ -41,6 +42,7 @@ export interface ReportBlockResolver {
   requiredEvidence: string[]
   validInsightTypes: string[]
   dataQualityConstraints: string[]
+  provenanceRecipes: BlockProvenanceRecipe[]
 
   canUse(ctx: BlockMatchContext): BlockDecision
   defaultVariables(ctx: BlockMatchContext): Record<string, unknown>
@@ -95,6 +97,7 @@ const kpiSummary: ReportBlockResolver = {
   requiredEvidence: ['total'],
   validInsightTypes: ['total', 'delta'],
   dataQualityConstraints: ['measure field must not be an identifier'],
+  provenanceRecipes: blockProvenanceRecipes('kpi-summary'),
 
   canUse(ctx) {
     const measures = ctx.fields.filter(f => f.role === 'measure' || f.role === 'score')
@@ -142,6 +145,7 @@ const snapshotRanking: ReportBlockResolver = {
   requiredEvidence: ['total', 'by_dimension'],
   validInsightTypes: ['total', 'rank', 'share'],
   dataQualityConstraints: ['dimension should stay within top-N readability limits'],
+  provenanceRecipes: blockProvenanceRecipes('snapshot-ranking'),
 
   canUse(ctx) {
     const measures = ctx.fields.filter(f => f.role === 'measure' || f.role === 'score')
@@ -193,6 +197,7 @@ const trendOverview: ReportBlockResolver = {
   requiredEvidence: ['total', 'by_time'],
   validInsightTypes: ['total', 'trend', 'delta'],
   dataQualityConstraints: ['requires at least 3 time periods'],
+  provenanceRecipes: blockProvenanceRecipes('trend-overview'),
 
   canUse(ctx) {
     const measures = ctx.fields.filter(f => f.role === 'measure' || f.role === 'score')
@@ -249,6 +254,7 @@ const comparisonBreakdown: ReportBlockResolver = {
   requiredEvidence: ['total', 'by_dimension'],
   validInsightTypes: ['total', 'rank', 'share'],
   dataQualityConstraints: ['pie requires a small part-to-whole dimension'],
+  provenanceRecipes: blockProvenanceRecipes('comparison-breakdown'),
 
   canUse(ctx) {
     const measures = ctx.fields.filter(f => f.role === 'measure' || f.role === 'score')
@@ -306,6 +312,7 @@ const trendRanking: ReportBlockResolver = {
   requiredEvidence: ['total', 'by_time', 'by_dimension'],
   validInsightTypes: ['total', 'trend', 'delta', 'rank'],
   dataQualityConstraints: ['requires at least 3 time periods and readable dimension cardinality'],
+  provenanceRecipes: blockProvenanceRecipes('trend-ranking'),
 
   canUse(ctx) {
     const measures = ctx.fields.filter(f => f.role === 'measure' || f.role === 'score')
@@ -375,6 +382,7 @@ const fullDetailReport: ReportBlockResolver = {
   requiredEvidence: ['total', 'by_time', 'by_dimension'],
   validInsightTypes: ['total', 'trend', 'delta', 'rank', 'data_quality'],
   dataQualityConstraints: ['requires at least 3 time periods and a dimension for detail review'],
+  provenanceRecipes: blockProvenanceRecipes('full-detail-report'),
 
   canUse(ctx) {
     const measures = ctx.fields.filter(f => f.role === 'measure' || f.role === 'score')
@@ -468,6 +476,7 @@ export function toCatalogBlockEntry(
     qualityChecks: resolver.qualityChecks,
     requiredEvidence: resolver.requiredEvidence,
     validInsightTypes: resolver.validInsightTypes,
-    dataQualityConstraints: resolver.dataQualityConstraints
+    dataQualityConstraints: resolver.dataQualityConstraints,
+    provenanceRecipes: resolver.provenanceRecipes
   }
 }

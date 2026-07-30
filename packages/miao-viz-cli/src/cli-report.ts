@@ -23,6 +23,7 @@ import { mapInsightText } from './insight-utils'
 import { renderStaticHtml } from './html-export'
 import { exportHtmlToPdf } from './pdf-export'
 import { compareEvidence, injectChangesHtml, type EvidenceChangeSet } from './report-changes'
+import { validateProvenance } from './provenance-validator'
 import type { CliArgs } from './cli-utils'
 import type { AgentError, AgentReportSpec, LoadedDataset } from './types'
 
@@ -138,6 +139,17 @@ async function reportUpdate(args: CliArgs): Promise<unknown> {
   const context: AnalyzeContext = { ...previous, evidence }
   const normalized = normalizeSpec(YAML.parse(loaded.spec as string))
   if (isAgentError(normalized)) return fail(normalized)
+  const currentSpecHash = hashValue(normalized)
+  const currentPlanHash = hashValue(loaded.plan)
+  if (currentSpecHash !== loaded.project.specHash || currentPlanHash !== loaded.project.evidencePlanHash) {
+    return fail(agentError('REPORT_LINEAGE_CONTRACT_CHANGED', 'The saved report specification or evidence recipe changed after project initialization.', {
+      changes: {
+        spec: currentSpecHash !== loaded.project.specHash,
+        evidencePlan: currentPlanHash !== loaded.project.evidencePlanHash
+      },
+      repairHint: 'Create a new report project version so the metric and lineage change is explicit.'
+    }))
+  }
   const validation = verifySpec(normalized, dataset.value, context)
   if (isAgentError(validation)) return failedRun(loaded.root, loaded.project, dataset.value, input, period, validation)
   return createRun(loaded.root, loaded.project, dataset.value, context, validation, period, {
@@ -213,11 +225,22 @@ async function createRun(
   const now = new Date().toISOString()
   const inputHash = hashFile(options.inputPath)
   const changes = compareEvidence(options.baseline?.evidence ?? null, context.evidence, options.baseline?.runId ?? null)
+  const provenance = validateProvenance(spec, context)
   const manifest: RunManifest = {
     schemaVersion: 2, id: period, status: 'running',
     input: { path: resolve(options.inputPath), sha256: inputHash, ...(dataset.sheet ? { sheet: dataset.sheet } : {}) },
     projectVersion: project.projectVersion, inputHash, specHash: project.specHash,
     evidencePlanHash: project.evidencePlanHash, evidenceResultHash: hashValue(context.evidence),
+    lineageHash: hashValue({
+      charts: spec.charts.map(chart => chart.provenance),
+      insights: spec.insights?.map(insight => typeof insight === 'string' ? insight : insight.provenance)
+    }),
+    coverage: {
+      objectCoverage: provenance.coverage.objectCoverage,
+      claimCheckCoverage: provenance.coverage.claimCheckCoverage,
+      eligibleObjects: provenance.coverage.eligibleObjects,
+      coveredObjects: provenance.coverage.coveredObjects
+    },
     createdAt: now, updatedAt: now, artifacts: {},
     baselineRunId: changes.baselineRunId,
     changes: changeSummary(changes)
@@ -234,7 +257,9 @@ async function createRun(
   manifest.artifacts.evidence = 'evidence.json'
   manifest.artifacts.changes = 'changes.json'
   const theme = readPreferences(root).theme as Parameters<typeof renderStaticHtml>[3]
-  const html = injectChangesHtml(renderStaticHtml(spec, profileDataset(dataset), dataset.rows, theme, { enabled: true }), changes)
+  const html = injectChangesHtml(renderStaticHtml(spec, profileDataset(dataset), dataset.rows, theme, {
+    enabled: true, context, coverage: provenance.coverage
+  }), changes)
   if (options.formats.includes('html')) {
     writeOutput(join(runRoot, 'report.html'), html)
     manifest.artifacts.html = 'report.html'
@@ -260,7 +285,7 @@ async function createRun(
   return { ok: true, value: {
     project: root, runId: period, status: 'ready',
     artifacts: Object.fromEntries(Object.entries(manifest.artifacts).map(([key, value]) => [key, join(runRoot, value)])),
-    changes: manifest.changes, warnings: []
+    changes: 'changes' in manifest ? manifest.changes : undefined, warnings: []
   } }
 }
 
@@ -285,7 +310,8 @@ function verifySpec(spec: AgentReportSpec, dataset: LoadedDataset, context: Anal
   if (isAgentError(result)) return result
   const evidence = validateEvidencePaths(result.value, context)
   if (isAgentError(evidence)) return evidence
-  const strict = strictVerifyError(collectVerifyIssues(result.value, context))
+  const provenance = validateProvenance(result.value, context)
+  const strict = strictVerifyError([...collectVerifyIssues(result.value, context), ...provenance.issues])
   if (isAgentError(strict)) return strict
   if (result.value.insights) {
     result.value.insights = result.value.insights.map(insight =>

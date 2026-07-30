@@ -188,6 +188,7 @@ export interface AgentReferenceLayer {
   aggregate?: 'sum' | 'avg' | 'count' | 'min' | 'max'
   label?: string
   evidence?: string
+  provenance?: AgentProvenance
 }
 
 export type AgentAnnotationSelector =
@@ -203,6 +204,7 @@ export interface AgentChartAnnotation {
   text: string
   evidence?: string
   priority?: number
+  provenance?: AgentProvenance
 }
 
 export interface AgentFacetSpec {
@@ -267,6 +269,17 @@ export interface AgentReportInteractions {
 
 export type AgentInsightType = 'total' | 'rank' | 'share' | 'trend' | 'delta' | 'correlation' | 'distribution' | 'data_quality'
 export type AgentInsightCheck = 'evidence_ref_exists' | 'value_match' | 'rank_position' | 'delta_formula' | 'trend_periods' | 'share_formula' | 'benchmark_present' | 'sample_size' | 'caveat_present'
+export type AgentProvenanceExemption = 'decorative' | 'methodology'
+
+export interface AgentProvenanceDetail {
+  evidence?: string[]
+  derivedFrom?: string[]
+  check?: AgentInsightCheck
+  claimArgs?: DeckClaimArgs
+  exemption?: AgentProvenanceExemption
+}
+
+export type AgentProvenance = string | AgentProvenanceDetail
 
 export type AgentInsight =
   | string
@@ -279,6 +292,7 @@ export type AgentInsight =
       claimArgs?: DeckClaimArgs
       caveat?: string
       severity?: 'info' | 'warning'
+      provenance?: AgentProvenance
     }
 
 export interface AgentChartStyle {
@@ -330,6 +344,7 @@ export interface AgentChartSpec {
   placement?: AgentChartPlacement
   quality?: AgentQualityEncoding
   style?: AgentChartStyle
+  provenance?: AgentProvenance
 }
 
 export interface AgentReportSpec {

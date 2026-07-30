@@ -2,8 +2,16 @@ import { renderChartSvg, escapeHtml } from './svg-renderer'
 import { getTheme } from './themes/index'
 import { renderInteractiveAssets, shouldEnableInteractiveRuntime, type InteractiveHtmlOptions } from './interactive-runtime'
 import { normalizeInsights } from './insight-utils'
+import { buildEvidenceViewModel, type EvidenceViewModel } from './evidence-view-model'
+import type { AnalyzeContext } from './context-schema'
+import type { ProvenanceCoverage } from './provenance-validator'
 import type { ThemeName, ReportTheme } from './themes/types'
 import type { AgentChartSpec, AgentInsight, AgentReportSpec, DataProfile } from './types'
+
+export interface ReportHtmlOptions extends InteractiveHtmlOptions {
+  context?: AnalyzeContext
+  coverage?: ProvenanceCoverage
+}
 
 const INSIGHTS_CSS = `
   .report-insights { margin: 0 0 32px; padding: 16px 20px 14px; border-radius: 4px; border: 1px solid rgba(128,128,128,0.18); background: rgba(128,128,128,0.04); }
@@ -26,8 +34,26 @@ const INSIGHTS_CSS = `
   .report-grid > .chart-block { margin: 0; grid-column: span var(--mv-span, 12); }
   .report-grid > .emphasis-primary { border-top: 3px solid var(--mv-brand, #2563eb); }
   .data-quality-badge { display: inline-block; margin: 0 0 8px; padding: 3px 8px; border: 1px solid #c2410c; border-radius: 999px; color: #9a3412; background: #fff7ed; font-size: 10px; font-weight: 700; }
+  .evidence-trigger { margin: 6px 0 0; border: 0; background: transparent; color: var(--mv-brand, #2563eb); font: inherit; font-size: 11px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+  .evidence-status { margin: 0 0 18px; padding: 9px 12px; border-left: 3px solid #b45309; background: #fffbeb; font-size: 12px; }
+  .evidence-drawer[hidden] { display: none; }
+  .evidence-drawer { position: fixed; inset: 0; z-index: 999; display: flex; justify-content: flex-end; background: rgba(15,23,42,.38); }
+  .evidence-panel { width: min(520px, 100%); height: 100%; overflow: auto; padding: 24px; background: var(--mv-surface, #fff); color: inherit; box-shadow: -12px 0 32px rgba(15,23,42,.18); }
+  .evidence-panel-header { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+  .evidence-close { border: 1px solid rgba(128,128,128,.3); border-radius: 4px; padding: 6px 10px; background: transparent; color: inherit; cursor: pointer; }
+  .evidence-meta { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
+  .evidence-meta dt { opacity: .55; }
+  .evidence-meta dd { margin: 0; overflow-wrap: anywhere; }
+  .evidence-summary { margin: 18px 0; padding: 14px 16px; border-left: 3px solid var(--mv-brand, #2563eb); background: rgba(37,99,235,.06); }
+  .evidence-summary p { margin: 5px 0; line-height: 1.45; }
+  .evidence-verified { font-weight: 650; color: #166534; }
+  .evidence-technical { margin-top: 18px; font-size: 12px; }
+  .evidence-technical summary { cursor: pointer; opacity: .72; }
+  .evidence-current { margin-top: 18px; padding: 10px 12px; background: rgba(128,128,128,.08); font-size: 12px; }
+  .evidence-appendix { margin-top: 32px; padding-top: 18px; border-top: 1px solid rgba(128,128,128,.25); }
+  .evidence-appendix li { margin: 8px 0; font-size: 11px; }
   .layout-narrative { display: block; }
-  @media (max-width: 720px) { .report-grid { display: block; } .report-grid > .chart-block { margin-bottom: 18px; } }
+  @media (max-width: 720px) { .report-grid { display: block; } .report-grid > .chart-block { margin-bottom: 18px; } .evidence-drawer { align-items: flex-end; } .evidence-panel { width: 100%; height: min(82vh, 760px); } }
 `
 
 export function renderStaticHtml(
@@ -35,18 +61,19 @@ export function renderStaticHtml(
   profile: DataProfile,
   rows: Record<string, unknown>[],
   themeOverride?: ThemeName,
-  interactiveOptions: InteractiveHtmlOptions = {}
+  interactiveOptions: ReportHtmlOptions = {}
 ): string {
   const theme = getTheme(themeOverride ?? spec.theme)
   const title = spec.title ?? 'Miao Vision Report'
   const interactive = shouldEnableInteractiveRuntime(spec, interactiveOptions)
+  const evidenceModel = buildEvidenceViewModel(spec, interactiveOptions.context, interactiveOptions.coverage)
 
   const header = theme.layout === 'editorial'
     ? renderEditorialHeader(title, spec.description, profile)
     : renderDefaultHeader(title, spec.description, profile)
 
   const insights = spec.insights && spec.insights.length > 0
-    ? renderInsights(spec.insights)
+    ? renderInsights(spec.insights, evidenceModel)
     : ''
 
   let charts: string
@@ -56,7 +83,7 @@ export function renderStaticHtml(
       const svg = renderChartSvg(chart, rows, theme.svg, { chartId })
       const span = chart.placement?.span ?? (spec.layout?.preset === 'narrative' ? 12 : 6)
       const emphasis = chart.placement?.emphasis === 'primary' ? ' emphasis-primary' : ''
-      return `<section class="chart-block${emphasis}" style="--mv-span:${span}" data-miao-chart="${escapeHtml(chartId)}"><h2>${escapeHtml(chart.title ?? `${chart.type} chart ${index + 1}`)}</h2>${renderQualityBadge(chart, profile)}<div class="miao-render-slot">${svg}</div></section>`
+      return `<section class="chart-block${emphasis}" style="--mv-span:${span}" data-miao-chart="${escapeHtml(chartId)}"><h2>${escapeHtml(chart.title ?? `${chart.type} chart ${index + 1}`)}</h2>${renderEvidenceTrigger(evidenceModel, `charts[${index}]`)}${renderQualityBadge(chart, profile)}<div class="miao-render-slot">${svg}</div></section>`
     }).join('\n')}</div>`
   } else if (theme.layout === 'editorial') {
     const sections: string[] = []
@@ -67,12 +94,12 @@ export function renderStaticHtml(
         while (i < spec.charts.length && spec.charts[i].type === 'bigvalue') {
           group.push(spec.charts[i++])
         }
-        sections.push(renderKpiGroup(group, rows, theme))
+        sections.push(renderKpiGroup(group, rows, theme, evidenceModel, i - group.length))
       } else {
         const chart = spec.charts[i]
         const chartId = chartIdFor(chart, i)
         const svg = renderChartSvg(chart, rows, theme.svg, { chartId })
-        sections.push(renderEditorialCard(chart, i, svg, chartId, renderQualityBadge(chart, profile)))
+        sections.push(renderEditorialCard(chart, i, svg, chartId, renderQualityBadge(chart, profile), renderEvidenceTrigger(evidenceModel, `charts[${i}]`)))
         i++
       }
     }
@@ -81,7 +108,7 @@ export function renderStaticHtml(
     charts = spec.charts.map((chart, index) => {
       const chartId = chartIdFor(chart, index)
       const svg = renderChartSvg(chart, rows, theme.svg, { chartId })
-      return renderDefaultCard(chart, index, svg, chartId, renderQualityBadge(chart, profile))
+      return renderDefaultCard(chart, index, svg, chartId, renderQualityBadge(chart, profile), renderEvidenceTrigger(evidenceModel, `charts[${index}]`))
     }).join('\n')
   }
 
@@ -95,13 +122,17 @@ export function renderStaticHtml(
 </head>
 <body>
   <main class="miao-viz-report">
+    ${evidenceModel.verified || !interactiveOptions.context ? '' : '<p class="evidence-status" role="status">This preview has not passed complete evidence verification.</p>'}
     ${header}
     ${insights}
     ${charts}
+    ${renderEvidenceAppendix(evidenceModel)}
   </main>
+  ${renderEvidenceDrawer(evidenceModel)}
   <script type="application/json" id="miao-viz-spec">${jsonScript(spec)}</script>
   <script type="application/json" id="miao-viz-profile">${jsonScript(profile)}</script>
   ${interactive ? renderInteractiveAssets(rows, theme.svg) : ''}
+  ${evidenceModel.items.length ? evidenceScript(evidenceModel) : ''}
   <script>Promise.resolve(document.fonts && document.fonts.ready).then(function(){document.documentElement.dataset.miaoRenderReady='true';});</script>
 </body>
 </html>`
@@ -133,18 +164,24 @@ function renderEditorialHeader(title: string, description: string | undefined, p
   </header>`
 }
 
-function renderDefaultCard(chart: AgentChartSpec, index: number, svg: string, chartId: string, qualityBadge = ''): string {
+function renderDefaultCard(chart: AgentChartSpec, index: number, svg: string, chartId: string, qualityBadge = '', evidence = ''): string {
   const chartTitle = chart.title ?? `${chart.type} chart ${index + 1}`
   return `<section class="chart-block" data-miao-chart="${escapeHtml(chartId)}">
     <h2>${escapeHtml(chartTitle)}</h2>
-    ${qualityBadge}<div class="miao-render-slot">${svg}</div>
+    ${evidence}${qualityBadge}<div class="miao-render-slot">${svg}</div>
   </section>`
 }
 
-function renderKpiGroup(charts: AgentChartSpec[], rows: Record<string, unknown>[], theme: ReportTheme): string {
+function renderKpiGroup(
+  charts: AgentChartSpec[],
+  rows: Record<string, unknown>[],
+  theme: ReportTheme,
+  evidenceModel: EvidenceViewModel,
+  startIndex: number
+): string {
   const items = charts.map((chart, index) => {
     const chartId = chartIdFor(chart, index)
-    return `<div data-miao-chart="${escapeHtml(chartId)}"><div class="miao-render-slot">${renderChartSvg(chart, rows, theme.svg, { chartId })}</div></div>`
+    return `<div data-miao-chart="${escapeHtml(chartId)}"><div class="miao-render-slot">${renderChartSvg(chart, rows, theme.svg, { chartId })}</div>${renderEvidenceTrigger(evidenceModel, `charts[${startIndex + index}]`)}</div>`
   }).join('\n')
   return `<section class="chart-card kpi-group">
     <div class="chart-label">KEY METRICS</div>
@@ -152,13 +189,13 @@ function renderKpiGroup(charts: AgentChartSpec[], rows: Record<string, unknown>[
   </section>`
 }
 
-function renderEditorialCard(chart: AgentChartSpec, index: number, svg: string, chartId: string, qualityBadge = ''): string {
+function renderEditorialCard(chart: AgentChartSpec, index: number, svg: string, chartId: string, qualityBadge = '', evidence = ''): string {
   const chartTitle = chart.title ?? `${chart.type} chart ${index + 1}`
   const caption = buildCaption(chart)
   return `<section class="chart-card" data-miao-chart="${escapeHtml(chartId)}">
     <div class="chart-label">${escapeHtml(chart.type.toUpperCase())} CHART</div>
     <h2>${escapeHtml(chartTitle)}</h2>
-    ${qualityBadge}<div class="miao-render-slot">${svg}</div>
+    ${evidence}${qualityBadge}<div class="miao-render-slot">${svg}</div>
     ${caption ? `<p class="chart-caption">${escapeHtml(caption)}</p>` : ''}
   </section>`
 }
@@ -174,13 +211,13 @@ function chartIdFor(chart: AgentChartSpec, index: number): string {
   return chart.id ?? `chart-${index + 1}`
 }
 
-function renderInsights(insights: AgentInsight[]): string {
-  const items = normalizeInsights(insights).map(insight => {
+function renderInsights(insights: AgentInsight[], evidenceModel: EvidenceViewModel): string {
+  const items = normalizeInsights(insights).map((insight, index) => {
     const className = insight.severity === 'warning' ? ' class="insight-warning"' : ''
     const caveat = insight.caveat
       ? `<span class="insight-caveat">${escapeHtml(insight.caveat)}</span>`
       : ''
-    return `<li${className}>${escapeHtml(insight.text)}${caveat}</li>`
+    return `<li${className}>${escapeHtml(insight.text)}${caveat}${renderEvidenceTrigger(evidenceModel, `insights[${index}]`)}</li>`
   }).join('\n      ')
   return `<section class="report-insights">
     <p class="insights-label">Key Observations</p>
@@ -188,6 +225,60 @@ function renderInsights(insights: AgentInsight[]): string {
       ${items}
     </ul>
   </section>`
+}
+
+function renderEvidenceTrigger(model: EvidenceViewModel, objectPath: string): string {
+  const item = model.items.find(candidate => candidate.objectPath === objectPath)
+  if (!item) return ''
+  return `<button type="button" class="evidence-trigger" data-evidence-key="${escapeHtml(item.key)}" aria-haspopup="dialog">View evidence</button>`
+}
+
+function renderEvidenceDrawer(model: EvidenceViewModel): string {
+  if (!model.items.length) return ''
+  return `<aside class="evidence-drawer" id="miao-evidence-drawer" role="dialog" aria-modal="true" aria-labelledby="miao-evidence-title" hidden>
+    <div class="evidence-panel">
+      <div class="evidence-panel-header">
+        <div><p class="insights-label">Why you can trust this</p><h2 id="miao-evidence-title">How this result was calculated</h2></div>
+        <button type="button" class="evidence-close" aria-label="Close evidence">Close</button>
+      </div>
+      <div id="miao-evidence-content"></div>
+    </div>
+  </aside>`
+}
+
+function renderEvidenceAppendix(model: EvidenceViewModel): string {
+  if (!model.appendix.length) return ''
+  const items = model.appendix.map(item =>
+    `<li><b>E${item.number} · ${escapeHtml(item.evidenceId)}</b> — ${escapeHtml(item.query)}${item.fields.length ? ` · fields: ${escapeHtml(item.fields.join(', '))}` : ''}${item.sampleSize ? ` · sample: ${item.sampleSize}` : ''}</li>`
+  ).join('')
+  return `<section class="evidence-appendix"><h2>Evidence Appendix</h2><ol>${items}</ol></section>`
+}
+
+function evidenceScript(model: EvidenceViewModel): string {
+  return `<script>(function(){
+    var items=${jsonScript(Object.fromEntries(model.items.map(item => [item.key, item])))};
+    var drawer=document.getElementById('miao-evidence-drawer');
+    var content=document.getElementById('miao-evidence-content');
+    var previous=null;
+    function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function row(label,value){if(!value||Array.isArray(value)&&!value.length)return '';return '<dt>'+esc(label)+'</dt><dd>'+esc(Array.isArray(value)?value.join(', '):value)+'</dd>';}
+    function openEvidence(key,trigger){
+      var item=items[key]; if(!item)return; previous=trigger;
+      var view=document.getElementById('miao-view-state');
+      var container=trigger.closest('[data-miao-chart]');
+      var currentValue=container&&container.querySelector('.miao-bigvalue-number');
+      var viewText=view?Array.from(view.children).map(function(node){return node.textContent.trim();}).filter(Boolean).join(' · '):'';
+      var current=(currentValue?'Displayed value: '+currentValue.textContent+'. ':'')+
+        (view ? viewText+(container?'':' — filter not applied to this published claim.') : 'Published evidence; no active runtime filters.');
+      content.innerHTML='<h3>'+esc(item.label)+'</h3><div class="evidence-summary"><p>'+esc(item.explanation)+'</p><p>'+esc(item.scope)+'</p><p class="evidence-verified">'+esc(item.verification)+'</p></div><div class="evidence-current"><b>Current view</b><br>'+esc(current)+'</div><details class="evidence-technical"><summary>Technical details</summary><dl class="evidence-meta">'+row('Evidence ID',item.evidenceIds)+row('Original query',item.query)+row('Source fields',item.fields)+row('Applied filters',item.filters)+row('Result count',item.sampleSize)+row('Validation rule',item.check)+row('Data path',item.derivedFrom)+'</dl></details>';
+      drawer.hidden=false; drawer.querySelector('.evidence-close').focus();
+    }
+    document.addEventListener('click',function(event){var trigger=event.target.closest('[data-evidence-key]');if(trigger)openEvidence(trigger.dataset.evidenceKey,trigger);});
+    function close(){drawer.hidden=true;if(previous)previous.focus();}
+    drawer.querySelector('.evidence-close').onclick=close;
+    drawer.addEventListener('click',function(event){if(event.target===drawer)close();});
+    document.addEventListener('keydown',function(event){if(event.key==='Escape'&&!drawer.hidden)close();});
+  }());</script>`
 }
 
 function buildCaption(chart: AgentChartSpec): string {
@@ -210,5 +301,7 @@ function buildCaption(chart: AgentChartSpec): string {
 }
 
 function jsonScript(value: unknown): string {
-  return JSON.stringify(value, null, 2).replace(/<\//g, '<\\u002f')
+  return JSON.stringify(value, null, 2)
+    .replace(/<\//g, '<\\u002f')
+    .replace(/\$evidence:/g, '\\u0024evidence:')
 }

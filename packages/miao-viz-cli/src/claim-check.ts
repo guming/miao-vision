@@ -17,7 +17,10 @@ export function executeClaimCheck(check: DeckClaimCheck, args: DeckClaimArgs, ev
     if (check === 'evidence_ref_exists' || check === 'caveat_present') return result(true, {}, tolerance)
     if (check === 'value_match') {
       const actual = resolve(args.value, evidence)
-      return compare(actual, args.expected, { value: actual }, tolerance)
+      const expected = typeof args.expected === 'string' && args.expected.startsWith('$evidence:')
+        ? resolve(args.expected, evidence)
+        : args.expected
+      return compare(actual, expected, { value: actual }, tolerance)
     }
     if (check === 'delta_formula') {
       const from = numeric(resolve(args.from, evidence))
@@ -52,17 +55,20 @@ export function executeClaimCheck(check: DeckClaimCheck, args: DeckClaimArgs, ev
     if (check === 'rank_position') {
       const rows = resolve(args.rows, evidence)
       if (!Array.isArray(rows) || !args.subjectField || !args.valueField || args.subject === undefined) return result(false, { rows }, tolerance, undefined, args.expectedRank, 'Rank check requires rows, subjectField, valueField, subject, and expectedRank.')
+      const subject = typeof args.subject === 'string' && args.subject.startsWith('$evidence:')
+        ? resolve(args.subject, evidence)
+        : args.subject
       const direction = args.order === 'asc' ? 1 : -1
       const sorted = rows.map((row, index) => ({ row: row as Record<string, unknown>, index })).sort((a, b) => {
         const diff = (numeric(a.row[args.valueField!]) - numeric(b.row[args.valueField!])) * direction
         return diff || a.index - b.index
       })
-      const target = sorted.find(item => String(item.row[args.subjectField!]) === String(args.subject))
-      if (!target) return result(false, { subject: args.subject }, tolerance, undefined, args.expectedRank, 'Rank subject was not found.')
+      const target = sorted.find(item => String(item.row[args.subjectField!]) === String(subject))
+      if (!target) return result(false, { subject }, tolerance, undefined, args.expectedRank, 'Rank subject was not found.')
       const targetValue = numeric(target.row[args.valueField])
       const better = sorted.filter(item => direction === -1 ? numeric(item.row[args.valueField!]) > targetValue : numeric(item.row[args.valueField!]) < targetValue)
       const actual = better.length + 1
-      return result(actual === args.expectedRank, { subject: args.subject, value: targetValue }, tolerance, actual, args.expectedRank)
+      return result(actual === args.expectedRank, { subject, value: targetValue }, tolerance, actual, args.expectedRank)
     }
     return result(false, {}, tolerance, undefined, undefined, `Unsupported claim check '${check}'.`)
   } catch (error) {

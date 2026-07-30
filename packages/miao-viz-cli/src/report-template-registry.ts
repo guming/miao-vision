@@ -57,7 +57,14 @@ function p1Spec(ctx: BlockMatchContext, kind: string): AgentReportSpec {
       { type: 'scatter', title: 'Measure relationship', encoding: { x: { field: m }, y: { field: m2 }, label: { field: d } }, placement: { span: 8, emphasis: 'primary' } },
       { type: 'bubble', title: 'Weighted relationship', encoding: { x: { field: m }, y: { field: m2 }, size: { field: m } }, placement: { span: 4, emphasis: 'supporting' } }, table] }
   }
-  return { title: 'Miao Vision Report', insights: [], ...configs[kind] }
+  const selected = configs[kind]
+  if (kind === 'conversion-journey' || kind === 'variance-bridge') {
+    selected.charts = selected.charts.map(chart => ({
+      ...chart,
+      provenance: { evidence: ['by_dimension'], derivedFrom: ['$evidence:by_dimension.rows'] }
+    }))
+  }
+  return { title: 'Miao Vision Report', insights: [], ...selected }
 }
 
 export interface ReportTemplateInfo {

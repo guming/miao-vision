@@ -76,7 +76,10 @@ miao-viz spec validate \
   --strict
 ```
 
-Fix every error and warning before rendering. Use `--patch-hints` for machine-fixable issues; apply only returned patches and fill unresolved field names manually.
+Fix every error and warning before rendering. Require both `coverage.objectCoverage`
+and `coverage.claimCheckCoverage` to equal `1`. Use `--patch-hints` for
+machine-fixable issues; apply only returned patches and fill unresolved field names
+or evidence paths manually.
 
 5. Render:
 
@@ -109,12 +112,28 @@ Every numeric, ranking, share, change, threshold, outlier, relationship, and com
 ```yaml
 insights:
   - text: "East contributed $evidence:by_dimension.rows[0].total."
-    evidence: [by_dimension]
+    type: share
+    provenance:
+      evidence: [by_dimension]
+      derivedFrom:
+        - $evidence:by_dimension.rows[0].total
+        - $evidence:total.values.total
+      check: share_formula
+      claimArgs:
+        numerator: $evidence:by_dimension.rows[0].total
+        denominator: $evidence:total.values.total
+        expected: 0.42
     caveat: "Based on limited rows only."
     severity: info
 ```
 
-Valid paths include `$evidence:total.values.total_sales` and `$evidence:by_dimension.rows[0].region`. Strict validation must resolve every path.
+Every KPI and chart also needs provenance. A trivial single-value binding may use
+`provenance: $evidence:total.values.total_sales`; charts backed by multiple rows
+should declare the exact evidence id and a path such as
+`$evidence:by_dimension.rows`. Valid paths include
+`$evidence:total.values.total_sales` and
+`$evidence:by_dimension.rows[0].region`. Strict validation must resolve every path
+and run the required claim check. Do not infer the first evidence value.
 
 Reflect sample warnings:
 

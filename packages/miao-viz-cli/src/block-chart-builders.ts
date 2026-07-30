@@ -2,6 +2,7 @@ import type { AgentChartSpec } from './types'
 
 export function buildKpiChart(measure: string): AgentChartSpec {
   const alias = `total_${measure}`
+  const valuePath = `$evidence:total.values.${alias}`
   return {
     id: `kpi_total_${measure}`,
     type: 'bigvalue',
@@ -11,7 +12,11 @@ export function buildKpiChart(measure: string): AgentChartSpec {
         { type: 'aggregate', measures: [{ field: measure, op: 'sum', as: alias }] }
       ]
     },
-    encoding: { value: { field: alias, type: 'quantitative' } }
+    encoding: { value: { field: alias, type: 'quantitative' } },
+    provenance: {
+      evidence: ['total'], derivedFrom: [valuePath], check: 'value_match',
+      claimArgs: { value: valuePath, expected: valuePath }
+    }
   }
 }
 
@@ -31,7 +36,8 @@ export function buildBarChart(measure: string, dimension: string, topN: number):
     encoding: {
       x: { field: dimension, type: 'nominal' },
       y: { field: alias, type: 'quantitative' }
-    }
+    },
+    provenance: { evidence: ['by_dimension'], derivedFrom: ['$evidence:by_dimension.rows'] }
   }
 }
 
@@ -50,7 +56,8 @@ export function buildLineChart(measure: string, timeField: string): AgentChartSp
     encoding: {
       x: { field: timeField, type: 'temporal' },
       y: { field: alias, type: 'quantitative' }
-    }
+    },
+    provenance: { evidence: ['by_time'], derivedFrom: ['$evidence:by_time.rows'] }
   }
 }
 
@@ -70,7 +77,8 @@ export function buildPieChart(measure: string, dimension: string): AgentChartSpe
     encoding: {
       label: { field: dimension, type: 'nominal' },
       value: { field: alias, type: 'quantitative' }
-    }
+    },
+    provenance: { evidence: ['by_dimension'], derivedFrom: ['$evidence:by_dimension.rows'] }
   }
 }
 
@@ -86,6 +94,7 @@ export function buildTableChart(measure: string, dimension: string): AgentChartS
         { type: 'sort', field: alias, order: 'desc' }
       ]
     },
-    encoding: {}
+    encoding: {},
+    provenance: { evidence: ['by_dimension'], derivedFrom: ['$evidence:by_dimension.rows'] }
   }
 }

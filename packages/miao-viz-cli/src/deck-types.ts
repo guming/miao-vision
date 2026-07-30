@@ -1,4 +1,4 @@
-import type { AgentChartSpec, AgentDataTransform, AgentGlobalFilter } from './types'
+import type { AgentChartSpec, AgentDataTransform, AgentGlobalFilter, AgentProvenance } from './types'
 import type { ThemeName } from './themes/types'
 
 export type SlideLayout =
@@ -18,6 +18,7 @@ export interface SlideMetric {
   data?: {
     transform?: AgentDataTransform[]
   }
+  provenance?: AgentProvenance
 }
 
 export type DeckIntent = 'executive-brief' | 'business-review'

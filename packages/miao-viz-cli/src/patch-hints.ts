@@ -85,10 +85,30 @@ function nextChartId(spec: AgentReportSpec, base: string): string {
 }
 
 function strictVerifyPatches(error: AgentError, spec: AgentReportSpec): JsonPatch[] | undefined {
-  const issues = error.issues as Array<{ code?: string; message?: string; insightType?: string; requiredEvidence?: string[] }> | undefined
+  const issues = error.issues as Array<{
+    code?: string
+    message?: string
+    insightType?: string
+    requiredEvidence?: string[]
+    payload?: { path?: string; objectType?: string; candidates?: string[] }
+  }> | undefined
   if (!issues?.length) return undefined
   const patches: JsonPatch[] = []
   for (const issue of issues) {
+    if (issue.code === 'PROVENANCE_REQUIRED' && issue.payload?.candidates?.length === 1 && issue.payload.path) {
+      const candidate = issue.payload.candidates[0]
+      const ref = candidate.match(/^\$evidence:([\w-]+)\./)
+      const value = issue.payload.objectType === 'kpi'
+        ? {
+            evidence: ref ? [ref[1]] : [],
+            derivedFrom: [candidate],
+            check: 'value_match',
+            claimArgs: { value: candidate, expected: candidate }
+          }
+        : candidate
+      patches.push({ op: 'add', path: `/${issue.payload.path.replace(/\[(\d+)\]/g, '/$1').replace(/\./g, '/')}/provenance`, value })
+      continue
+    }
     if (issue.code !== 'INSIGHT_REQUIRED_EVIDENCE_MISSING_STRICT') continue
     const type = issue.insightType ?? issue.message?.match(/INSIGHT_REQUIRED_EVIDENCE_MISSING: ([a-z_]+) insight/)?.[1]
     const missing = issue.requiredEvidence ?? issue.message?.match(/requires evidence ([^:]+):/)?.[1]

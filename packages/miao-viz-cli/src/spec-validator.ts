@@ -14,6 +14,7 @@ import type { AnalyzeContext } from './context-schema'
 import type { AgentChartSpec, AgentDataTransform, AgentOutputFormat, AgentResult, AgentReportSpec, DataProfile } from './types'
 
 export { collectVerifyIssues, collectVerifyWarnings, strictVerifyError, type VerifyIssue } from './spec-validator-intelligence'
+export { validateProvenance, type ProvenanceCoverage, type ProvenanceValidation } from './provenance-validator'
 
 const DRILLDOWN_CHART_TYPES = ['bar', 'pie', 'table'] as const
 

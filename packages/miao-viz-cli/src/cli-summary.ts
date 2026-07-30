@@ -5,6 +5,8 @@ import { fail, normalizeSpec, readJson, readSpec, requiredFlag, stringFlag, writ
 import { templateSpecToYaml } from './report-template-registry'
 import type { AgentChartSpec, AgentInsight, AgentReportSpec } from './types'
 import type { CliArgs } from './cli-utils'
+import { normalizeProvenance } from './provenance-normalize'
+import { validateProvenance } from './provenance-validator'
 
 export interface SummaryProvenance {
   evidenceIds: string[]
@@ -14,6 +16,8 @@ export interface SummaryProvenance {
     kind: 'chart' | 'insight'
     sourceId: string
     evidenceIds: string[]
+    derivedFrom: string[]
+    check?: string
   }>
 }
 
@@ -31,7 +35,8 @@ export function runSummary(args: CliArgs): unknown {
   if (!context) return fail(agentError('INVALID_CONTEXT', 'context.json format is invalid.', { contextPath }))
   const evidenceCheck = validateEvidencePaths(source, context)
   if (isAgentError(evidenceCheck)) return fail(evidenceCheck)
-  const strictCheck = strictVerifyError(collectVerifyIssues(source, context))
+  const provenanceCheck = validateProvenance(source, context)
+  const strictCheck = strictVerifyError([...collectVerifyIssues(source, context), ...provenanceCheck.issues])
   if (isAgentError(strictCheck)) {
     return fail(agentError('SUMMARY_SOURCE_NOT_VERIFIED', 'Source report did not pass strict evidence verification.', {
       cause: strictCheck
@@ -57,14 +62,22 @@ export function runSummary(args: CliArgs): unknown {
     return {
       kind: 'chart' as const,
       sourceId: chart.id ?? `chart-index:${index}`,
-      evidenceIds: matchChartEvidence(chart, context)
+      evidenceIds: matchChartEvidence(chart, context),
+      derivedFrom: normalizeProvenance(chart.provenance).derivedFrom,
+      check: normalizeProvenance(chart.provenance).check
     }
   })
-  const insightItems = selection.insightIndexes.map((index, selectedIndex) => ({
-    kind: 'insight' as const,
-    sourceId: `insight-index:${index}`,
-    evidenceIds: collectEvidenceIds([selection.insights[selectedIndex]])
-  }))
+  const insightItems = selection.insightIndexes.map((index, selectedIndex) => {
+    const insight = selection.insights[selectedIndex]
+    const normalized = typeof insight === 'string' ? undefined : normalizeProvenance(insight.provenance)
+    return {
+      kind: 'insight' as const,
+      sourceId: `insight-index:${index}`,
+      evidenceIds: collectEvidenceIds([insight]),
+      derivedFrom: normalized?.derivedFrom ?? [],
+      check: normalized?.check
+    }
+  })
   const provenance: SummaryProvenance = {
     evidenceIds: Array.from(new Set([...insightEvidence, ...chartItems.flatMap(item => item.evidenceIds)])),
     sourceChartIds: selection.chartIndexes.map(index => source.charts[index].id ?? `chart-index:${index}`),
@@ -88,6 +101,8 @@ export function runSummary(args: CliArgs): unknown {
 }
 
 function matchChartEvidence(chart: AgentChartSpec, context: NonNullable<ReturnType<typeof parseAnalyzeContext>>): string[] {
+  const declared = normalizeProvenance(chart.provenance).evidence
+  if (declared.length) return declared
   const fields = new Set<string>()
   for (const encoding of Object.values(chart.encoding ?? {})) if (encoding?.field) fields.add(encoding.field)
   for (const transform of chart.data?.transform ?? []) {
@@ -137,6 +152,7 @@ function collectEvidenceIds(insights: AgentInsight[]): string[] {
     if (typeof insight === 'string') {
       for (const match of insight.matchAll(/\$evidence:([A-Za-z0-9_-]+)/g)) ids.add(match[1])
     } else {
+      for (const id of normalizeProvenance(insight.provenance).evidence) ids.add(id)
       for (const id of insight.evidence ?? []) ids.add(id)
       for (const match of insight.text.matchAll(/\$evidence:([A-Za-z0-9_-]+)/g)) ids.add(match[1])
     }

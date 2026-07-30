@@ -30,6 +30,7 @@ import {
 } from './cli-utils'
 import { resolveDirectives } from './directive-resolver'
 import { mapInsightText } from './insight-utils'
+import { validateProvenance, type ProvenanceCoverage } from './provenance-validator'
 import type { CliArgs } from './cli-utils'
 import type { AnalyzeContext } from './context-schema'
 import type { AgentReportSpec } from './types'
@@ -237,8 +238,11 @@ function runValidate(args: CliArgs): unknown {
     }
   }
 
+  let coverage: ProvenanceCoverage | undefined
   if (args.flags['verify'] === true) {
-    const verifyIssues = collectVerifyIssues(result.value, context)
+    const provenance = context ? validateProvenance(result.value, context) : undefined
+    coverage = provenance?.coverage
+    const verifyIssues = [...collectVerifyIssues(result.value, context), ...(provenance?.issues ?? [])]
     const verifyWarnings = verifyIssues.map(issue => issue.message)
     warnings.push(...verifyWarnings)
     if (args.flags['strict'] === true) {
@@ -255,11 +259,11 @@ function runValidate(args: CliArgs): unknown {
   if (args.flags['patch-hints'] === true) {
     const warningPatches = collectWarningPatches(result.value)
     if (warningPatches.length > 0) {
-      return { ok: true, value: result.value, warnings, visualDiversityIssues, warningPatches }
+      return { ok: true, value: result.value, warnings, visualDiversityIssues, coverage, warningPatches }
     }
   }
 
-  return { ok: true, value: result.value, warnings, visualDiversityIssues }
+  return { ok: true, value: result.value, warnings, visualDiversityIssues, coverage }
 }
 
 async function runRender(args: CliArgs): Promise<unknown> {
@@ -307,10 +311,15 @@ async function runRender(args: CliArgs): Promise<unknown> {
   // HTML reports are interactive by default. Keep --interactive as a
   // backwards-compatible explicit opt-in and --no-interactive as the opt-out.
   const interactive = args.flags['no-interactive'] !== true
+  const renderProvenance = renderContext ? validateProvenance(validation.value, renderContext) : undefined
 
   const written: string[] = []
   const warnings: string[] = []
-  const html = renderStaticHtml(validation.value, profile, dataset.value.rows, themeFlag, { enabled: interactive })
+  const html = renderStaticHtml(validation.value, profile, dataset.value.rows, themeFlag, {
+    enabled: interactive,
+    context: renderContext ?? undefined,
+    coverage: renderProvenance?.coverage
+  })
   for (const format of formats) {
     if (format === 'html') {
       const htmlPath = outputDir ? join(outputDir, 'report.html') : formatOutputPath(output!, 'html', false)
@@ -355,7 +364,17 @@ async function runRender(args: CliArgs): Promise<unknown> {
     }
   }
 
-  return { ok: true, value: { output: written, profile, interactive: formats.includes('html') ? interactive : false }, ...(warnings.length ? { warnings } : {}) }
+  return {
+    ok: true,
+    value: {
+      output: written,
+      profile,
+      interactive: formats.includes('html') ? interactive : false,
+      coverage: renderProvenance?.coverage,
+      verified: renderProvenance ? renderProvenance.issues.length === 0 : false
+    },
+    ...(warnings.length ? { warnings } : {})
+  }
 }
 
 function runQuery(args: CliArgs): unknown {

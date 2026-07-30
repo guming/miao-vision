@@ -1,5 +1,6 @@
 import type { AgentInsight, AgentInsightCheck, AgentInsightType } from './types'
 import type { DeckClaimArgs } from './deck-types'
+import { normalizeProvenance } from './provenance-normalize'
 
 export interface NormalizedInsight {
   text: string
@@ -17,13 +18,14 @@ export function normalizeInsight(insight: AgentInsight): NormalizedInsight {
   if (typeof insight === 'string') {
     return { text: insight, evidence: [], derivedFrom: [], original: insight }
   }
+  const provenance = normalizeProvenance(insight.provenance)
   return {
     text: insight.text,
     type: insight.type,
-    evidence: insight.evidence ?? [],
-    derivedFrom: insight.derivedFrom ?? [],
-    check: insight.check,
-    claimArgs: insight.claimArgs,
+    evidence: provenance.evidence.length ? provenance.evidence : insight.evidence ?? [],
+    derivedFrom: provenance.derivedFrom.length ? provenance.derivedFrom : insight.derivedFrom ?? [],
+    check: provenance.check ?? insight.check,
+    claimArgs: provenance.claimArgs ?? insight.claimArgs,
     caveat: insight.caveat,
     severity: insight.severity,
     original: insight

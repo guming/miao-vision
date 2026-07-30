@@ -3,10 +3,10 @@ import type { VisualIntentFamily, VizType } from './types'
 import { MVP_CHART_TYPES } from './spec-schema'
 import { queryRecipeSchema, type QueryRecipe } from './query-recipe'
 import { blockedSceneEntrySchema, catalogSceneEntrySchema, type BlockedSceneEntry, type CatalogSceneEntry, type CatalogSceneSummary } from './context-scene-schema'
+import { catalogProvenanceRecipeSchema, type CatalogProvenanceRecipe } from './context-provenance-schema'
 export type { BlockedSceneEntry, CatalogSceneEntry, CatalogSceneSummary } from './context-scene-schema'
 const fieldRoleValues = ['measure', 'dimension', 'time', 'id', 'status', 'score', 'flag', 'text', 'geo', 'unknown'] as const
 const chartUsageValues = ['recommended', 'allowed', 'discouraged', 'forbidden'] as const
-// Compact field descriptor — only fields useful for spec writing, not full ColumnProfile
 export interface AnalyzeField {
   name: string
   role: 'measure' | 'dimension' | 'time' | 'id' | 'status' | 'score' | 'flag' | 'text' | 'geo' | 'unknown'
@@ -61,16 +61,15 @@ export interface CatalogBlockEntry {
   requiredEvidence?: string[]
   validInsightTypes?: string[]
   dataQualityConstraints?: string[]
+  provenanceRecipes?: CatalogProvenanceRecipe[]
 }
 export interface BlockedBlockEntry {
   id: string
   reason: string
 }
-
 export type DeckPatternSummary = [id: 'executive-brief' | 'business-review', score: number, density: 'compact' | 'medium', blocks: string[]]
 export type DeckSlideBlockSummary = [id: string, score: number, requiredRoles: string[], requiredEvidence: string[]]
 export type BlockedDeckSlideBlockSummary = [id: string, reasonCode: string, reason: string]
-
 export interface DeckPatternEntry {
   id: 'executive-brief' | 'business-review'
   score: number
@@ -294,7 +293,8 @@ const catalogBlockEntrySchema = z.object({
   qualityChecks: z.array(z.string()),
   requiredEvidence: z.array(z.string()).optional(),
   validInsightTypes: z.array(z.string()).optional(),
-  dataQualityConstraints: z.array(z.string()).optional()
+  dataQualityConstraints: z.array(z.string()).optional(),
+  provenanceRecipes: z.array(catalogProvenanceRecipeSchema).optional()
 })
 
 const blockedBlockEntrySchema = z.object({

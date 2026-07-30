@@ -10,6 +10,7 @@ import type { CliArgs } from './cli-utils'
 import { instantiateDeck } from './deck-knowledge-registry'
 import * as YAML from 'yaml'
 import { exportHtmlToPdf } from './pdf-export'
+import { validateDeckProvenance } from './deck-provenance'
 
 export function runDeckCommand(args: CliArgs): unknown {
   if (args.subcommand === 'instantiate') return runDeckInstantiate(args)
@@ -35,10 +36,15 @@ export function runDeckCommand(args: CliArgs): unknown {
   }
 
   const issues = collectDeckKnowledgeIssues(parsedSpec.value, context, args.flags.strict === true)
+  const provenance = validateDeckProvenance(parsedSpec.value, context)
   const errors = deckKnowledgeErrors(issues)
   if (errors.length > 0) {
     const first = errors[0]
     return fail(agentError(first.code, first.message, { path: first.path, hint: first.hint, issues }))
+  }
+  if (args.flags.strict === true && provenance.issues.length) {
+    const first = provenance.issues[0]
+    return fail(agentError(first.code, first.message, { issues: provenance.issues, coverage: provenance.coverage }))
   }
 
   return {
@@ -46,7 +52,8 @@ export function runDeckCommand(args: CliArgs): unknown {
     value: {
       spec: parsedSpec.value,
       warnings: issues.filter(item => item.severity === 'warning').map(item => item.message),
-      issues
+      issues: [...issues, ...provenance.issues],
+      coverage: provenance.coverage
     }
   }
 }
@@ -96,10 +103,13 @@ export async function runDeckRender(args: CliArgs): Promise<unknown> {
   }
 
   let knowledgeIssues: ReturnType<typeof collectDeckKnowledgeIssues> = []
+  let provenanceCoverage: ReturnType<typeof validateDeckProvenance>['coverage'] | undefined
   if (contextPath) {
     const context = parseAnalyzeContext(readJson<unknown>(contextPath))
     if (!context) return fail(agentError('INVALID_CONTEXT', 'context.json format is invalid.', { contextPath }))
     knowledgeIssues = collectDeckKnowledgeIssues(validation.value, context, args.flags.strict === true)
+    const provenance = validateDeckProvenance(validation.value, context)
+    provenanceCoverage = provenance.coverage
     const errors = deckKnowledgeErrors(knowledgeIssues)
     if (errors.length > 0) {
       const first = errors[0]
@@ -108,6 +118,10 @@ export async function runDeckRender(args: CliArgs): Promise<unknown> {
         hint: first.hint,
         issues: knowledgeIssues
       }))
+    }
+    if (args.flags.strict === true && provenance.issues.length) {
+      const first = provenance.issues[0]
+      return fail(agentError(first.code, first.message, { issues: provenance.issues, coverage: provenance.coverage }))
     }
   }
 
@@ -134,6 +148,7 @@ export async function runDeckRender(args: CliArgs): Promise<unknown> {
       slides: validation.value.slides.length,
       warnings: knowledgeIssues.filter(item => item.severity === 'warning').map(item => item.message),
       issues: knowledgeIssues,
+      coverage: provenanceCoverage,
       ...(!contextPath ? {
         skippedChecks: ['claim grounding', 'evidence paths', 'caveat coverage']
       } : {})
