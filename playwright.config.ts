@@ -53,6 +53,12 @@ export default defineConfig({
       }
     },
 
+    {
+      name: 'webkit-trusted-report',
+      testMatch: /trusted-interactive-report\.spec\.ts/,
+      use: { ...devices['Desktop Safari'] }
+    },
+
     // Uncomment to test on Firefox and WebKit
     // {
     //   name: 'firefox',

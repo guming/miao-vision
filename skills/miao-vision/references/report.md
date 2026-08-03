@@ -28,7 +28,7 @@ miao-viz data profile /path/to/data.csv \
 
 Read `context.json`; treat the profile only as validation input. Follow `promptRules[]`, surface
 `sampleWarnings[]`, use only `fields[]`, `metricCandidates[]`, `catalog.charts`,
-`catalog.scenes`, and `catalog.blocks/templates`. Reject anything in `catalog.blockedCharts`,
+`catalog.scenes`, `catalog.blocks/templates`, and `catalog.interactions`. Reject anything in `catalog.blockedCharts`,
 `catalog.blockedScenes`, or `catalog.blockedBlocks`. Ask at most one question, and only when
 `clarificationQuestions[]` or a blocked Scene identifies a blocking ambiguity.
 
@@ -54,6 +54,16 @@ miao-viz spec block instantiate <id> \
 
 Review field names, variables, generated insights, evidence ids, and quality checks. Fall back to manual charts only when no suitable template or block exists.
 
+For an HTML report intended for another person to explore, instantiate a recommended interaction preset and merge its `interactions` fragment into the report spec:
+
+```bash
+miao-viz spec interaction instantiate <filter|filter-and-detail> \
+  --context /tmp/miao-vision/context.json \
+  --output /tmp/miao-vision/interactions.yaml
+```
+
+Use only a preset present in `catalog.interactions`. Keep `dataPolicy.mode: minimal` unless detail rows are required. With `detail-safe`, review every `detailField` and `excludeField`; never replace a restricted field or switch to `full` automatically. A legacy spec without `dataPolicy` remains renderable but is not share-safe.
+
 Use `miao-viz spec scene list` to discover business scenes. If the selected scene returns
 `SCENE_NOT_APPLICABLE`, surface its missing semantics and clarification questions; never guess
 which field represents revenue, cost, campaign response, or experiment outcome.
@@ -73,7 +83,8 @@ miao-viz spec validate \
   --profile /tmp/miao-vision/profile.json \
   --context /tmp/miao-vision/context.json \
   --verify \
-  --strict
+  --strict \
+  --trusted
 ```
 
 Fix every error and warning before rendering. Require both `coverage.objectCoverage`
@@ -88,6 +99,7 @@ miao-viz render report \
   --input /path/to/data.csv \
   --spec /tmp/miao-vision/report.yaml \
   --context /tmp/miao-vision/context.json \
+  --trusted \
   --theme <theme> \
   --format html \
   --output /tmp/miao-vision/report.html
@@ -231,3 +243,4 @@ Keep the generated provenance sidecar with the summary. Do not add metrics or ev
 are absent from the source report/context.
 
 Before returning, confirm strict validation passed, every claim is evidence-grounded, sample caveats are present, all charts are allowed and nonredundant, fields and transforms are valid, and the requested artifact exists.
+For an interactive artifact intended for third-party delivery, also require `value.shareSafe: true` and inspect `value.exposureManifest`. Do not deliver a report with `review` or `restricted` status as trusted.

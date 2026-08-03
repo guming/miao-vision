@@ -21,6 +21,8 @@ export const INTERACTIVE_JS = `
   var filters = (spec.interactions && spec.interactions.globalFilters) || [];
   var charts = spec.charts || [];
   var state = { filters: {}, selection: null, sort: {}, drilldown: null };
+  var zh = spec.locale === 'zh-CN';
+  var copy = zh ? { filters:'交互筛选',reset:'重置',all:'全部',search:'搜索 ',filter:'筛选 ',min:'最小值',max:'最大值',drilldown:'下钻',view:'当前视图',rows:'行',copy:'复制视图链接',resetAll:'全部重置',base:'完整数据视图',published:'结论基于完整发布数据集。' } : { filters:'Interactive filters',reset:'Reset',all:'All',search:'Search ',filter:'Filter ',min:'Min',max:'Max',drilldown:'Drilldown',view:'View',rows:'rows',copy:'Copy view link',resetAll:'Reset all',base:'Base evidence view',published:'Claims are based on the complete dataset.' };
 
   function createTooltip() {
     var el = document.createElement('div');
@@ -42,14 +44,14 @@ export const INTERACTIVE_JS = `
     if (!main) return;
     var controls = document.createElement('section');
     controls.className = 'miao-interactive-controls';
-    controls.setAttribute('aria-label', 'Interactive filters');
+    controls.setAttribute('aria-label', copy.filters);
     filters.forEach(function(filter) {
       controls.appendChild(filter.type === 'range' ? renderRangeFilter(filter) : renderSelectFilter(filter));
     });
     var reset = document.createElement('button');
     reset.type = 'button';
     reset.className = 'miao-reset';
-    reset.textContent = 'Reset';
+    reset.textContent = copy.reset;
     reset.addEventListener('click', function() {
       state.filters = {};
       state.selection = null;
@@ -81,7 +83,7 @@ export const INTERACTIVE_JS = `
     if (values.length >= 20) {
       var input = document.createElement('input');
       input.className = 'miao-filter-search';
-      input.placeholder = 'Search ' + filter.field + '...';
+      input.placeholder = copy.search + filter.field + '...';
       input.setAttribute('list', 'miao-sg-' + md.escapeAttr(filter.field));
       var datalist = document.createElement('datalist');
       datalist.id = 'miao-sg-' + md.escapeAttr(filter.field);
@@ -96,9 +98,10 @@ export const INTERACTIVE_JS = `
       });
       wrap.appendChild(input);
       wrap.appendChild(datalist);
+      input.value = state.filters[filter.field] || '';
     } else {
       var select = document.createElement('select');
-      select.innerHTML = '<option value="">All</option>' + values.map(function(value) {
+      select.innerHTML = '<option value="">'+copy.all+'</option>' + values.map(function(value) {
         return '<option value="' + md.escapeAttr(value) + '">' + md.escapeHtml(value) + '</option>';
       }).join('');
       select.addEventListener('change', function() {
@@ -106,6 +109,7 @@ export const INTERACTIVE_JS = `
         update();
       });
       wrap.appendChild(select);
+      select.value = state.filters[filter.field] || '';
     }
   }
 
@@ -148,7 +152,7 @@ export const INTERACTIVE_JS = `
   function renderSearchableMulti(wrap, filter, values) {
     var searchInput = document.createElement('input');
     searchInput.className = 'miao-filter-search';
-    searchInput.placeholder = 'Filter ' + filter.field + '...';
+    searchInput.placeholder = copy.filter + filter.field + '...';
     var container = document.createElement('div');
     container.className = 'miao-filter-checks miao-filter-checks-scroll';
     function renderFiltered(term) {
@@ -196,8 +200,8 @@ export const INTERACTIVE_JS = `
       min.type = 'date';
       max.type = 'date';
     } else {
-      min.placeholder = 'Min';
-      max.placeholder = 'Max';
+      min.placeholder = copy.min;
+      max.placeholder = copy.max;
     }
     [min, max].forEach(function(input) {
       input.addEventListener('input', function() {
@@ -207,6 +211,7 @@ export const INTERACTIVE_JS = `
     });
     pair.appendChild(min);
     pair.appendChild(max);
+    var savedRange=state.filters[filter.field]||[];min.value=savedRange[0]||'';max.value=savedRange[1]||'';
     wrap.appendChild(label);
     wrap.appendChild(pair);
     return wrap;
@@ -312,7 +317,7 @@ export const INTERACTIVE_JS = `
     var bar = document.createElement('div');
     bar.id = 'miao-drilldown-bar';
     bar.className = 'miao-drilldown-bar';
-    bar.innerHTML = '<span class="miao-drilldown-label">Drilldown: </span>' +
+    bar.innerHTML = '<span class="miao-drilldown-label">'+copy.drilldown+': </span>' +
       '<span class="miao-drilldown-chip">' + md.escapeHtml(state.drilldown.field) + ': ' + md.escapeHtml(String(state.drilldown.value)) +
       ' <button class="miao-drilldown-clear">&times;</button></span>';
     bar.querySelector('.miao-drilldown-clear').addEventListener('click', function() {
@@ -343,6 +348,7 @@ export const INTERACTIVE_JS = `
     });
     renderDrilldownBreadcrumb();
     renderViewState(filtered);
+    window.dispatchEvent(new CustomEvent('miao:view-update',{detail:{filtered:filtered,state:JSON.parse(JSON.stringify(state)),total:rows.length}}));
   }
 
   function renderViewState(filtered) {
@@ -351,11 +357,12 @@ export const INTERACTIVE_JS = `
     var el = document.getElementById('miao-view-state');
     if (!el) { el=document.createElement('div'); el.id='miao-view-state'; el.className='miao-view-state'; var controls=main.querySelector('.miao-interactive-controls'); main.insertBefore(el, controls ? controls.nextSibling : main.firstChild); }
     var active=Object.keys(state.filters).filter(function(key){ var value=state.filters[key]; return value !== '' && value != null && (!Array.isArray(value) || value.some(Boolean)); });
-    el.innerHTML='<span>View: '+filtered.length+' / '+rows.length+' rows</span>'+active.map(function(key){return '<span class="miao-chip">'+md.escapeHtml(key)+': '+md.escapeHtml(Array.isArray(state.filters[key])?state.filters[key].join(' – '):String(state.filters[key]))+'</span>';}).join('')+(active.length?'<button id="miao-view-copy">Copy view link</button><button id="miao-view-reset">Reset all</button>':'<span>Base evidence view</span>');
-    var reset=document.getElementById('miao-view-reset'); if(reset) reset.onclick=function(){state.filters={};state.selection=null;state.drilldown=null;document.querySelectorAll('.miao-interactive-controls select,.miao-interactive-controls input').forEach(function(input){input.value='';input.checked=false;});update();};
-    var copy=document.getElementById('miao-view-copy'); if(copy) copy.onclick=function(){if(navigator.clipboard)navigator.clipboard.writeText(location.href);};
-    document.querySelectorAll('.report-insights').forEach(function(insights){insights.setAttribute('data-view-scope',active.length?'base-evidence':'current');insights.title=active.length?'Claims are based on the complete dataset.':'';});
-    try { location.hash = active.length ? 'miao=' + encodeURIComponent(JSON.stringify({filters:state.filters})) : ''; } catch (_) {}
+    var hasState=Boolean(active.length||state.selection||state.drilldown);
+    el.innerHTML='<span>'+copy.view+': '+filtered.length+' / '+rows.length+' '+copy.rows+'</span>'+active.map(function(key){return '<span class="miao-chip">'+md.escapeHtml(key)+': '+md.escapeHtml(Array.isArray(state.filters[key])?state.filters[key].join(' - '):String(state.filters[key]))+'</span>';}).join('')+(hasState?'<button id="miao-view-copy">'+copy.copy+'</button><button id="miao-view-reset">'+copy.resetAll+'</button>':'<span>'+copy.base+'</span>');
+    var reset=document.getElementById('miao-view-reset'); if(reset) reset.onclick=function(){state.filters={};state.selection=null;state.drilldown=null;state.sort={};document.querySelectorAll('.miao-interactive-controls select,.miao-interactive-controls input').forEach(function(input){input.value='';input.checked=false;});update();};
+    var copyButton=document.getElementById('miao-view-copy'); if(copyButton) copyButton.onclick=function(){if(navigator.clipboard)navigator.clipboard.writeText(location.href);};
+    document.querySelectorAll('.report-insights').forEach(function(insights){insights.setAttribute('data-view-scope',hasState?'base-evidence':'current');insights.title=hasState?copy.published:'';});
+    try { location.hash = active.length||state.selection||state.drilldown ? 'miao=' + encodeURIComponent(JSON.stringify({filters:state.filters,selection:state.selection,drilldown:state.drilldown})) : ''; } catch (_) {}
   }
 
   function renderDetail(container, filtered) {
@@ -406,10 +413,10 @@ export const INTERACTIVE_JS = `
     });
   }
 
-  try { if(location.hash.indexOf('#miao=')===0) { var saved=JSON.parse(decodeURIComponent(location.hash.slice(6))); state.filters=saved.filters||{}; } } catch (_) {}
+  try { if(location.hash.indexOf('#miao=')===0) { var saved=JSON.parse(decodeURIComponent(location.hash.slice(6))); state.filters=saved.filters||{};state.selection=saved.selection||null;state.drilldown=saved.drilldown||null; } } catch (_) {}
   var printState=null;
-  window.addEventListener('beforeprint',function(){printState=JSON.parse(JSON.stringify(state.filters));state.filters={};update();});
-  window.addEventListener('afterprint',function(){state.filters=printState||{};printState=null;update();});
+  window.addEventListener('beforeprint',function(){if(document.documentElement.dataset.miaoPrintScope==='current')return;printState=JSON.parse(JSON.stringify({filters:state.filters,selection:state.selection,drilldown:state.drilldown}));state.filters={};state.selection=null;state.drilldown=null;update();});
+  window.addEventListener('afterprint',function(){if(printState){state.filters=printState.filters||{};state.selection=printState.selection||null;state.drilldown=printState.drilldown||null;}printState=null;update();});
   renderControls();
   update();
 })();

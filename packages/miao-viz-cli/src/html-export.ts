@@ -7,10 +7,13 @@ import type { AnalyzeContext } from './context-schema'
 import type { ProvenanceCoverage } from './provenance-validator'
 import type { ThemeName, ReportTheme } from './themes/types'
 import type { AgentChartSpec, AgentInsight, AgentReportSpec, DataProfile } from './types'
+import type { ExposureManifest, ShareSafetyCheck } from './trusted-artifact'
 
 export interface ReportHtmlOptions extends InteractiveHtmlOptions {
   context?: AnalyzeContext
   coverage?: ProvenanceCoverage
+  exposureManifest?: ExposureManifest
+  shareSafetyChecks?: ShareSafetyCheck[]
 }
 
 const INSIGHTS_CSS = `
@@ -113,7 +116,7 @@ export function renderStaticHtml(
   }
 
   return `<!doctype html>
-<html lang="en">
+<html lang="${spec.locale ?? 'en'}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -124,6 +127,7 @@ export function renderStaticHtml(
   <main class="miao-viz-report">
     ${evidenceModel.verified || !interactiveOptions.context ? '' : '<p class="evidence-status" role="status">This preview has not passed complete evidence verification.</p>'}
     ${header}
+    ${renderExposureManifest(interactiveOptions.exposureManifest, interactiveOptions.shareSafetyChecks, spec.locale)}
     ${insights}
     ${charts}
     ${renderEvidenceAppendix(evidenceModel)}
@@ -136,6 +140,19 @@ export function renderStaticHtml(
   <script>Promise.resolve(document.fonts && document.fonts.ready).then(function(){document.documentElement.dataset.miaoRenderReady='true';});</script>
 </body>
 </html>`
+}
+
+function renderExposureManifest(manifest: ExposureManifest | undefined, checks: ShareSafetyCheck[] | undefined, locale: AgentReportSpec['locale']): string {
+  if (!manifest) return ''
+  const zh = locale === 'zh-CN'
+  const label = zh ? '嵌入数据详情' : 'Embedded data details'
+  const fields = manifest.embeddedFields.map(escapeHtml).join(', ')
+  const risks = (checks ?? []).flatMap(check => check.issues).map(item => `<li>${escapeHtml(item.code)}: ${escapeHtml(item.message)}</li>`).join('')
+  return `<details class="miao-exposure" data-share-status="${manifest.status}">
+    <summary>${label}: ${manifest.status}</summary>
+    <dl><dt>${zh ? '策略' : 'Policy'}</dt><dd>${manifest.policy}</dd><dt>${zh ? '行数' : 'Rows'}</dt><dd>${manifest.embeddedRows}</dd><dt>${zh ? '字段' : 'Fields'}</dt><dd>${fields}</dd><dt>${zh ? '数据字节' : 'Data bytes'}</dt><dd>${manifest.embeddedBytes}</dd></dl>
+    ${risks ? `<ul>${risks}</ul>` : ''}
+  </details>`
 }
 
 function renderDefaultHeader(title: string, description: string | undefined, profile: DataProfile): string {

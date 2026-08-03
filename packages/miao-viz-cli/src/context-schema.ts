@@ -4,7 +4,10 @@ import { MVP_CHART_TYPES } from './spec-schema'
 import { queryRecipeSchema, type QueryRecipe } from './query-recipe'
 import { blockedSceneEntrySchema, catalogSceneEntrySchema, type BlockedSceneEntry, type CatalogSceneEntry, type CatalogSceneSummary } from './context-scene-schema'
 import { catalogProvenanceRecipeSchema, type CatalogProvenanceRecipe } from './context-provenance-schema'
+import { compactInteractionRecommendationSchema, interactionRecommendationSchema, type CompactInteractionRecommendation, type InteractionRecommendation } from './context-interaction-schema'
+import { clarificationQuestionSchema } from './context-clarification-schema'
 export type { BlockedSceneEntry, CatalogSceneEntry, CatalogSceneSummary } from './context-scene-schema'
+export type { CompactInteractionRecommendation, InteractionRecommendation } from './context-interaction-schema'
 const fieldRoleValues = ['measure', 'dimension', 'time', 'id', 'status', 'score', 'flag', 'text', 'geo', 'unknown'] as const
 const chartUsageValues = ['recommended', 'allowed', 'discouraged', 'forbidden'] as const
 export interface AnalyzeField {
@@ -112,6 +115,7 @@ export interface AnalyzeCatalog {
   deckPatterns?: DeckPatternEntry[]
   slideBlocks?: DeckSlideBlockEntry[]
   blockedSlideBlocks?: BlockedDeckSlideBlockEntry[]
+  interactions?: InteractionRecommendation[]
 }
 
 export interface VisualRecommendation {
@@ -228,6 +232,7 @@ export interface CompactAnalyzeContext {
     deckPatterns?: DeckPatternSummary[]
     slideBlocks?: DeckSlideBlockSummary[]
     blockedSlideBlocks?: BlockedDeckSlideBlockSummary[]
+    interactions?: CompactInteractionRecommendation[]
   }
   warnings: Array<[string, string]>
   promptRules?: string[]
@@ -365,6 +370,7 @@ const analyzeCatalogSchema = z.object({
   ,deckPatterns: z.array(deckPatternEntrySchema).optional()
   ,slideBlocks: z.array(deckSlideBlockEntrySchema).optional()
   ,blockedSlideBlocks: z.array(blockedDeckSlideBlockEntrySchema).optional()
+  ,interactions: z.array(interactionRecommendationSchema).max(2).optional()
 })
 
 const metricCandidateSchema = z.object({
@@ -405,14 +411,6 @@ const analyzeIntentSchema = z.object({
 const analyzeSampleWarningSchema = z.object({
   code: z.string().min(1),
   message: z.string().min(1)
-})
-
-const clarificationQuestionSchema = z.object({
-  id: z.string().min(1),
-  question: z.string().min(1),
-  options: z.array(z.string()),
-  blocking: z.boolean(),
-  appliesTo: z.enum(['measure', 'dimension', 'time', 'template'])
 })
 
 export const analyzeContextSchema: z.ZodType<AnalyzeContext> = z.object({
@@ -485,6 +483,7 @@ export const compactAnalyzeContextSchema: z.ZodType<CompactAnalyzeContext> = z.o
     ,deckPatterns: z.array(z.tuple([z.enum(['executive-brief', 'business-review']), z.number(), z.enum(['compact', 'medium']), z.array(z.string())])).optional()
     ,slideBlocks: z.array(z.tuple([z.string(), z.number(), z.array(z.string()), z.array(z.string())])).optional()
     ,blockedSlideBlocks: z.array(z.tuple([z.string(), z.string(), z.string()])).optional()
+    ,interactions: z.array(compactInteractionRecommendationSchema).max(2).optional()
   }),
   warnings: z.array(z.tuple([z.string(), z.string()])),
   promptRules: z.array(z.string()).optional(),

@@ -6,7 +6,7 @@ import { countChartsByType } from './spec-utils'
 import { normalizeInsights } from './insight-utils'
 import { collectChartSemanticWarnings } from './spec-validator-intelligence'
 import { VALIDATOR_ERROR_CODES } from './error-codes'
-import { interactionCapabilities } from './interaction-capabilities'
+import { validateReportInteractions } from './report-interaction-validator'
 import { collectP0Warnings, validateP0ChartSpec } from './spec-validator-p0'
 import { collectVisualDiversityIssues } from './report-diversity-audit'
 import { validateP1ChartSpec } from './spec-validator-p1'
@@ -305,37 +305,6 @@ function runCatalogErrorRules(chart: AgentChartSpec, ctx?: AnalyzeContext): Agen
     }
   }
   return ok(chart)
-}
-
-function validateReportInteractions(
-  spec: AgentReportSpec,
-  profile: DataProfile,
-  availableFields: string[]
-): AgentResult<AgentReportSpec> {
-  if ((spec.interactions?.globalFilters?.length ?? 0) > 0) {
-    const unsupported = spec.charts.find(chart => !interactionCapabilities(chart.type).filter)
-    if (unsupported) return agentError('INTERACTION_CHART_NOT_FILTERABLE', `Chart type '${unsupported.type}' cannot be updated by global filters.`, { chartId: unsupported.id, chartType: unsupported.type })
-  }
-  for (const filter of spec.interactions?.globalFilters ?? []) {
-    const column = profile.columns.find(candidate => candidate.name === filter.field)
-    if (!column) {
-      return agentError('INTERACTION_FIELD_NOT_FOUND', `Interactive filter field '${filter.field}' was not found in the input data.`, {
-        field: filter.field,
-        availableFields
-      })
-    }
-
-    if (filter.type === 'range' && column.type !== 'number' && column.type !== 'date') {
-      return agentError('INTERACTION_FILTER_TYPE_MISMATCH', `Range filter '${filter.field}' requires a number or date field.`, {
-        field: filter.field,
-        filterType: filter.type,
-        columnType: column.type,
-        supportedColumnTypes: ['number', 'date']
-      })
-    }
-  }
-
-  return ok(spec)
 }
 
 function validateDrilldownCharts(charts: AgentChartSpec[]): AgentResult<void> {

@@ -1,4 +1,5 @@
 import type { DeckClaimArgs } from './deck-types'
+import type { QueryRecipe } from './query-recipe'
 
 export type AgentColumnType = 'string' | 'number' | 'boolean' | 'date' | 'unknown'
 export type AgentOutputFormat = 'html' | 'svg' | 'png' | 'pdf'
@@ -263,8 +264,25 @@ export interface AgentChartInteraction {
   select?: AgentInteractionSelectMode
 }
 
+export type AgentDataPolicyMode = 'minimal' | 'detail-safe' | 'full'
+
+export interface AgentInteractionDataPolicy {
+  mode: AgentDataPolicyMode
+  detailFields?: string[]
+  excludeFields?: string[]
+}
+
+export interface AgentCurrentViewSummary {
+  id: string
+  label: string
+  recipe: QueryRecipe
+  format?: 'currency' | 'integer' | 'number' | 'percentage' | 'text'
+}
+
 export interface AgentReportInteractions {
   globalFilters?: AgentGlobalFilter[]
+  dataPolicy?: AgentInteractionDataPolicy
+  currentView?: { summaries: AgentCurrentViewSummary[] }
 }
 
 export type AgentInsightType = 'total' | 'rank' | 'share' | 'trend' | 'delta' | 'correlation' | 'distribution' | 'data_quality'
@@ -353,6 +371,7 @@ export interface AgentReportSpec {
   title?: string
   description?: string
   theme?: 'standard-white' | 'magazine' | 'standard-dark' | 'minimal' | 'nyt' | 'bloomberg' | 'tableau'
+  locale?: 'en' | 'zh-CN'
   interactions?: AgentReportInteractions
   insights?: AgentInsight[]
   charts: AgentChartSpec[]

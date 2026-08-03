@@ -37,7 +37,8 @@ Options:
   --profile <file>    Path to profile JSON (output of "profile")
   --context <file>    Path to context.json (output of "analyze") for catalog compliance and
                       $evidence path checks
-  --strict            With --verify, treat verify warnings as hard errors; also hard-fails blockedChart violations
+  --strict            With --verify, treat verify warnings as hard errors; hard-fails blockedChart violations and trusted-policy errors when dataPolicy is present
+  --trusted           Require --strict, --verify, --context, and an explicit dataPolicy
   --verify            Also check for forbidden words and missing sampleWarning caveats
   --patch-hints       Attach machine-readable JSON Patch hints to fixable errors
 `,
@@ -80,6 +81,10 @@ Return JSON Pointer changes, affected charts/insights/evidence, recompute requir
 
 Inspect chart transform pipelines and evidence usage for debugging.
 `,
+  'spec.interaction': `Usage: miao-viz spec interaction instantiate <filter|filter-and-detail> --context <context.json> [--output <file>]
+
+Instantiate a deterministic interaction fragment from catalog.interactions. The command does not run a second planner.
+`,
   'render.report': `Usage: miao-viz render report --input <file> --spec <file> --output <file> [options]
 
 Render a vizspec to HTML or SVG.
@@ -93,6 +98,7 @@ Options:
   --context <file>  Path to context.json (output of "analyze") — resolves $evidence: directives in insights[]
   --interactive     Explicitly enable the interactive runtime (HTML default)
   --no-interactive  Disable the runtime and force static HTML output
+  --trusted         Refuse to write the artifact unless shareSafe is true
   --sheet <name>    Sheet name (Excel only)
   --limit <n>       Max rows to read
   --inputs <a,b,...> Append schema-compatible files before rendering

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { queryRecipeSchema } from './query-recipe'
 import type { AgentChartSpec, AgentOutputFormat, AgentReportSpec } from './types'
 
 export const MVP_CHART_TYPES = [
@@ -209,9 +210,23 @@ export const reportSpecSchema: z.ZodType<AgentReportSpec> = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   theme: z.enum(['standard-white', 'magazine', 'standard-dark', 'minimal', 'nyt', 'bloomberg', 'tableau']).optional(),
+  locale: z.enum(['en', 'zh-CN']).optional(),
   interactions: z.object({
-    globalFilters: z.array(globalFilterSchema).optional()
-  }).optional(),
+    globalFilters: z.array(globalFilterSchema).max(2).optional(),
+    dataPolicy: z.object({
+      mode: z.enum(['minimal', 'detail-safe', 'full']),
+      detailFields: z.array(z.string().min(1)).max(64).optional(),
+      excludeFields: z.array(z.string().min(1)).optional()
+    }).strict().optional(),
+    currentView: z.object({
+      summaries: z.array(z.object({
+        id: z.string().min(1),
+        label: z.string().min(1),
+        recipe: queryRecipeSchema,
+        format: z.enum(['currency', 'integer', 'number', 'percentage', 'text']).optional()
+      }).strict()).max(8)
+    }).strict().optional()
+  }).strict().optional(),
   insights: z.array(insightSchema).optional(),
   charts: z.array(chartSpecSchema).min(1)
 }).strict()

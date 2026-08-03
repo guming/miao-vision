@@ -20,6 +20,7 @@ import { CHART_THRESHOLDS } from './chart-catalog-thresholds'
 import { buildDeckCatalog } from './deck-knowledge-registry'
 import { buildSceneCatalog } from './report-scene-registry'
 import { buildAbTestEvidence } from './analyzer-ab-test'
+import { planInteractions } from './interaction-planner'
 
 export interface AnalyzerOptions {
   intent?: string
@@ -53,6 +54,7 @@ export function analyzeDataset(dataset: LoadedDataset, options: AnalyzerOptions 
     fields, evidence, catalog, sampleWarnings, metricCandidates
   }))
   Object.assign(context.catalog, buildDeckCatalog(context))
+  context.catalog.interactions = planInteractions(context)
   return context
 }
 

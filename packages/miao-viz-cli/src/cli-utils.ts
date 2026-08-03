@@ -9,7 +9,7 @@ const GROUPS = new Set(['data', 'spec', 'deck', 'report', 'render'])
 
 const GROUP_SUBCOMMANDS: Record<string, Set<string>> = {
   data:   new Set(['profile', 'query', 'analyze']),
-  spec:   new Set(['validate', 'catalog', 'block', 'template', 'scene', 'summary', 'diff', 'inspect']),
+  spec:   new Set(['validate', 'catalog', 'block', 'template', 'scene', 'summary', 'diff', 'inspect', 'interaction']),
   deck:   new Set(['validate', 'instantiate']),
   report: new Set(['init', 'update', 'info', 'history', 'clean']),
   render: new Set(['report', 'deck', 'article']),
@@ -24,7 +24,7 @@ export interface CliArgs {
 
 export const BOOLEAN_FLAGS = new Set([
   'h', 'help', 'summary', 'reliable-only', 'interactive', 'no-interactive',
-  'strict', 'patch-hints', 'verify', 'for-llm', 'compact', 'verbose'
+  'strict', 'trusted', 'patch-hints', 'verify', 'for-llm', 'compact', 'verbose'
   ,'dry-run', 'confirm', 'copy-input', 'keep-temp'
 ])
 

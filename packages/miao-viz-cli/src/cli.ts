@@ -5,7 +5,6 @@ import { agentError, isAgentError } from './errors'
 import { loadDataset, loadDatasets } from './data-loader'
 import { profileDataset, profileSummary } from './data-profiler'
 import { queryDataset } from './data-query'
-import { renderStaticHtml } from './html-export'
 import { validateReportSpec, collectValidationWarnings, validateEvidencePaths, collectVerifyIssues, strictVerifyError } from './spec-validator'
 import { parseAnalyzeContext, toCompactAnalyzeContext } from './context-schema'
 import { renderChartSvg } from './svg-renderer'
@@ -22,6 +21,7 @@ import { runScene } from './cli-scene'
 import { runSummary } from './cli-summary'
 import { runSpecDiff } from './cli-spec-diff'
 import { runInspect } from './cli-inspect'
+import { runInteraction } from './cli-interaction'
 import { runDeckCommand, runDeckRender } from './cli-deck'
 import {
   parseArgs, requiredFlag, stringFlag, numberFlag,
@@ -38,6 +38,8 @@ import { runReportCommand } from './cli-report'
 import { exportHtmlToPdf } from './pdf-export'
 import { join } from 'node:path'
 import { exportHtmlToPng } from './png-export'
+import { packageTrustedArtifact } from './trusted-artifact'
+import { renderReportHtmlWithTrust } from './trusted-html-render'
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
@@ -131,10 +133,13 @@ function runSpec(args: CliArgs): void {
     case 'inspect':
       printJson(runInspect(args))
       return
+    case 'interaction':
+      printJson(runInteraction(args))
+      return
     default:
       printJson(fail(agentError('UNKNOWN_SUBCOMMAND',
-        `Unknown spec subcommand: ${args.subcommand ?? '(none)'}. Available: validate, catalog, block, template, scene, summary, diff, inspect`,
-        { subcommand: args.subcommand, available: ['validate', 'catalog', 'block', 'template', 'scene', 'summary', 'diff', 'inspect'] }
+        `Unknown spec subcommand: ${args.subcommand ?? '(none)'}. Available: validate, catalog, block, template, scene, summary, diff, inspect, interaction`,
+        { subcommand: args.subcommand, available: ['validate', 'catalog', 'block', 'template', 'scene', 'summary', 'diff', 'inspect', 'interaction'] }
       )))
   }
 }
@@ -203,6 +208,26 @@ function runValidate(args: CliArgs): unknown {
       return fail({ ...result, patches: generatePatchHints(result, normalized as AgentReportSpec) })
     }
     return fail(result)
+  }
+
+  if (args.flags['trusted'] === true) {
+    if (args.flags['strict'] !== true || args.flags['verify'] !== true || !context) {
+      return fail(agentError('TRUSTED_VALIDATION_FLAGS_REQUIRED', 'Trusted validation requires --strict, --verify, and --context.', {
+        requiredFlags: ['strict', 'verify', 'context']
+      }))
+    }
+    if (!result.value.interactions?.dataPolicy) {
+      return fail(agentError('INTERACTION_DATA_POLICY_REQUIRED', 'Trusted validation requires interactions.dataPolicy.', { path: 'interactions.dataPolicy' }))
+    }
+  }
+
+  if (args.flags['strict'] === true && result.value.interactions?.dataPolicy) {
+    const trust = packageTrustedArtifact(result.value, profile, [], { context })
+    const restricted = trust.shareSafety.checks.flatMap(check => check.issues).filter(issue => issue.severity === 'error')
+    if (restricted.length) {
+      const first = restricted[0]
+      return fail(agentError(first.code, first.message, { path: first.path, issues: restricted }))
+    }
   }
 
   const warnings = collectValidationWarnings(result.value, profile, context)
@@ -315,11 +340,26 @@ async function runRender(args: CliArgs): Promise<unknown> {
 
   const written: string[] = []
   const warnings: string[] = []
-  const html = renderStaticHtml(validation.value, profile, dataset.value.rows, themeFlag, {
-    enabled: interactive,
+  const provenanceVerified = renderProvenance ? renderProvenance.issues.length === 0 : undefined
+  const rendered = renderReportHtmlWithTrust(validation.value, profile, dataset.value.rows, {
+    interactive,
     context: renderContext ?? undefined,
-    coverage: renderProvenance?.coverage
+    evidenceVerified: provenanceVerified,
+    coverage: renderProvenance?.coverage,
+    theme: themeFlag
   })
+  const html = rendered.html
+  const finalTrust = rendered.trust
+  const hardBudgetIssue = finalTrust.shareSafety.checks.find(check => check.id === 'artifact_budget')?.issues.find(issue => issue.severity === 'error')
+  if (interactive && validation.value.interactions?.dataPolicy && hardBudgetIssue) {
+    return fail(agentError(hardBudgetIssue.code, hardBudgetIssue.message, { path: hardBudgetIssue.path, shareSafety: finalTrust.shareSafety }))
+  }
+  if (interactive && args.flags['trusted'] === true && !finalTrust.shareSafe) {
+    const firstIssue = finalTrust.shareSafety.checks.flatMap(check => check.issues)[0]
+    return fail(agentError(firstIssue?.code ?? 'INTERACTION_NOT_SHARE_SAFE', firstIssue?.message ?? 'Interactive artifact is not share-safe.', {
+      shareSafety: finalTrust.shareSafety
+    }))
+  }
   for (const format of formats) {
     if (format === 'html') {
       const htmlPath = outputDir ? join(outputDir, 'report.html') : formatOutputPath(output!, 'html', false)
@@ -364,6 +404,10 @@ async function runRender(args: CliArgs): Promise<unknown> {
     }
   }
 
+  if (interactive) {
+    warnings.push(...finalTrust.shareSafety.checks.flatMap(check => check.issues.map(issue => `${issue.code}: ${issue.message}`)))
+  }
+
   return {
     ok: true,
     value: {
@@ -372,6 +416,9 @@ async function runRender(args: CliArgs): Promise<unknown> {
       interactive: formats.includes('html') ? interactive : false,
       coverage: renderProvenance?.coverage,
       verified: renderProvenance ? renderProvenance.issues.length === 0 : false
+      ,shareSafe: interactive ? finalTrust.shareSafe : undefined
+      ,shareSafety: interactive ? finalTrust.shareSafety : undefined
+      ,exposureManifest: interactive ? finalTrust.manifest : undefined
     },
     ...(warnings.length ? { warnings } : {})
   }

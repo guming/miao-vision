@@ -49,6 +49,10 @@ export function toCompactAnalyzeContext(ctx: AnalyzeContext): CompactAnalyzeCont
       ,deckPatterns: ctx.catalog.deckPatterns?.map(p => [p.id, p.score, p.density, p.blocks])
       ,slideBlocks: ctx.catalog.slideBlocks?.map(b => [b.id, b.score, b.requiredRoles, b.requiredEvidence])
       ,blockedSlideBlocks: ctx.catalog.blockedSlideBlocks?.map(b => [b.id, b.reasonCode, b.reason])
+      ,interactions: ctx.catalog.interactions?.map(item => [
+        item.preset, item.score, item.filters.map(filter => [filter.field, filter.type, filter.reason]),
+        item.detailFields, item.dataPolicy, item.risks
+      ])
     },
     warnings: ctx.sampleWarnings.map(w => [w.code, w.message]),
     promptRules: ctx.promptRules,
@@ -137,6 +141,9 @@ export function fromCompactAnalyzeContext(ctx: CompactAnalyzeContext): AnalyzeCo
       ,deckPatterns: ctx.catalog.deckPatterns?.map(([id, score, density, blocks]) => ({ id, score, density, blocks }))
       ,slideBlocks: ctx.catalog.slideBlocks?.map(([id, score, requiredRoles, requiredEvidence]) => ({ id, score, requiredRoles, requiredEvidence }))
       ,blockedSlideBlocks: ctx.catalog.blockedSlideBlocks?.map(([id, reasonCode, reason]) => ({ id, reasonCode, reason }))
+      ,interactions: ctx.catalog.interactions?.map(([preset, score, filters, detailFields, dataPolicy, risks]) => ({
+        preset, score, filters: filters.map(([field, type, reason]) => ({ field, type, reason })), detailFields, dataPolicy, risks
+      }))
     },
     sampleWarnings: ctx.warnings.map(([code, message]) => ({ code, message })),
     promptRules: ctx.promptRules ?? [],

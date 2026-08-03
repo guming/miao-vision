@@ -1,5 +1,6 @@
 import { CLIENT_DATA_ENGINE_CSS, CLIENT_DATA_ENGINE_JS } from './client-data-engine'
 import { INTERACTIVE_CSS, INTERACTIVE_JS } from './interactive-runtime-assets'
+import { TRUSTED_RUNTIME_CSS, TRUSTED_RUNTIME_JS } from './trusted-runtime-assets'
 import type { AgentGlobalFilter, AgentReportSpec } from './types'
 import type { SvgTheme } from './themes/types'
 
@@ -47,7 +48,8 @@ export function renderInteractiveAssets(rows: Record<string, unknown>[], theme: 
   <script type="application/json" id="miao-viz-data">${escapeScriptJson(rows)}</script>
   <script type="application/json" id="miao-viz-runtime-theme">${escapeScriptJson(theme)}</script>
   <script>${CLIENT_DATA_ENGINE_JS}</script>
-  <style>${CLIENT_DATA_ENGINE_CSS}${INTERACTIVE_CSS}</style>
+  <style>${CLIENT_DATA_ENGINE_CSS}${INTERACTIVE_CSS}${TRUSTED_RUNTIME_CSS}</style>
+  <script>${TRUSTED_RUNTIME_JS}</script>
   <script>${INTERACTIVE_JS}</script>`
 }
 
