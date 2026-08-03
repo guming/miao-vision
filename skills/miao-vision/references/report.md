@@ -62,7 +62,9 @@ miao-viz spec interaction instantiate <filter|filter-and-detail> \
   --output /tmp/miao-vision/interactions.yaml
 ```
 
-Use only a preset present in `catalog.interactions`. Keep `dataPolicy.mode: minimal` unless detail rows are required. With `detail-safe`, review every `detailField` and `excludeField`; never replace a restricted field or switch to `full` automatically. A legacy spec without `dataPolicy` remains renderable but is not share-safe.
+Use only a preset present in `catalog.interactions`. Keep `dataPolicy.mode: minimal` unless detail rows are required. With `detail-safe`, review every `detailFields` and `excludeFields` entry; never replace a restricted field or switch to `full` automatically. A legacy spec without `dataPolicy` remains renderable but is not share-safe.
+
+Use `interactions.currentView.summaries` only for deterministic local calculations supported by `QueryRecipe`; never generate JavaScript or rewrite published insights as filters change. Published insights remain bound to full-dataset evidence, while current-view summaries must expose their active filter scope and `Calculated locally` status. Set `locale` to `en` or `zh-CN` from the requested report language.
 
 Use `miao-viz spec scene list` to discover business scenes. If the selected scene returns
 `SCENE_NOT_APPLICABLE`, surface its missing semantics and clarification questions; never guess
@@ -83,9 +85,10 @@ miao-viz spec validate \
   --profile /tmp/miao-vision/profile.json \
   --context /tmp/miao-vision/context.json \
   --verify \
-  --strict \
-  --trusted
+  --strict
 ```
+
+Add `--trusted` only for an interactive HTML report intended for third-party delivery.
 
 Fix every error and warning before rendering. Require both `coverage.objectCoverage`
 and `coverage.claimCheckCoverage` to equal `1`. Use `--patch-hints` for
@@ -99,11 +102,12 @@ miao-viz render report \
   --input /path/to/data.csv \
   --spec /tmp/miao-vision/report.yaml \
   --context /tmp/miao-vision/context.json \
-  --trusted \
   --theme <theme> \
   --format html \
   --output /tmp/miao-vision/report.html
 ```
+
+Add `--trusted` only for an interactive HTML report intended for third-party delivery.
 
 Default to `magazine` when the user has no preference. Supported themes are `standard-white`, `magazine`, `standard-dark`, `minimal`, `nyt`, `bloomberg`, and `tableau`. Use `--no-interactive` only when explicitly requested.
 

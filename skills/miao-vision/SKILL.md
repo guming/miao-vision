@@ -62,6 +62,7 @@ After selecting `references/report.md`, route report requests as follows:
 - Recurring update: use `report update`, inspect `changes.json`, and report comparable and non-comparable changes.
 - Compatible local files: use `--inputs`; add `--field-map` only for explicit source-to-canonical field mappings.
 - Report image: render with `--format png`; use PDF for print/archive and HTML as the default.
+- Trusted interactive report for third-party exploration: use `catalog.interactions`, instantiate a recommended preset, choose an explicit `dataPolicy`, and require `--trusted` validation and rendering with `shareSafe: true` before delivery.
 
 Never infer business metric mappings after `SCENE_NOT_APPLICABLE`, ignore `notComparable`
 period changes, or add evidence absent from the source context.

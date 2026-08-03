@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "pluginVersion": "0.2.0",
-  "recommendedCliVersion": "0.2.0",
-  "minimumCliVersion": "0.2.0",
+  "pluginVersion": "0.2.1",
+  "recommendedCliVersion": "0.2.1",
+  "minimumCliVersion": "0.2.1",
   "maximumCliVersionExclusive": "0.3.0",
-  "releaseTag": "skill-v0.2.0",
+  "releaseTag": "skill-v0.2.1",
   "capabilityProbes": [
     {
       "args": ["deck", "instantiate", "--help"],
@@ -12,6 +12,10 @@
     },
     {
       "args": ["spec", "catalog"]
+    },
+    {
+      "args": ["spec", "interaction", "instantiate", "--help"],
+      "stdoutIncludes": "spec interaction instantiate"
     }
   ]
 }
