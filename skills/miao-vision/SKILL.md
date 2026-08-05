@@ -52,6 +52,15 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 - Return the requested artifact path and report any blocking structured error.
 - Treat `skills/miao-vision/` as the source skill; refresh generated copies through repository build or pack commands.
 
+## Artifact Delivery
+
+- Prefer `value.delivery` when a successful render or recurring update returns it. Do not reread the full HTML or PDF to summarize the artifact.
+- Lead with the delivery status and title, render `artifacts.preview` when the client supports local images, and link `artifacts.primary` as the formal deliverable.
+- Show at most three `summary.metrics`, two `summary.highlights`, and three `actions`. Use only the values present in the manifest; never supplement them from memory or `metricCandidates`.
+- Keep the default delivery response below 300 tokens. Hide Context, Profile, Spec, and temporary paths unless they are required to explain a blocking structured error.
+- Do not describe `needs_review` as verified, or `restricted` as safe to share. Say that preview generation failed without withholding a successfully generated primary artifact.
+- If local images or native artifact cards are unsupported, degrade to concise Markdown in this order: status and title, primary path, metrics, warnings, actions.
+
 ## Report Capability Routing
 
 After selecting `references/report.md`, route report requests as follows:

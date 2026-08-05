@@ -93,3 +93,7 @@ Repair structured errors as follows:
 - Overloaded slide: split it or reduce metrics/charts.
 
 Return only after strict validation succeeds and the requested artifact is rendered.
+
+## Deliver the artifact
+
+Prefer `value.delivery`. Show the status, first-slide PNG preview, primary HTML/PDF link, and only the verified metrics or claims included in the manifest. Do not reread the complete deck or invent a narrative summary. Display at most three actions and keep the response below the shared 300-token budget. If preview generation fails, retain the successfully rendered deck and report the warning. Use the shared Markdown fallback when local images are unavailable.

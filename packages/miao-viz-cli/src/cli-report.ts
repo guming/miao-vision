@@ -26,6 +26,8 @@ import { compareEvidence, injectChangesHtml, type EvidenceChangeSet } from './re
 import { validateProvenance } from './provenance-validator'
 import type { CliArgs } from './cli-utils'
 import type { AgentError, AgentReportSpec, LoadedDataset } from './types'
+import { buildDelivery, reportDeliverySummary } from './artifact-delivery'
+import { createArtifactPreview } from './artifact-preview'
 
 export async function runReportCommand(args: CliArgs): Promise<unknown> {
   if (args.subcommand === 'init') return reportInit(args)
@@ -278,14 +280,33 @@ async function createRun(
     }
     manifest.artifacts.pdf = 'report.pdf'
   }
+  const primaryPath = manifest.artifacts.html
+    ? join(runRoot, manifest.artifacts.html)
+    : join(runRoot, manifest.artifacts.pdf)
+  const preview = await createArtifactPreview(html, primaryPath, { fixedName: 'report.preview.png' })
+  if (preview.path) manifest.artifacts.preview = 'report.preview.png'
   manifest.status = 'ready'
   manifest.updatedAt = new Date().toISOString()
   atomicWriteJson(join(runRoot, 'manifest.json'), manifest)
   atomicWriteJson(join(root, 'latest.json'), { schemaVersion: 1, runId: period, manifest: `runs/${period}/manifest.json` })
+  const summary = reportDeliverySummary(spec, context, provenance.issues.length === 0)
+  const delivery = buildDelivery({
+    kind: 'recurring-report', title: spec.title ?? 'Miao Vision Report', period,
+    outputs: ['html', 'pdf'].flatMap(format => manifest.artifacts[format] ? [join(runRoot, manifest.artifacts[format])] : []),
+    primaryPath, previewPath: preview.path, verified: provenance.issues.length === 0,
+    coverage: provenance.coverage, warnings: [], ...summary,
+    changeCounts: changes.baselineRunId ? {
+      up: changes.metrics.filter(change => change.absolute > 0).length,
+      down: changes.metrics.filter(change => change.absolute < 0).length,
+      warnings: changes.anomalies.added.length + changes.notComparable.length
+    } : undefined,
+    recurring: true
+  })
+  const warnings = preview.warning ? [preview.warning] : []
   return { ok: true, value: {
     project: root, runId: period, status: 'ready',
     artifacts: Object.fromEntries(Object.entries(manifest.artifacts).map(([key, value]) => [key, join(runRoot, value)])),
-    changes: 'changes' in manifest ? manifest.changes : undefined, warnings: []
+    changes: 'changes' in manifest ? manifest.changes : undefined, warnings, delivery
   } }
 }
 

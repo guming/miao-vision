@@ -96,3 +96,7 @@ miao-viz render article /tmp/miao-vision/article.md \
 ```
 
 On a structured error, repair the reported input path once when obvious. Do not build a separate HTML pipeline. Before returning, confirm all numbers and quotes map to claims, block ids are stable, visuals match their data shapes, and the final render has no unresolved warning.
+
+## Deliver the artifact
+
+Prefer `value.delivery`. Show the status, PNG preview, primary artifact link, and up to three available actions. Article delivery may have empty metrics and highlights; do not reread the HTML/PDF or generate a replacement summary. If preview generation fails, deliver the primary artifact with the warning. Keep the response below the shared 300-token budget and use the shared Markdown fallback when local images are unavailable.

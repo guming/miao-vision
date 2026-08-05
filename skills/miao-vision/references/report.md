@@ -248,3 +248,7 @@ are absent from the source report/context.
 
 Before returning, confirm strict validation passed, every claim is evidence-grounded, sample caveats are present, all charts are allowed and nonredundant, fields and transforms are valid, and the requested artifact exists.
 For an interactive artifact intended for third-party delivery, also require `value.shareSafe: true` and inspect `value.exposureManifest`. Do not deliver a report with `review` or `restricted` status as trusted.
+
+## Deliver the artifact
+
+When `value.delivery` is present, use it as the delivery source of truth. Show its status, PNG preview, primary HTML/PDF link, up to three verified metrics, up to two verified highlights, and no more than three actions. For recurring reports, include `period` and `changeCounts`; omit comparison language when no baseline exists. Do not read the generated HTML/PDF to create another summary, and do not expose Context, Profile, Spec, Evidence, or changes files unless the user requests diagnostics. If preview generation failed, deliver the primary artifact and mention the preview warning. If the client cannot display local images, use the shared Markdown fallback.

@@ -38,7 +38,8 @@ describe('report workflow smoke', () => {
     writeFileSync(profilePath, JSON.stringify(runCli(['data', 'profile', fixture]), null, 2))
     expect(runCli(['spec', 'block', 'instantiate', 'trend-ranking', '--context', contextPath, '--output', specPath])).toMatchObject({ ok: true })
     expect(runCli(['spec', 'validate', '--spec', specPath, '--profile', profilePath, '--context', contextPath, '--verify'])).toMatchObject({ ok: true })
-    expect(runCli(['render', 'report', '--input', fixture, '--spec', specPath, '--context', contextPath, '--output', htmlPath])).toMatchObject({ ok: true })
+    expect(runCli(['render', 'report', '--input', fixture, '--spec', specPath, '--context', contextPath, '--output', htmlPath]))
+      .toMatchObject({ ok: true, value: { delivery: { kind: 'report', status: 'needs_review' } } })
 
     const html = readFileSync(htmlPath, 'utf8')
     expect(html).toContain('<svg')
@@ -86,7 +87,7 @@ describe('report workflow smoke', () => {
     expect(runCli(['report', 'init', project, '--input', fixture, '--spec', specPath, '--context', contextPath, '--period', '2026-W28']))
       .toMatchObject({ ok: true, value: { status: 'ready' } })
     expect(runCli(['report', 'update', project, '--input', fixture, '--period', '2026-W29']))
-      .toMatchObject({ ok: true, value: { status: 'ready', changes: { status: 'ready' } } })
+      .toMatchObject({ ok: true, value: { status: 'ready', changes: { status: 'ready' }, delivery: { kind: 'recurring-report', period: '2026-W29' } } })
     expect(existsSync(join(project, 'runs', '2026-W29', 'evidence.json'))).toBe(true)
     expect(existsSync(join(project, 'runs', '2026-W29', 'changes.json'))).toBe(true)
     expect(readFileSync(join(project, 'runs', '2026-W29', 'report.html'), 'utf8')).toContain('Period changes')

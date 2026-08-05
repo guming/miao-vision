@@ -11,6 +11,8 @@ import { compositionSelectionRequired } from './cli-article-composition'
 import { requiredFlag, stringFlag, writeOutput, fail } from './cli-utils'
 import type { CliArgs } from './cli-utils'
 import { ARTICLE_INFOGRAPHIC_TEMPLATES, compactArticleInfographicTemplates } from './infographic/catalog'
+import { buildDelivery, type DeliveryManifest } from './artifact-delivery'
+import { createArtifactPreview } from './artifact-preview'
 
 export async function runArticle(args: CliArgs): Promise<unknown> {
   const firstPos = args.positional[0]
@@ -65,17 +67,20 @@ export async function runArticle(args: CliArgs): Promise<unknown> {
     const loaded = loadInfographicBundleSpec(bundleInputPath)
     if (isAgentError(loaded)) return fail(loaded)
     const bundle = loaded.value
+    const html = renderInfographicBundleHtml(bundle)
     if (format === 'json') {
       writeOutput(output, `${JSON.stringify(bundle, null, 2)}\n`)
     } else if (format === 'markdown') {
       writeOutput(output, renderInfographicBundleMarkdown(bundle))
     } else if (format === 'png' || format === 'pdf') {
-      const exported = await exportInfographicToFile(renderInfographicBundleHtml(bundle), format, output)
+      const exported = await exportInfographicToFile(html, format, output)
       if (isAgentError(exported)) return fail(exported)
     } else {
-      writeOutput(output, renderInfographicBundleHtml(bundle))
+      writeOutput(output, html)
     }
-    return { ok: true, value: { output, format, style: bundle.style, blocks: bundle.blocks.map(block => block.id), warnings: [] } }
+    const delivered = await articleDelivery(html, output, 'Miao Vision Infographic', [])
+    return { ok: true, value: { output, format, style: bundle.style, blocks: bundle.blocks.map(block => block.id), warnings: [], delivery: delivered.delivery },
+      ...(delivered.previewWarning ? { warnings: [delivered.previewWarning] } : {}) }
   }
 
   if (specInputPath) {
@@ -98,18 +103,20 @@ export async function runArticle(args: CliArgs): Promise<unknown> {
         }))
       }
     }
+    const html = renderInfographicHtml(spec)
     if (format === 'json') {
       writeOutput(output, `${JSON.stringify(spec, null, 2)}\n`)
     } else if (format === 'markdown') {
       writeOutput(output, renderInfographicMarkdown(spec))
     } else if (format === 'png' || format === 'pdf') {
-      const html = renderInfographicHtml(spec)
       const exported = await exportInfographicToFile(html, format, output)
       if (isAgentError(exported)) return fail(exported)
     } else {
-      writeOutput(output, renderInfographicHtml(spec))
+      writeOutput(output, html)
     }
-    return { ok: true, value: { output, format, style: spec.style, sections: spec.sections.map(s => s.type), warnings: quality.warnings } }
+    const delivered = await articleDelivery(html, output, spec.title ?? 'Miao Vision Infographic', quality.warnings)
+    return { ok: true, value: { output, format, style: spec.style, sections: spec.sections.map(s => s.type), warnings: quality.warnings, delivery: delivered.delivery },
+      ...(delivered.previewWarning ? { warnings: [delivered.previewWarning] } : {}) }
   }
 
   const file = args.positional[0]
@@ -130,16 +137,16 @@ export async function runArticle(args: CliArgs): Promise<unknown> {
   const compositionIssue = getCompositionRenderIssue(generated.value.spec)
   if (compositionIssue) return fail(compositionSelectionRequired(compositionIssue))
 
+  const html = renderInfographicHtml(generated.value.spec)
   if (format === 'json') {
     writeOutput(output, `${JSON.stringify(generated.value.spec, null, 2)}\n`)
   } else if (format === 'markdown') {
     writeOutput(output, generated.value.markdown)
   } else if (format === 'png' || format === 'pdf') {
-    const html = renderInfographicHtml(generated.value.spec)
     const exported = await exportInfographicToFile(html, format, output)
     if (isAgentError(exported)) return fail(exported)
   } else {
-    writeOutput(output, renderInfographicHtml(generated.value.spec))
+    writeOutput(output, html)
   }
 
   const quality = assessInfographicQuality(generated.value.spec)
@@ -156,6 +163,7 @@ export async function runArticle(args: CliArgs): Promise<unknown> {
       }))
     }
   }
+  const delivered = await articleDelivery(html, output, generated.value.spec.title ?? 'Miao Vision Infographic', quality.warnings)
   return {
     ok: true,
     value: {
@@ -163,7 +171,22 @@ export async function runArticle(args: CliArgs): Promise<unknown> {
       format,
       style,
       sections: generated.value.spec.sections.map(section => section.type),
-      warnings: quality.warnings
-    }
+      warnings: quality.warnings,
+      delivery: delivered.delivery
+    },
+    ...(delivered.previewWarning ? { warnings: [delivered.previewWarning] } : {})
+  }
+}
+
+async function articleDelivery(
+  html: string, output: string, title: string, contentWarnings: unknown[]
+): Promise<{ delivery: DeliveryManifest; previewWarning?: string }> {
+  const preview = await createArtifactPreview(html, output)
+  return {
+    previewWarning: preview.warning,
+    delivery: buildDelivery({
+      kind: 'article', title, outputs: [output], primaryPath: output, previewPath: preview.path,
+      warnings: contentWarnings, metrics: [], highlights: []
+    })
   }
 }

@@ -73,6 +73,9 @@ describe('deck CLI knowledge validation', () => {
     ])
     expect(result.status).toBe(0)
     expect(result.output.value.skippedChecks).toContain('claim grounding')
+    expect(result.output.value.delivery).toMatchObject({
+      kind: 'deck', status: 'needs_review', summary: { metrics: [], highlights: [] }
+    })
     expect(readFileSync(output, 'utf8')).toContain('class="slide-nav"')
   })
 

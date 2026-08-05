@@ -11,6 +11,9 @@ import { instantiateDeck } from './deck-knowledge-registry'
 import * as YAML from 'yaml'
 import { exportHtmlToPdf } from './pdf-export'
 import { validateDeckProvenance } from './deck-provenance'
+import { buildDelivery, deckDeliverySummary } from './artifact-delivery'
+import { createArtifactPreview } from './artifact-preview'
+import type { AnalyzeContext } from './context-schema'
 
 export function runDeckCommand(args: CliArgs): unknown {
   if (args.subcommand === 'instantiate') return runDeckInstantiate(args)
@@ -104,9 +107,11 @@ export async function runDeckRender(args: CliArgs): Promise<unknown> {
 
   let knowledgeIssues: ReturnType<typeof collectDeckKnowledgeIssues> = []
   let provenanceCoverage: ReturnType<typeof validateDeckProvenance>['coverage'] | undefined
+  let renderContext: AnalyzeContext | null = null
   if (contextPath) {
     const context = parseAnalyzeContext(readJson<unknown>(contextPath))
     if (!context) return fail(agentError('INVALID_CONTEXT', 'context.json format is invalid.', { contextPath }))
+    renderContext = context
     knowledgeIssues = collectDeckKnowledgeIssues(validation.value, context, args.flags.strict === true)
     const provenance = validateDeckProvenance(validation.value, context)
     provenanceCoverage = provenance.coverage
@@ -141,14 +146,28 @@ export async function runDeckRender(args: CliArgs): Promise<unknown> {
   } else {
     writeOutput(output, html)
   }
+  const warnings = knowledgeIssues.filter(item => item.severity === 'warning').map(item => item.message)
+  const preview = await createArtifactPreview(html, output, {
+    selector: '.slide', width: 1440, height: 900, timeout: numberFlag(args, 'png-timeout')
+  })
+  if (preview.warning) warnings.push(preview.warning)
+  const verified = Boolean(contextPath) && knowledgeIssues.every(item => item.severity !== 'error') &&
+    Boolean(provenanceCoverage && provenanceCoverage.objectCoverage === 1 && provenanceCoverage.claimCheckCoverage === 1)
+  const summary = deckDeliverySummary(validation.value, renderContext, verified)
+  const delivery = buildDelivery({
+    kind: 'deck', title: validation.value.title ?? validation.value.slides[0]?.title ?? 'Miao Vision Deck',
+    outputs: [output], primaryPath: output, previewPath: preview.path, verified,
+    coverage: provenanceCoverage, warnings: warnings.filter(warning => !warning.startsWith('PNG_')), ...summary
+  })
   return {
     ok: true,
     value: {
       output,
       slides: validation.value.slides.length,
-      warnings: knowledgeIssues.filter(item => item.severity === 'warning').map(item => item.message),
+      warnings,
       issues: knowledgeIssues,
       coverage: provenanceCoverage,
+      delivery,
       ...(!contextPath ? {
         skippedChecks: ['claim grounding', 'evidence paths', 'caveat coverage']
       } : {})

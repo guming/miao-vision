@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import packageJson from '../package.json'
 import { agentError, isAgentError } from './errors'
 import { loadDataset, loadDatasets } from './data-loader'
@@ -23,11 +22,7 @@ import { runSpecDiff } from './cli-spec-diff'
 import { runInspect } from './cli-inspect'
 import { runInteraction } from './cli-interaction'
 import { runDeckCommand, runDeckRender } from './cli-deck'
-import {
-  parseArgs, requiredFlag, stringFlag, numberFlag,
-  formatOutputPath, writeOutput, fail, printJson,
-  readSpec, readJson, readProfile, normalizeSpec, parseFormats
-} from './cli-utils'
+import { parseArgs, requiredFlag, stringFlag, numberFlag, formatOutputPath, writeOutput, fail, printJson, readSpec, readJson, readProfile, normalizeSpec, parseFormats } from './cli-utils'
 import { resolveDirectives } from './directive-resolver'
 import { mapInsightText } from './insight-utils'
 import { validateProvenance, type ProvenanceCoverage } from './provenance-validator'
@@ -40,20 +35,17 @@ import { join } from 'node:path'
 import { exportHtmlToPng } from './png-export'
 import { packageTrustedArtifact } from './trusted-artifact'
 import { renderReportHtmlWithTrust } from './trusted-html-render'
-
+import { deliverReportArtifact } from './report-delivery'
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
-
   if (args.command === '--version' || args.command === '-v' || args.command === 'version') {
     process.stdout.write(`${packageJson.version}\n`)
     return
   }
-
   if (args.command === '--help' || args.command === '-h' || args.command === 'help' || !args.command) {
     printHelp()
     return
   }
-
   if (args.flags['help'] === true || args.flags['h'] === true) {
     if (args.subcommand) {
       printHelp(`${args.command}.${args.subcommand}`)
@@ -62,7 +54,6 @@ async function main(): Promise<void> {
     }
     return
   }
-
   try {
     switch (args.command) {
       case 'data':
@@ -78,7 +69,6 @@ async function main(): Promise<void> {
         printJson(await runReportCommand(args))
         return
     }
-
     printJson(agentError('UNKNOWN_COMMAND', `Unknown command: ${args.command ?? '(none)'}`, {
       commands: ['data', 'spec', 'deck', 'report', 'render']
     }))
@@ -88,7 +78,6 @@ async function main(): Promise<void> {
     process.exitCode = 1
   }
 }
-
 function runData(args: CliArgs): void | Promise<void> {
   switch (args.subcommand) {
     case 'profile':
@@ -106,7 +95,6 @@ function runData(args: CliArgs): void | Promise<void> {
       )))
   }
 }
-
 function runSpec(args: CliArgs): void {
   switch (args.subcommand) {
     case 'validate':
@@ -408,6 +396,18 @@ async function runRender(args: CliArgs): Promise<unknown> {
     warnings.push(...finalTrust.shareSafety.checks.flatMap(check => check.issues.map(issue => `${issue.code}: ${issue.message}`)))
   }
 
+  const primaryPath = formats.includes('html') ? written.find(path => path.endsWith('.html'))! : written[0]
+  const verified = renderProvenance ? renderProvenance.issues.length === 0 : false
+  const delivered = await deliverReportArtifact({
+    kind: 'report', html, spec: validation.value, context: renderContext, outputs: written, primaryPath,
+    verified, coverage: renderProvenance?.coverage, shareSafe: interactive ? finalTrust.shareSafe : undefined,
+    shareStatus: interactive ? finalTrust.shareSafety.status : undefined,
+    contentWarnings: warnings.filter(warning => !warning.startsWith('PNG_')),
+    previewName: outputDir ? 'report.preview.png' : undefined,
+    previewWidth: numberFlag(args, 'viewport-width'), previewHeight: numberFlag(args, 'viewport-height'), previewTimeout: numberFlag(args, 'png-timeout')
+  })
+  if (delivered.previewWarning) warnings.push(delivered.previewWarning)
+
   return {
     ok: true,
     value: {
@@ -415,10 +415,11 @@ async function runRender(args: CliArgs): Promise<unknown> {
       profile,
       interactive: formats.includes('html') ? interactive : false,
       coverage: renderProvenance?.coverage,
-      verified: renderProvenance ? renderProvenance.issues.length === 0 : false
+      verified
       ,shareSafe: interactive ? finalTrust.shareSafe : undefined
       ,shareSafety: interactive ? finalTrust.shareSafety : undefined
       ,exposureManifest: interactive ? finalTrust.manifest : undefined
+      ,delivery: delivered.delivery
     },
     ...(warnings.length ? { warnings } : {})
   }

@@ -11,7 +11,7 @@ type PlaywrightModule = { chromium: import('playwright-core').BrowserType<import
 export async function exportHtmlToPng(
   html: string,
   outputPath: string,
-  options: { width?: number; height?: number; scale?: number; timeout?: number; keepTemp?: boolean } = {}
+  options: { width?: number; height?: number; scale?: number; timeout?: number; keepTemp?: boolean; selector?: string } = {}
 ): Promise<AgentResult<{ output: string; tempDir?: string }>> {
   const workspaceRequire = createRequire(join(process.cwd(), 'package.json'))
   let playwright: PlaywrightModule | null = null
@@ -33,7 +33,13 @@ export async function exportHtmlToPng(
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'networkidle', timeout })
     await page.waitForFunction(() => document.documentElement.dataset.miaoRenderReady === 'true', undefined, { timeout })
     await page.evaluate(() => document.fonts.ready)
-    await page.screenshot({ path: outputPath, fullPage: true })
+    if (options.selector) {
+      const target = page.locator(options.selector).first()
+      await target.waitFor({ state: 'visible', timeout })
+      await target.screenshot({ path: outputPath })
+    } else {
+      await page.screenshot({ path: outputPath, fullPage: true })
+    }
     if (!existsSync(outputPath) || statSync(outputPath).size === 0) {
       return agentError('PNG_OUTPUT_FAILED', 'PNG output was not created or is empty.', { outputPath })
     }
