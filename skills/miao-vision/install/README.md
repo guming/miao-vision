@@ -1,7 +1,7 @@
 # Miao Vision Plugin Installation
 
-Current compatible release: `v0.2.1` (`skill-v0.2.1`), with
-`@miao-vision/cli@0.2.1`. Download the cross-host bundle from:
+Current compatible release: `v0.3.0` (`skill-v0.3.0`), with
+`@miao-vision/cli@0.3.0`. Download the cross-host bundle from:
 
 ```text
 https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-plugin.zip
