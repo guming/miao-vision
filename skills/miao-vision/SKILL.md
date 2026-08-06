@@ -45,7 +45,10 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 
 ## Shared Rules
 
-- Use `/tmp/miao-vision` for temporary context, specs, and artifacts unless the user names another output location.
+- Keep context, profiles, draft specs, and other intermediate files under a task-specific `miao-vision` directory in the operating system's native temporary directory. Resolve that directory with the host runtime instead of hardcoding `/tmp`; on Windows use the system temp location, and on macOS/Linux use their native temp location.
+- Unless the user names another output location, create one delivery directory per artifact under `./miao-vision/artifacts/{artifact-slug}-{YYYYMMDD-HHmmss}/`, resolved from the task's initial working directory. Derive the slug from the artifact title or kind, normalize it for macOS, Windows, and Linux filename rules, and keep every requested format plus its preview together in that directory.
+- Check that the working directory is writable before rendering. If it is not, use `{system-temp}/miao-vision/artifacts/{artifact-slug}-{YYYYMMDD-HHmmss}/` and disclose the fallback path. Never silently switch locations, reuse an existing delivery directory, or treat an intermediate file as the formal deliverable.
+- Braced names and `SYSTEM_TEMP` in this documentation are notation, not CLI variables. Resolve them to absolute or working-directory-relative literal paths before invoking `miao-viz`; never pass placeholder tokens or angle brackets to the CLI.
 - Keep work local, ground every metric and finding in source evidence, and use only CLI-supported charts and structures.
 - Let the agent author specs; use the CLI for deterministic analysis, validation, and rendering. Do not call an LLM from the CLI.
 - Do not edit generated HTML/PDF as source.

@@ -5,17 +5,17 @@ Use this workflow for a user-provided URL, local Markdown/text, or pasted long-f
 ## Standard Path
 
 1. For a URL, fetch only that page and extract the main article. Preserve title, author/date when available, headings, body, lists, tables, and key quotes.
-2. Normalize content to `/tmp/miao-vision/article.md`.
+2. Normalize content to `SYSTEM_TEMP/miao-vision/article.md`.
 3. Extract 12–20 compact claims for an ordinary article; keep every number, date, quote, and strong conclusion traceable to its source location.
 4. Group claims into 3–6 atomic blocks. Give each block one visual, one claim, one explanation, and a stable ordered id such as `fig-03-market-structure`.
-5. Write `/tmp/miao-vision/article-bundle.json`.
-6. Render once:
+5. Write `SYSTEM_TEMP/miao-vision/article-bundle.json`.
+6. Resolve the concrete `artifactPath` using the shared delivery-directory rule, then render once. In the schematic command below, `ARTIFACT_PATH` means that already-resolved literal path; do not pass the token itself to the CLI.
 
 ```bash
 miao-viz render article \
-  --bundle-input /tmp/miao-vision/article-bundle.json \
+  --bundle-input SYSTEM_TEMP/miao-vision/article-bundle.json \
   --format html \
-  --output /tmp/miao-vision/article-infographic.html
+  --output ARTIFACT_PATH
 ```
 
 Use `png` or `pdf` only when requested. Those formats require Playwright; obtain approval before installing it. Surface structured export errors rather than creating a second renderer.
@@ -89,10 +89,14 @@ Aim for at least three distinct visual types across a multi-section infographic.
 Use auto-extract only for a short or explicitly requested quick draft:
 
 ```bash
-miao-viz render article /tmp/miao-vision/article.md \
+miao-viz render article SYSTEM_TEMP/miao-vision/article.md \
   --style editorial \
   --format html \
-  --output /tmp/miao-vision/article-infographic.html
+  --output ARTIFACT_PATH
 ```
 
 On a structured error, repair the reported input path once when obvious. Do not build a separate HTML pipeline. Before returning, confirm all numbers and quotes map to claims, block ids are stable, visuals match their data shapes, and the final render has no unresolved warning.
+
+## Deliver the artifact
+
+Prefer `value.delivery`. Show the status, PNG preview, primary artifact link, and up to three available actions. Article delivery may have empty metrics and highlights; do not reread the HTML/PDF or generate a replacement summary. If preview generation fails, deliver the primary artifact with the warning. Keep the response below the shared 300-token budget and use the shared Markdown fallback when local images are unavailable.

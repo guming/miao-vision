@@ -45,12 +45,24 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 
 ## Shared Rules
 
-- Use `/tmp/miao-vision` for temporary context, specs, and artifacts unless the user names another output location.
+- Keep context, profiles, draft specs, and other intermediate files under a task-specific `miao-vision` directory in the operating system's native temporary directory. Resolve that directory with the host runtime instead of hardcoding `/tmp`; on Windows use the system temp location, and on macOS/Linux use their native temp location.
+- Unless the user names another output location, create one delivery directory per artifact under `./miao-vision/artifacts/{artifact-slug}-{YYYYMMDD-HHmmss}/`, resolved from the task's initial working directory. Derive the slug from the artifact title or kind, normalize it for macOS, Windows, and Linux filename rules, and keep every requested format plus its preview together in that directory.
+- Check that the working directory is writable before rendering. If it is not, use `{system-temp}/miao-vision/artifacts/{artifact-slug}-{YYYYMMDD-HHmmss}/` and disclose the fallback path. Never silently switch locations, reuse an existing delivery directory, or treat an intermediate file as the formal deliverable.
+- Braced names and `SYSTEM_TEMP` in this documentation are notation, not CLI variables. Resolve them to absolute or working-directory-relative literal paths before invoking `miao-viz`; never pass placeholder tokens or angle brackets to the CLI.
 - Keep work local, ground every metric and finding in source evidence, and use only CLI-supported charts and structures.
 - Let the agent author specs; use the CLI for deterministic analysis, validation, and rendering. Do not call an LLM from the CLI.
 - Do not edit generated HTML/PDF as source.
 - Return the requested artifact path and report any blocking structured error.
 - Treat `skills/miao-vision/` as the source skill; refresh generated copies through repository build or pack commands.
+
+## Artifact Delivery
+
+- Prefer `value.delivery` when a successful render or recurring update returns it. Do not reread the full HTML or PDF to summarize the artifact.
+- Lead with the delivery status and title, render `artifacts.preview` when the client supports local images, and link `artifacts.primary` as the formal deliverable.
+- Show at most three `summary.metrics`, two `summary.highlights`, and three `actions`. Use only the values present in the manifest; never supplement them from memory or `metricCandidates`.
+- Keep the default delivery response below 300 tokens. Hide Context, Profile, Spec, and temporary paths unless they are required to explain a blocking structured error.
+- Do not describe `needs_review` as verified, or `restricted` as safe to share. Say that preview generation failed without withholding a successfully generated primary artifact.
+- If local images or native artifact cards are unsupported, degrade to concise Markdown in this order: status and title, primary path, metrics, warnings, actions.
 
 ## Report Capability Routing
 
@@ -62,6 +74,7 @@ After selecting `references/report.md`, route report requests as follows:
 - Recurring update: use `report update`, inspect `changes.json`, and report comparable and non-comparable changes.
 - Compatible local files: use `--inputs`; add `--field-map` only for explicit source-to-canonical field mappings.
 - Report image: render with `--format png`; use PDF for print/archive and HTML as the default.
+- Trusted interactive report for third-party exploration: use `catalog.interactions`, instantiate a recommended preset, choose an explicit `dataPolicy`, and require `--trusted` validation and rendering with `shareSafe: true` before delivery.
 
 Never infer business metric mappings after `SCENE_NOT_APPLICABLE`, ignore `notComparable`
 period changes, or add evidence absent from the source context.

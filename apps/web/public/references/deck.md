@@ -9,15 +9,15 @@ Use this workflow for an HTML or PDF deck from local structured data. Do not off
 ```bash
 miao-viz data analyze /path/to/data.csv \
   --intent "user request and audience" \
-  --output /tmp/miao-vision/context.json
+  --output SYSTEM_TEMP/miao-vision/context.json
 ```
 
 2. Instantiate the closest deterministic DeckSpec:
 
 ```bash
 miao-viz deck instantiate executive-brief \
-  --context /tmp/miao-vision/context.json \
-  --output /tmp/miao-vision/deck.yaml
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/deck.yaml
 ```
 
 Use `business-review` for a longer periodic review. Preserve generated evidence metadata and omit blocked slides.
@@ -35,24 +35,24 @@ Use at most one claim, four metrics, and one chart per main slide. Put detailed 
 
 ```bash
 miao-viz deck validate \
-  --spec /tmp/miao-vision/deck.yaml \
-  --context /tmp/miao-vision/context.json \
+  --spec SYSTEM_TEMP/miao-vision/deck.yaml \
+  --context SYSTEM_TEMP/miao-vision/context.json \
   --verify \
   --strict
 ```
 
 Repair the first issue path and rerun validation. Never remove grounding metadata to silence a warning.
 
-5. Render:
+5. Resolve the concrete `artifactPath` using the shared delivery-directory rule, then render. In the schematic command below, `ARTIFACT_PATH` means that already-resolved literal path; do not pass the token itself to the CLI.
 
 ```bash
 miao-viz render deck \
   --input /path/to/data.csv \
-  --spec /tmp/miao-vision/deck.yaml \
-  --context /tmp/miao-vision/context.json \
+  --spec SYSTEM_TEMP/miao-vision/deck.yaml \
+  --context SYSTEM_TEMP/miao-vision/context.json \
   --strict \
   --theme <theme> \
-  --output /tmp/miao-vision/deck.html
+  --output ARTIFACT_PATH
 ```
 
 Default to `magazine` when the user has no theme preference. Supported themes are `standard-white`, `magazine`, `standard-dark`, `minimal`, `nyt`, `bloomberg`, and `tableau`.
@@ -93,3 +93,7 @@ Repair structured errors as follows:
 - Overloaded slide: split it or reduce metrics/charts.
 
 Return only after strict validation succeeds and the requested artifact is rendered.
+
+## Deliver the artifact
+
+Prefer `value.delivery`. Show the status, first-slide PNG preview, primary HTML/PDF link, and only the verified metrics or claims included in the manifest. Do not reread the complete deck or invent a narrative summary. Display at most three actions and keep the response below the shared 300-token budget. If preview generation fails, retain the successfully rendered deck and report the warning. Use the shared Markdown fallback when local images are unavailable.

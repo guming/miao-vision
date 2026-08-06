@@ -20,15 +20,15 @@ Use this workflow for a report, static dashboard, evidence-backed findings artif
 miao-viz data analyze /path/to/data.csv \
   --intent "user intent" \
   --compact \
-  --output /tmp/miao-vision/context.json
+  --output SYSTEM_TEMP/miao-vision/context.json
 
 miao-viz data profile /path/to/data.csv \
-  > /tmp/miao-vision/profile.json
+  > SYSTEM_TEMP/miao-vision/profile.json
 ```
 
 Read `context.json`; treat the profile only as validation input. Follow `promptRules[]`, surface
 `sampleWarnings[]`, use only `fields[]`, `metricCandidates[]`, `catalog.charts`,
-`catalog.scenes`, and `catalog.blocks/templates`. Reject anything in `catalog.blockedCharts`,
+`catalog.scenes`, `catalog.blocks/templates`, and `catalog.interactions`. Reject anything in `catalog.blockedCharts`,
 `catalog.blockedScenes`, or `catalog.blockedBlocks`. Ask at most one question, and only when
 `clarificationQuestions[]` or a blocked Scene identifies a blocking ambiguity.
 
@@ -38,21 +38,33 @@ If the primary field assumption is wrong, rerun analyze with `--correct-assumpti
 
 ```bash
 miao-viz spec scene instantiate <scene-id> \
-  --context /tmp/miao-vision/context.json \
-  --output /tmp/miao-vision/report.yaml
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/report.yaml
 
 # Use only when no scene matches:
 miao-viz spec template instantiate <id> \
-  --context /tmp/miao-vision/context.json \
-  --output /tmp/miao-vision/report.yaml
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/report.yaml
 
 # Use only when no template matches:
 miao-viz spec block instantiate <id> \
-  --context /tmp/miao-vision/context.json \
-  --output /tmp/miao-vision/report.yaml
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/report.yaml
 ```
 
 Review field names, variables, generated insights, evidence ids, and quality checks. Fall back to manual charts only when no suitable template or block exists.
+
+For an HTML report intended for another person to explore, instantiate a recommended interaction preset and merge its `interactions` fragment into the report spec:
+
+```bash
+miao-viz spec interaction instantiate <filter|filter-and-detail> \
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/interactions.yaml
+```
+
+Use only a preset present in `catalog.interactions`. Keep `dataPolicy.mode: minimal` unless detail rows are required. With `detail-safe`, review every `detailFields` and `excludeFields` entry; never replace a restricted field or switch to `full` automatically. A legacy spec without `dataPolicy` remains renderable but is not share-safe.
+
+Use `interactions.currentView.summaries` only for deterministic local calculations supported by `QueryRecipe`; never generate JavaScript or rewrite published insights as filters change. Published insights remain bound to full-dataset evidence, while current-view summaries must expose their active filter scope and `Calculated locally` status. Set `locale` to `en` or `zh-CN` from the requested report language.
 
 Use `miao-viz spec scene list` to discover business scenes. If the selected scene returns
 `SCENE_NOT_APPLICABLE`, surface its missing semantics and clarification questions; never guess
@@ -69,29 +81,33 @@ fields. Without that evidence, keep the report descriptive and do not claim sign
 
 ```bash
 miao-viz spec validate \
-  --spec /tmp/miao-vision/report.yaml \
-  --profile /tmp/miao-vision/profile.json \
-  --context /tmp/miao-vision/context.json \
+  --spec SYSTEM_TEMP/miao-vision/report.yaml \
+  --profile SYSTEM_TEMP/miao-vision/profile.json \
+  --context SYSTEM_TEMP/miao-vision/context.json \
   --verify \
   --strict
 ```
+
+Add `--trusted` only for an interactive HTML report intended for third-party delivery.
 
 Fix every error and warning before rendering. Require both `coverage.objectCoverage`
 and `coverage.claimCheckCoverage` to equal `1`. Use `--patch-hints` for
 machine-fixable issues; apply only returned patches and fill unresolved field names
 or evidence paths manually.
 
-5. Render:
+5. Resolve the concrete `artifactPath` using the shared delivery-directory rule, then render. In the schematic command below, `ARTIFACT_PATH` means that already-resolved literal path; do not pass the token itself to the CLI.
 
 ```bash
 miao-viz render report \
   --input /path/to/data.csv \
-  --spec /tmp/miao-vision/report.yaml \
-  --context /tmp/miao-vision/context.json \
+  --spec SYSTEM_TEMP/miao-vision/report.yaml \
+  --context SYSTEM_TEMP/miao-vision/context.json \
   --theme <theme> \
   --format html \
-  --output /tmp/miao-vision/report.html
+  --output ARTIFACT_PATH
 ```
+
+Add `--trusted` only for an interactive HTML report intended for third-party delivery.
 
 Default to `magazine` when the user has no preference. Supported themes are `standard-white`, `magazine`, `standard-dark`, `minimal`, `nyt`, `bloomberg`, and `tableau`. Use `--no-interactive` only when explicitly requested.
 
@@ -172,8 +188,8 @@ After the first report passes validation, preview initialization:
 ```bash
 miao-viz report init /path/to/project \
   --input /path/to/period-1.xlsx \
-  --spec /tmp/miao-vision/report.yaml \
-  --context /tmp/miao-vision/context.json \
+  --spec SYSTEM_TEMP/miao-vision/report.yaml \
+  --context SYSTEM_TEMP/miao-vision/context.json \
   --period 2026-W28 \
   --dry-run
 ```
@@ -209,9 +225,9 @@ validation, inspect the change contract:
 
 ```bash
 miao-viz spec diff \
-  --before /tmp/miao-vision/before.yaml \
-  --after /tmp/miao-vision/after.yaml \
-  --context /tmp/miao-vision/context.json
+  --before SYSTEM_TEMP/miao-vision/before.yaml \
+  --after SYSTEM_TEMP/miao-vision/after.yaml \
+  --context SYSTEM_TEMP/miao-vision/context.json
 ```
 
 Report the changed paths and affected charts, insights, and evidence. Then validate with
@@ -222,12 +238,17 @@ To derive an executive summary from an already verified report:
 
 ```bash
 miao-viz spec summary instantiate \
-  --spec /tmp/miao-vision/report.yaml \
-  --context /tmp/miao-vision/context.json \
-  --output /tmp/miao-vision/executive-summary.yaml
+  --spec SYSTEM_TEMP/miao-vision/report.yaml \
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/executive-summary.yaml
 ```
 
 Keep the generated provenance sidecar with the summary. Do not add metrics or evidence ids that
 are absent from the source report/context.
 
 Before returning, confirm strict validation passed, every claim is evidence-grounded, sample caveats are present, all charts are allowed and nonredundant, fields and transforms are valid, and the requested artifact exists.
+For an interactive artifact intended for third-party delivery, also require `value.shareSafe: true` and inspect `value.exposureManifest`. Do not deliver a report with `review` or `restricted` status as trusted.
+
+## Deliver the artifact
+
+When `value.delivery` is present, use it as the delivery source of truth. Show its status, PNG preview, primary HTML/PDF link, up to three verified metrics, up to two verified highlights, and no more than three actions. For recurring reports, include `period` and `changeCounts`; omit comparison language when no baseline exists. Do not read the generated HTML/PDF to create another summary, and do not expose Context, Profile, Spec, Evidence, or changes files unless the user requests diagnostics. If preview generation failed, deliver the primary artifact and mention the preview warning. If the client cannot display local images, use the shared Markdown fallback.
