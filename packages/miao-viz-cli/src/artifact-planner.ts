@@ -1,0 +1,221 @@
+import { artifactPlanSchema, type ArtifactPlan } from './artifact-plan-schema'
+import type { AnalyzeContext, CompactAnalyzeContext } from './context-schema'
+import type { OutcomeClarification, ResolvedOutcomeBrief } from './outcome-brief-schema'
+import type { ResolvedOutcomeBriefResult } from './outcome-brief-resolver'
+
+type PlannerContext = AnalyzeContext | CompactAnalyzeContext
+type PlannedForm = NonNullable<ArtifactPlan['form']>
+
+interface Selection {
+  form: PlannedForm
+  renderer: NonNullable<ArtifactPlan['renderer']>
+  reasonCode: string
+  reason: string
+}
+
+export function planArtifact(
+  briefResult: ResolvedOutcomeBriefResult,
+  context: PlannerContext
+): ArtifactPlan {
+  const { resolvedBrief: brief, assumptions, briefHash } = briefResult
+  const dataClarification = firstBlockingDataClarification(context)
+  if (dataClarification) {
+    return buildPlan(briefResult, context, {
+      status: 'needs_clarification', clarification: dataClarification,
+      selectionReasons: [{
+        code: 'data_semantics_before_form',
+        message: 'A blocking data-semantic question must be resolved before artifact selection.'
+      }]
+    })
+  }
+
+  const selected = selectForm(brief)
+  if ('clarification' in selected) {
+    return buildPlan(briefResult, context, {
+      status: 'needs_clarification', clarification: selected.clarification,
+      selectionReasons: [{ code: 'form_scores_close', message: selected.clarification.question }]
+    })
+  }
+  if ('unsupported' in selected) {
+    return buildPlan(briefResult, context, {
+      status: 'unsupported', form: selected.form,
+      selectionReasons: [{ code: selected.unsupported, message: selected.message }]
+    })
+  }
+
+  const pattern = selectPattern(selected, brief, context)
+  if (!pattern) {
+    return buildPlan(briefResult, context, {
+      status: 'unsupported', form: selected.form,
+      selectionReasons: [
+        { code: selected.reasonCode, message: selected.reason },
+        { code: 'no_allowed_pattern', message: 'The analyze catalog contains no allowed pattern for this form.' }
+      ]
+    })
+  }
+
+  return buildPlan(briefResult, context, {
+    status: assumptions.length > 0 ? 'ready_with_assumptions' : 'ready',
+    form: selected.form,
+    renderer: selected.renderer,
+    pattern: pattern.id,
+    structureRoles: structureRoles(selected.form, pattern.blocks),
+    formats: ['html', 'pdf'],
+    selectionReasons: [
+      { code: selected.reasonCode, message: selected.reason },
+      { code: pattern.reasonCode, message: pattern.reason }
+    ]
+  })
+}
+
+function selectForm(brief: ResolvedOutcomeBrief): Selection
+  | { unsupported: string; message: string; form: PlannedForm | null }
+  | { clarification: OutcomeClarification } {
+  const requested = brief.delivery.form
+  if (requested === 'report') {
+    return { form: 'report', renderer: 'report', reasonCode: 'explicit_report', reason: 'The brief explicitly requests a report.' }
+  }
+  if (requested === 'presentation') {
+    return { form: 'presentation', renderer: 'deck', reasonCode: 'explicit_presentation', reason: 'The brief explicitly requests a presentation.' }
+  }
+  if (requested === 'infographic') {
+    return {
+      unsupported: 'infographic_not_supported_v1', form: 'infographic',
+      message: 'V1 does not include the future infographic adapter.'
+    }
+  }
+  if (requested === 'brief') {
+    return { form: 'brief', renderer: 'report', reasonCode: 'brief_uses_report', reason: 'A one-page brief uses the report renderer.' }
+  }
+  if (brief.audience.scope === 'public' || brief.trust.privacy === 'public'
+    || brief.delivery.context === 'public') {
+    return {
+      unsupported: 'public_requires_infographic_adapter', form: null,
+      message: 'Public auto-routing requires the future infographic and share-safety adapter.'
+    }
+  }
+  if (brief.delivery.context === 'chat' && brief.delivery.density === 'concise') {
+    return { form: 'brief', renderer: 'report', reasonCode: 'chat_concise_brief', reason: 'Concise chat delivery favors an executive brief.' }
+  }
+
+  let reportScore = 0
+  let presentationScore = 0
+  if (brief.delivery.context === 'meeting') presentationScore += 2
+  if (brief.delivery.density === 'concise') presentationScore += 1
+  if (brief.delivery.tone === 'executive') presentationScore += 1
+  if (brief.delivery.context === 'archive') reportScore += 2
+  if (brief.delivery.context === 'email' && brief.delivery.density === 'detailed') reportScore += 2
+  if (brief.delivery.density === 'detailed') reportScore += 1
+  if (brief.delivery.tone === 'analytical') reportScore += 1
+  if (brief.lifecycle.mode === 'recurring') reportScore += 2
+
+  const lacksIntent = brief.goal.keyQuestion === null && brief.goal.decision === null
+  if (Math.abs(reportScore - presentationScore) <= 1 && lacksIntent) {
+    return { clarification: {
+      field: 'delivery.form',
+      question: '这份成果主要用于会议讲述，还是由读者自行阅读？',
+      options: ['会议讲述', '自行阅读'],
+      reasonCode: 'presentation_or_reading',
+      blocking: true
+    } }
+  }
+  return reportScore > presentationScore
+    ? { form: 'report', renderer: 'report', reasonCode: 'report_score_higher', reason: `Report score ${reportScore} exceeded presentation score ${presentationScore}.` }
+    : { form: 'presentation', renderer: 'deck', reasonCode: 'presentation_score_higher', reason: `Presentation score ${presentationScore} exceeded report score ${reportScore}.` }
+}
+
+function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, context: PlannerContext) {
+  const catalog = context.catalog
+  if (selection.renderer === 'deck') {
+    const patterns = isCompact(context)
+      ? (catalog.deckPatterns ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
+      : (catalog.deckPatterns ?? []).map(item => ({ id: item.id, score: item.score, blocks: item.blocks }))
+    const preferred = brief.delivery.density === 'concise' || brief.delivery.tone === 'executive'
+      ? 'executive-brief' : 'business-review'
+    const item = patterns.find(pattern => pattern.id === preferred) ?? highest(patterns)
+    return item && {
+      ...item, reasonCode: `catalog_deck_${item.id}`,
+      reason: `Selected allowed deck pattern ${item.id} from the analyze catalog.`
+    }
+  }
+
+  const blockedScenes = new Set(isCompact(context)
+    ? (catalog.blockedScenes ?? []).map(item => item[0])
+    : (catalog.blockedScenes ?? []).map(item => item.id))
+  const scenes = (isCompact(context)
+    ? (catalog.scenes ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
+    : (catalog.scenes ?? []).map(item => ({ id: item.id, score: item.score, blocks: item.blocks })))
+    .filter(item => !blockedScenes.has(item.id))
+  const scene = highest(scenes)
+  if (scene) return {
+    ...scene, reasonCode: `catalog_scene_${scene.id}`,
+    reason: `Selected highest-scoring allowed scene ${scene.id} from the analyze catalog.`
+  }
+
+  const blockedTemplates = new Set(isCompact(context)
+    ? (catalog.blockedTemplates ?? []).map(item => item[0])
+    : (catalog.blockedTemplates ?? []).map(item => item.id))
+  const templates = (isCompact(context)
+    ? (catalog.templates ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
+    : (catalog.templates ?? []).map(item => ({ id: item.id, score: item.score, blocks: item.blocks })))
+    .filter(item => !blockedTemplates.has(item.id))
+  const template = highest(templates)
+  return template && {
+    ...template, reasonCode: `catalog_template_${template.id}`,
+    reason: `Selected highest-scoring allowed template ${template.id} from the analyze catalog.`
+  }
+}
+
+function highest<T extends { id: string; score: number }>(items: T[]): T | undefined {
+  return [...items].sort((left, right) => right.score - left.score || left.id.localeCompare(right.id))[0]
+}
+
+function firstBlockingDataClarification(context: PlannerContext): OutcomeClarification | null {
+  const item = (context.clarificationQuestions ?? [])
+    .find(question => isCompact(context) ? question[3] : question.blocking)
+  if (!item) return null
+  const question = isCompact(context) ? item[1] : item.question
+  const options = (isCompact(context) ? item[2] : item.options).slice(0, 3)
+  if (options.length < 2) options.push('Use the current assumption')
+  return {
+    field: `data.${isCompact(context) ? item[4] : item.appliesTo}`,
+    question, options, reasonCode: 'data_semantics_blocking', blocking: true
+  }
+}
+
+function buildPlan(
+  briefResult: ResolvedOutcomeBriefResult,
+  context: PlannerContext,
+  overrides: Partial<ArtifactPlan> & Pick<ArtifactPlan, 'status' | 'selectionReasons'>
+): ArtifactPlan {
+  const density = briefResult.resolvedBrief.delivery.density
+  const budget = density === 'concise' ? [4, 3] : density === 'detailed' ? [10, 8] : [7, 5]
+  const gates: ArtifactPlan['qualityGates'] = ['evidence_validation', 'data_semantics', 'catalog_compliance', 'readability']
+  if (briefResult.resolvedBrief.trust.shareSafetyRequired) gates.push('share_safety')
+  return artifactPlanSchema.parse({
+    schemaVersion: '1', briefHash: briefResult.briefHash,
+    status: overrides.status, sourceKind: 'tabular',
+    resolvedBrief: briefResult.resolvedBrief, assumptions: briefResult.assumptions,
+    form: null, renderer: null, pattern: null, structureRoles: [],
+    densityBudget: { level: density, maxSections: budget[0], maxPrimaryVisuals: budget[1] },
+    qualityGates: gates, formats: [],
+    selectionReasons: overrides.selectionReasons,
+    warnings: contextWarnings(context), clarification: null,
+    ...overrides
+  })
+}
+
+function contextWarnings(context: PlannerContext): ArtifactPlan['warnings'] {
+  return isCompact(context)
+    ? context.warnings.map(([code, message]) => ({ code, message }))
+    : context.sampleWarnings.map(({ code, message }) => ({ code, message }))
+}
+
+function structureRoles(form: PlannedForm, blocks: string[]): string[] {
+  const lead = form === 'presentation' ? ['cover-claim'] : ['executive-summary']
+  return [...new Set([...lead, ...blocks])]
+}
+
+function isCompact(context: PlannerContext): context is CompactAnalyzeContext {
+  return 'format' in context && context.format === 'compact-v1'
+}
