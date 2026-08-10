@@ -109,6 +109,22 @@ Handle structured failures without bypassing the binding:
 - `ARTIFACT_TARGET_BLOCKED` or `PLAN_TARGET_UNAVAILABLE`: stop; do not fall back to a different Catalog item.
 - `PLAN_NOT_EXECUTABLE`: create a fresh V2 Plan.
 
+For example, a changed input schema must remain blocked:
+
+```json
+{
+  "ok": true,
+  "value": {
+    "status": "blocked",
+    "renderReadiness": {
+      "ready": false,
+      "allowedFormats": [],
+      "blockingCodes": ["DATA_CONTEXT_MISMATCH"]
+    }
+  }
+}
+```
+
 ## Return to the established renderer
 
 If Verification is `verified`, use its `specKind` to read `report.md` or `deck.md` and continue with the existing Renderer. Preserve the same Context, data, and Spec that produced the Verification.

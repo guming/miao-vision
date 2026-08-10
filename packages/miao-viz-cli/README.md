@@ -36,9 +36,20 @@ miao-viz artifact instantiate \
   --plan ./plan.json \
   --context ./context.json \
   --output ./artifact-spec.yaml
+
+miao-viz artifact validate \
+  --plan ./plan.json \
+  --context ./context.json \
+  --input ./sales.csv \
+  --spec ./artifact-spec.yaml \
+  --output ./verification.json
 ```
 
-Both commands accept full or compact Analyze Context. Planning supports only `tabular` → Report/Presentation. Instantiation generates a draft Spec only: it does not validate, render, deliver, publish, call an LLM, or authorize sharing. Run the existing Report or Deck validation before rendering.
+All three commands accept full or compact Analyze Context. Planning supports only `tabular` → Report/Presentation. Instantiation generates a draft Spec only. Validation binds the Plan, Context, local data, and Spec into an Artifact Verification. Neither command renders, delivers, publishes, calls an LLM, or authorizes sharing.
+
+```text
+Outcome Brief → Artifact Plan V2 → ReportSpec/DeckSpec → Artifact Verification → existing Renderer
+```
 
 ### Plan versions
 
@@ -97,6 +108,55 @@ If the Context has changed, instantiation returns:
 ```
 
 Create a fresh Plan with the current Context; do not bypass or patch the hash.
+
+### Artifact Verification
+
+The same validation command works for ReportSpec and DeckSpec; `specKind` and the Plan Adapter select the existing strict validator:
+
+```bash
+# Report
+miao-viz artifact validate \
+  --plan ./report-plan.json \
+  --context ./context.json \
+  --input ./sales.csv \
+  --spec ./report.yaml
+
+# Deck
+miao-viz artifact validate \
+  --plan ./deck-plan.json \
+  --context ./context.json \
+  --input ./sales.csv \
+  --spec ./deck.yaml \
+  --compact
+```
+
+| Verification status | Meaning | Caller action |
+|---|---|---|
+| `verified` | Plan, Context, data, target, Spec, and evidence checks passed | Render only when `renderReadiness.ready` is `true` |
+| `needs_repair` | The Spec is recognizable but has actionable validation problems | Apply supported repair hints and validate again |
+| `blocked` | The Plan, Context, data schema, or target is no longer executable | Stop; do not select a fallback or render |
+
+A repairable field error is returned as a successful verification state:
+
+```json
+{
+  "ok": true,
+  "value": {
+    "status": "needs_repair",
+    "repairHints": [{
+      "code": "FIELD_NOT_FOUND",
+      "path": "charts.0.encoding.y.field",
+      "problem": "Field 'revenue' was not found in the input data.",
+      "action": "Choose an available field and validate again."
+    }],
+    "renderReadiness": { "ready": false, "allowedFormats": [], "blockingCodes": [] }
+  }
+}
+```
+
+Changing the Plan, Context, Spec, or data invalidates the previous Verification. A schema-incompatible input returns `blocked` with `DATA_CONTEXT_MISMATCH`; a Plan created from another Context returns `blocked` with `PLAN_CONTEXT_MISMATCH`. Re-analyze and replan instead of editing hashes.
+
+A `verified` receipt does not mean that an artifact has been rendered, reviewed for its final appearance, delivered, published, or approved for external sharing. Continue through the existing Report or Deck Renderer using exactly the Spec, Context, and data that were verified.
 
 For Agent UX, keep the plan-first interaction concise:
 
