@@ -21,28 +21,90 @@ miao-viz render deck --input ./examples/sales.csv --spec ./examples/sales-deck.y
 miao-viz render article ./article.md --style editorial --format html --output /tmp/article-infographic.html
 ```
 
-## Outcome Brief Shadow Planning
+## Outcome Brief Plan-First Workflow
 
-`artifact plan` is an optional, deterministic preview for deciding whether a local tabular Analyze Context should become a Report or Presentation:
+`artifact plan` deterministically selects a Report or Presentation for local tabular data. `artifact instantiate` can then convert an executable V2 Plan into a ReportSpec or DeckSpec:
 
 ```bash
 miao-viz artifact plan \
   --brief ./brief.json \
   --context ./context.json \
-  --compact
+  --compact \
+  --output ./plan.json
+
+miao-viz artifact instantiate \
+  --plan ./plan.json \
+  --context ./context.json \
+  --output ./artifact-spec.yaml
 ```
 
-V1 supports only `tabular` → Report/Presentation planning. It does not generate a Spec, render an artifact, call an LLM, or alter the existing Report, Deck, and Article commands. Full and compact Analyze Context files are accepted; add `--output ./plan.json` to write the result.
+Both commands accept full or compact Analyze Context. Planning supports only `tabular` → Report/Presentation. Instantiation generates a draft Spec only: it does not validate, render, deliver, publish, call an LLM, or authorize sharing. Run the existing Report or Deck validation before rendering.
 
-The status is one of `ready`, `ready_with_assumptions`, `needs_clarification`, or `unsupported`. Typical abbreviated results are:
+### Plan versions
+
+- V2 includes `contextHash`, a discriminated `target`, and `nextAction`; it is the only executable Plan version.
+- V1 remains readable for history and diagnostics but returns `PLAN_NOT_EXECUTABLE` when passed to `artifact instantiate`.
+- Never translate V1 to V2 by guessing a target. Create a fresh Plan from the current Brief and Context.
+
+### Plan actions
+
+| `nextAction` | Caller behavior |
+|---|---|
+| `instantiate` | Generate the draft Spec. |
+| `confirm` | Obtain confirmation, then add `--confirm-plan`. |
+| `clarify` | Answer the single returned clarification by updating the Brief and replanning. |
+| `stop` | Surface the unsupported reason and stop. |
+
+An abbreviated ready Plan looks like:
 
 ```json
-{ "ok": true, "value": { "status": "ready_with_assumptions", "form": "presentation", "renderer": "deck", "pattern": "executive-brief", "clarification": null } }
-{ "ok": true, "value": { "status": "needs_clarification", "form": null, "renderer": null, "pattern": null, "clarification": { "reasonCode": "presentation_or_reading" } } }
-{ "ok": true, "value": { "status": "unsupported", "form": null, "renderer": null, "pattern": null, "selectionReasons": [{ "code": "public_requires_infographic_adapter" }] } }
+{
+  "ok": true,
+  "value": {
+    "schemaVersion": "2",
+    "status": "ready_with_assumptions",
+    "nextAction": "instantiate",
+    "form": "presentation",
+    "renderer": "deck",
+    "target": { "adapter": "deck-pattern", "id": "executive-brief" },
+    "clarification": null
+  }
+}
 ```
 
-These snippets omit required plan metadata for readability; use the CLI response as the source of truth.
+Successful instantiation returns the generated Spec and execution metadata on stdout, or writes YAML with `--output`. `appliedConstraints` lists constraints enforced during planning/instantiation; `deferredConstraints` must not be described as applied.
+
+For an external Plan with `nextAction=confirm`:
+
+```bash
+miao-viz artifact instantiate \
+  --plan ./plan.json \
+  --context ./context.json \
+  --confirm-plan \
+  --output ./report.yaml
+```
+
+`--confirm-plan` confirms only this planning choice. It does not authorize rendering, sending, publishing, or external disclosure.
+
+If the Context has changed, instantiation returns:
+
+```json
+{
+  "ok": false,
+  "code": "PLAN_CONTEXT_MISMATCH",
+  "message": "Artifact Plan was created for a different Analyze Context."
+}
+```
+
+Create a fresh Plan with the current Context; do not bypass or patch the hash.
+
+For Agent UX, keep the plan-first interaction concise:
+
+```text
+建议生成 executive-brief Presentation，用于管理层会议；证据策略为严格验证。将继续生成草稿 DeckSpec。
+```
+
+When confirmation is required, show the selected form/target, no more than three consequential assumptions, and the safety warning. Do not show the complete Outcome Brief form. The examples above omit required hashes and metadata for readability; consume the actual CLI response.
 
 Generate both report formats with one render:
 

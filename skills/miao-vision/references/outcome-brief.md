@@ -11,6 +11,8 @@ Use this workflow only for an explicit plan-first request or when a local tabula
 - Treat `artifact instantiate` as Spec creation only. Always validate through the selected workflow before rendering.
 - Never treat `--confirm-plan` as authorization to render, send, publish, or expose sensitive data.
 
+V2 binds the execution target to the planning Context with `contextHash`. V1 lacks that executable contract: keep it readable for diagnostics, but create a fresh V2 Plan before instantiation.
+
 ## Plan
 
 Analyze the local data once, then create a minimal Draft Brief containing `schemaVersion`, `rawRequest`, and only fields clearly established by the user. Do not ask about density, tone, evidence policy, locale, or other defaultable fields.
