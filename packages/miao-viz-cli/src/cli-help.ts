@@ -1,4 +1,14 @@
 const COMMAND_HELP: Record<string, string> = {
+  'artifact.plan': `Usage: miao-viz artifact plan --brief <file> --context <file> [options]
+
+Plan a tabular outcome as a report or presentation without generating a spec or rendering.
+
+Options:
+  --brief <file>     Draft Outcome Brief JSON
+  --context <file>   Full or compact Analyze Context JSON
+  --output <file>    Write the plan result to this path (default: stdout)
+  --compact          Return the compact Agent-facing plan
+`,
   'data.analyze': `Usage: miao-viz data analyze <file> [options]
 
 Compile a scoped evidence pack and catalog for LLM report generation.
@@ -208,6 +218,14 @@ Preview old runs by default. Use --confirm to delete, excluding the latest run.
 }
 
 const GROUP_HELP: Record<string, string> = {
+  artifact: `
+Usage: miao-viz artifact <command> [options]
+
+Plan visual outcomes in optional Shadow Mode.
+
+Commands:
+  plan      Plan a tabular report or presentation without generating it
+`,
   data: `
 Usage: miao-viz data <command> [options]
 
@@ -286,6 +304,7 @@ Usage:
   miao-viz --version
 
 Groups:
+  artifact Plan tabular visual outcomes in optional Shadow Mode
   data    Inspect and query data files
   spec    Author, validate, and debug visualization specs
   deck    Plan and validate browser deck specs

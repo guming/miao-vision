@@ -7,6 +7,10 @@
   "releaseTag": "skill-v0.3.1",
   "capabilityProbes": [
     {
+      "args": ["artifact", "plan", "--help"],
+      "stdoutIncludes": "artifact plan"
+    },
+    {
       "args": ["deck", "instantiate", "--help"],
       "stdoutIncludes": "deck instantiate"
     },

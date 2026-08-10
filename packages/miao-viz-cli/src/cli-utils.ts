@@ -5,7 +5,7 @@ import { agentError } from './errors'
 import { parseOutputFormats, singleOrReportSpecSchema } from './spec-schema'
 import type { AgentError, AgentOutputFormat, AgentReportSpec, DataProfile } from './types'
 
-const GROUPS = new Set(['data', 'spec', 'deck', 'report', 'render'])
+const GROUPS = new Set(['data', 'spec', 'deck', 'report', 'render', 'artifact'])
 
 const GROUP_SUBCOMMANDS: Record<string, Set<string>> = {
   data:   new Set(['profile', 'query', 'analyze']),
@@ -13,6 +13,7 @@ const GROUP_SUBCOMMANDS: Record<string, Set<string>> = {
   deck:   new Set(['validate', 'instantiate']),
   report: new Set(['init', 'update', 'info', 'history', 'clean']),
   render: new Set(['report', 'deck', 'article']),
+  artifact: new Set(['plan']),
 }
 
 export interface CliArgs {

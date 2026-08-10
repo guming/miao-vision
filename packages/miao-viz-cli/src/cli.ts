@@ -26,6 +26,7 @@ import type { AgentReportSpec } from './types'
 import { runReportCommand } from './cli-report'
 import { packageTrustedArtifact } from './trusted-artifact'
 import { runRenderGroup } from './cli-render'
+import { runArtifactCommand } from './cli-artifact'
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
   if (args.command === '--version' || args.command === '-v' || args.command === 'version') {
@@ -58,9 +59,12 @@ async function main(): Promise<void> {
       case 'report':
         printJson(await runReportCommand(args))
         return
+      case 'artifact':
+        printJson(runArtifactCommand(args))
+        return
     }
     printJson(agentError('UNKNOWN_COMMAND', `Unknown command: ${args.command ?? '(none)'}`, {
-      commands: ['data', 'spec', 'deck', 'report', 'render']
+      commands: ['data', 'spec', 'deck', 'report', 'render', 'artifact']
     }))
     process.exitCode = 1
   } catch (error) {
