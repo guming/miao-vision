@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "verification-eval-v1",
+  "contextFixture": "context.json",
+  "dataFixture": "data.csv",
+  "cases": [
+    { "id": "report-scene", "variant": "ready", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "report-template", "variant": "template-only", "brief": { "schemaVersion": "1", "rawRequest": "Create a fallback report", "delivery": { "form": "report" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "executive-deck", "variant": "ready", "brief": { "schemaVersion": "1", "rawRequest": "Executive deck", "delivery": { "form": "presentation", "tone": "executive" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "business-review-deck", "variant": "ready", "brief": { "schemaVersion": "1", "rawRequest": "Detailed business review", "delivery": { "form": "presentation", "density": "detailed" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "external-confirmed", "variant": "ready", "brief": { "schemaVersion": "1", "rawRequest": "Client report", "audience": { "scope": "external" }, "delivery": { "form": "report" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "spec-kind-mismatch", "variant": "spec-kind", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "error", "ready": false, "code": "SPEC_KIND_MISMATCH" } },
+    { "id": "manual-title-edit", "variant": "title-edit", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "missing-field", "variant": "missing-field", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "needs_repair", "ready": false, "code": "FIELD_NOT_FOUND" } },
+    { "id": "invalid-encoding", "variant": "invalid-encoding", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "needs_repair", "ready": false, "code": "MISSING_ENCODING" } },
+    { "id": "missing-evidence-id", "variant": "missing-evidence-id", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "needs_repair", "ready": false, "code": "PROVENANCE_EVIDENCE_NOT_FOUND" } },
+    { "id": "missing-evidence-path", "variant": "missing-evidence-path", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "needs_repair", "ready": false, "code": "PROVENANCE_PATH_NOT_FOUND" } },
+    { "id": "stale-context", "variant": "stale-context", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "blocked", "ready": false, "code": "PLAN_CONTEXT_MISMATCH" } },
+    { "id": "blocked-target", "variant": "blocked-target", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "blocked", "ready": false, "code": "ARTIFACT_TARGET_BLOCKED" } },
+    { "id": "data-column-change", "variant": "data-column", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "blocked", "ready": false, "code": "DATA_CONTEXT_MISMATCH" } },
+    { "id": "data-value-change", "variant": "data-value", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "verified", "ready": true, "code": "SPEC_VALIDATION" } },
+    { "id": "v1-plan", "variant": "v1", "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } }, "expected": { "status": "error", "ready": false, "code": "PLAN_NOT_EXECUTABLE" } },
+    { "id": "data-clarification", "variant": "clarification", "brief": { "schemaVersion": "1", "rawRequest": "Analyze the data", "delivery": { "form": "report" } }, "expected": { "status": "blocked", "ready": false, "code": "PLAN_STATUS_BLOCKED" } },
+    { "id": "unsupported-public", "variant": "ready", "brief": { "schemaVersion": "1", "rawRequest": "Public infographic", "audience": { "scope": "public" }, "delivery": { "form": "infographic" } }, "expected": { "status": "blocked", "ready": false, "code": "PLAN_STATUS_BLOCKED" } }
+  ]
+}
