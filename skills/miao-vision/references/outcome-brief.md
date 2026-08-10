@@ -1,93 +1,81 @@
-# Outcome Brief Shadow Planning
+# Outcome Brief Plan-First Workflow
 
-Use this reference only when the user explicitly asks to inspect or evaluate artifact planning. Do not insert it into the Report, Deck, or Article generation workflows.
+Use this workflow only for an explicit plan-first request or when a local tabular request does not materially establish Report versus Presentation. Keep explicit Report, Deck/Presentation, and Article requests on their existing workflows without calling the Planner.
 
-## Boundary
+## Boundaries
 
-- Accept a Draft Outcome Brief plus a full or compact Analyze Context.
-- Support only `tabular` source planning to Report or Presentation in V1.
-- Return a deterministic plan; do not generate or edit a Spec.
-- Do not render, call an LLM, persist a project, or make an artifact recipient-ready.
-- Treat `brief`, Infographic, Article, brand expansion, and public auto-routing as unsupported unless the returned plan explicitly maps `brief` to the Report renderer.
+- Support only local tabular Analyze Context → Report/Presentation planning.
+- Build the Draft Brief from the request; never show the full Brief field set as a form.
+- Ask at most one question, and only the question returned by the Plan.
+- Treat Artifact Plan V2 as executable. V1 is readable history and must return `PLAN_NOT_EXECUTABLE` if passed to instantiate.
+- Treat `artifact instantiate` as Spec creation only. Always validate through the selected workflow before rendering.
+- Never treat `--confirm-plan` as authorization to render, send, publish, or expose sensitive data.
 
-## Command
+## Plan
+
+Analyze the local data once, then create a minimal Draft Brief containing `schemaVersion`, `rawRequest`, and only fields clearly established by the user. Do not ask about density, tone, evidence policy, locale, or other defaultable fields.
 
 ```bash
+miao-viz data analyze /path/to/data.csv \
+  --intent "user request" \
+  --compact \
+  --output SYSTEM_TEMP/miao-vision/context.json
+
 miao-viz artifact plan \
-  --brief ./brief.json \
-  --context ./context.json \
-  --compact
+  --brief SYSTEM_TEMP/miao-vision/brief.json \
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --compact \
+  --output SYSTEM_TEMP/miao-vision/plan.json
 ```
 
-Use `--output ./plan.json` to write the structured result. `--compact` removes the full resolved Brief and explanatory text, but preserves the decision, status, pattern, gates, reason codes, and hash.
+Display only:
 
-## Draft Brief
+- recommended form;
+- target id;
+- at most three consequential assumptions;
+- share-safety or draft warning;
+- one confirmation or clarification question when required.
 
-The minimum input is:
+Do not expose hashes, full Context, intermediate paths, or low-risk defaults unless needed to explain an error.
 
-```json
-{
-  "schemaVersion": "1",
-  "rawRequest": "给老板开会看本月经营情况"
-}
+## Follow `nextAction`
+
+| `nextAction` | Required behavior |
+|---|---|
+| `instantiate` | Instantiate the Spec without asking another question. |
+| `confirm` | Summarize the form, target, consequential assumptions, and safety warning; obtain confirmation before using `--confirm-plan`. |
+| `clarify` | Ask exactly `clarification.question`, using its options. Update the Draft Brief from the answer and rerun `artifact plan`; do not patch the Plan. |
+| `stop` | Explain the first selection reason and stop; do not guess another workflow. |
+
+For confirmation, use concise language such as:
+
+```text
+建议生成 business-overview Report，用于外部交付；严格证据策略和隐私范围来自默认值，需要确认。是否继续生成草稿 Spec？
 ```
 
-Optionally provide `audience`, `goal`, `delivery`, `trust`, `presentation`, and `lifecycle`. Explicit fields take priority over project values, source hints, and defaults.
+## Instantiate
 
-## Status examples
+For `instantiate`:
 
-Ready for a requested presentation:
-
-```json
-{
-  "ok": true,
-  "value": {
-    "status": "ready_with_assumptions",
-    "sourceKind": "tabular",
-    "form": "presentation",
-    "renderer": "deck",
-    "pattern": "executive-brief",
-    "clarification": null
-  }
-}
+```bash
+miao-viz artifact instantiate \
+  --plan SYSTEM_TEMP/miao-vision/plan.json \
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --output SYSTEM_TEMP/miao-vision/artifact-spec.yaml
 ```
 
-Needs one clarification before choosing a form:
+For a confirmed `confirm` Plan, add `--confirm-plan`. Do not use the flag before receiving confirmation.
 
-```json
-{
-  "ok": true,
-  "value": {
-    "status": "needs_clarification",
-    "form": null,
-    "renderer": null,
-    "pattern": null,
-    "clarification": {
-      "field": "delivery.form",
-      "question": "这份成果主要用于会议讲述，还是由读者自行阅读？",
-      "options": ["会议讲述", "自行阅读"],
-      "reasonCode": "presentation_or_reading"
-    }
-  }
-}
-```
+Handle structured failures without fallback guessing:
 
-Unsupported public auto-routing:
+- `PLAN_CONTEXT_MISMATCH`: rerun `artifact plan` with the current Context.
+- `PLAN_CONFIRMATION_REQUIRED`: obtain confirmation; do not silently add the flag.
+- `PLAN_STATUS_BLOCKED`: follow the Plan clarification or unsupported reason.
+- `PLAN_TARGET_BLOCKED` or `PLAN_TARGET_UNAVAILABLE`: stop and report that the planned Catalog target is no longer executable.
+- `PLAN_NOT_EXECUTABLE`: create a fresh V2 Plan; do not translate V1 by guessing.
 
-```json
-{
-  "ok": true,
-  "value": {
-    "status": "unsupported",
-    "form": null,
-    "renderer": null,
-    "pattern": null,
-    "selectionReasons": [
-      { "code": "public_requires_infographic_adapter" }
-    ],
-    "clarification": null
-  }
-}
-```
+## Return to the established workflow
 
-These examples are abbreviated for readability. Consume the actual CLI response rather than reconstructing omitted fields.
+If `specKind` is `report`, read `report.md` and continue at profile plus strict Spec validation. If `specKind` is `deck`, read `deck.md` and continue at strict Deck validation. Preserve the same Context used by the Plan.
+
+Do not render until the corresponding validation succeeds. Do not claim that density, tone, locale, brand, quality gates, or output formats were applied when they appear in `deferredConstraints`.

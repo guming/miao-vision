@@ -21,13 +21,14 @@ Use Miao Vision for local-first article infographics, data reports, browser deck
 
 ## Scope
 
-Proceed only after the user explicitly invokes `$miao-vision` for a supported artifact:
+Proceed only after the user explicitly invokes `$miao-vision` for a supported artifact. Choose the initial route below:
 
 | Request | Read exactly one workflow |
 |---|---|
 | Article URL, Markdown, or long-form text to infographic | `references/article.md` |
 | Local CSV/TSV/XLSX/JSON to report, static dashboard, findings artifact, recurring report, business-scene report, executive summary, report edit, multi-file merge, or PNG/PDF export | `references/report.md` |
 | Browser-based HTML/PDF slides, deck, or briefing | `references/deck.md` |
+| Local tabular data with a materially ambiguous artifact form, or an explicit plan-first request | `references/outcome-brief.md`, then the workflow selected by its V2 Plan |
 | Report or deck spec validation | The matching report or deck workflow above |
 
 Do not use this skill for text-only work, raster-image generation, native `.pptx`, live dashboards, remote databases, or remote datasets. Ask one concise question only when the deliverable or whether a dashboard is static versus live is materially ambiguous.
@@ -55,9 +56,11 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 - Return the requested artifact path and report any blocking structured error.
 - Treat `skills/miao-vision/` as the source skill; refresh generated copies through repository build or pack commands.
 
-## Optional Shadow Planning
+## Controlled Plan-First Routing
 
-Do not route normal artifact generation through Outcome Brief or Artifact Plan. When the user explicitly asks to inspect or evaluate planning before generation, read `references/outcome-brief.md` and use `artifact plan` as an optional Shadow Mode diagnostic. V1 supports only local tabular Analyze Context → Report/Presentation planning; its result is not a Spec or deliverable.
+- Keep explicit Report requests on the existing Report workflow, explicit Deck/Presentation requests on the existing Deck workflow, and all Article requests on the existing Article workflow. Do not add a Planner call to those paths.
+- For materially ambiguous local tabular requests or explicit plan-first requests, read `references/outcome-brief.md`, construct a minimal Draft Brief without showing a field form, and follow the returned `nextAction`.
+- After `artifact instantiate`, enter the selected Report or Deck workflow at strict validation. Instantiation creates only a draft Spec; it does not validate, render, deliver, publish, or authorize sharing.
 
 ## Artifact Delivery
 
