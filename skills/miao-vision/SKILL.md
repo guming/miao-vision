@@ -55,6 +55,10 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 - Return the requested artifact path and report any blocking structured error.
 - Treat `skills/miao-vision/` as the source skill; refresh generated copies through repository build or pack commands.
 
+## Optional Shadow Planning
+
+Do not route normal artifact generation through Outcome Brief or Artifact Plan. When the user explicitly asks to inspect or evaluate planning before generation, read `references/outcome-brief.md` and use `artifact plan` as an optional Shadow Mode diagnostic. V1 supports only local tabular Analyze Context → Report/Presentation planning; its result is not a Spec or deliverable.
+
 ## Artifact Delivery
 
 - Prefer `value.delivery` when a successful render or recurring update returns it. Do not reread the full HTML or PDF to summarize the artifact.

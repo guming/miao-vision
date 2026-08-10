@@ -21,6 +21,29 @@ miao-viz render deck --input ./examples/sales.csv --spec ./examples/sales-deck.y
 miao-viz render article ./article.md --style editorial --format html --output /tmp/article-infographic.html
 ```
 
+## Outcome Brief Shadow Planning
+
+`artifact plan` is an optional, deterministic preview for deciding whether a local tabular Analyze Context should become a Report or Presentation:
+
+```bash
+miao-viz artifact plan \
+  --brief ./brief.json \
+  --context ./context.json \
+  --compact
+```
+
+V1 supports only `tabular` → Report/Presentation planning. It does not generate a Spec, render an artifact, call an LLM, or alter the existing Report, Deck, and Article commands. Full and compact Analyze Context files are accepted; add `--output ./plan.json` to write the result.
+
+The status is one of `ready`, `ready_with_assumptions`, `needs_clarification`, or `unsupported`. Typical abbreviated results are:
+
+```json
+{ "ok": true, "value": { "status": "ready_with_assumptions", "form": "presentation", "renderer": "deck", "pattern": "executive-brief", "clarification": null } }
+{ "ok": true, "value": { "status": "needs_clarification", "form": null, "renderer": null, "pattern": null, "clarification": { "reasonCode": "presentation_or_reading" } } }
+{ "ok": true, "value": { "status": "unsupported", "form": null, "renderer": null, "pattern": null, "selectionReasons": [{ "code": "public_requires_infographic_adapter" }] } }
+```
+
+These snippets omit required plan metadata for readability; use the CLI response as the source of truth.
+
 Generate both report formats with one render:
 
 ```bash
