@@ -60,7 +60,9 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 
 - Keep explicit Report requests on the existing Report workflow, explicit Deck/Presentation requests on the existing Deck workflow, and all Article requests on the existing Article workflow. Do not add a Planner call to those paths.
 - For materially ambiguous local tabular requests or explicit plan-first requests, read `references/outcome-brief.md`, construct a minimal Draft Brief without showing a field form, and follow the returned `nextAction`.
-- After `artifact instantiate`, enter the selected Report or Deck workflow at strict validation. Instantiation creates only a draft Spec; it does not validate, render, deliver, publish, or authorize sharing.
+- After `artifact instantiate`, run `artifact validate` with the same Plan, Context, local data, and generated Spec. Render only when its Artifact Verification is `verified` with `renderReadiness.ready=true`.
+- For `needs_repair`, apply only the returned repair hints, then create a fresh Verification. For `blocked`, stop; never enter a Renderer or guess a fallback.
+- Artifact Verification is a validation receipt, not rendering, delivery, publication, or sharing authorization. Keep explicit Report/Deck/Article requests on their existing validation paths without adding Planner calls.
 
 ## Artifact Delivery
 

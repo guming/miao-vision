@@ -8,8 +8,9 @@ Use this workflow only for an explicit plan-first request or when a local tabula
 - Build the Draft Brief from the request; never show the full Brief field set as a form.
 - Ask at most one question, and only the question returned by the Plan.
 - Treat Artifact Plan V2 as executable. V1 is readable history and must return `PLAN_NOT_EXECUTABLE` if passed to instantiate.
-- Treat `artifact instantiate` as Spec creation only. Always validate through the selected workflow before rendering.
+- Treat `artifact instantiate` as Spec creation only. Follow it with `artifact validate` before entering a Renderer.
 - Never treat `--confirm-plan` as authorization to render, send, publish, or expose sensitive data.
+- Treat Artifact Verification as a validation receipt, not rendering or sharing authorization.
 
 V2 binds the execution target to the planning Context with `contextHash`. V1 lacks that executable contract: keep it readable for diagnostics, but create a fresh V2 Plan before instantiation.
 
@@ -76,8 +77,40 @@ Handle structured failures without fallback guessing:
 - `PLAN_TARGET_BLOCKED` or `PLAN_TARGET_UNAVAILABLE`: stop and report that the planned Catalog target is no longer executable.
 - `PLAN_NOT_EXECUTABLE`: create a fresh V2 Plan; do not translate V1 by guessing.
 
-## Return to the established workflow
+## Verify
 
-If `specKind` is `report`, read `report.md` and continue at profile plus strict Spec validation. If `specKind` is `deck`, read `deck.md` and continue at strict Deck validation. Preserve the same Context used by the Plan.
+Bind the Plan, Context, generated Spec, and the same local data through the unified verifier:
 
-Do not render until the corresponding validation succeeds. Do not claim that density, tone, locale, brand, quality gates, or output formats were applied when they appear in `deferredConstraints`.
+```bash
+miao-viz artifact validate \
+  --plan SYSTEM_TEMP/miao-vision/plan.json \
+  --context SYSTEM_TEMP/miao-vision/context.json \
+  --input /path/to/data.csv \
+  --spec SYSTEM_TEMP/miao-vision/artifact-spec.yaml \
+  --compact \
+  --output SYSTEM_TEMP/miao-vision/verification.json
+```
+
+Follow the returned status exactly:
+
+| Verification status | Required behavior |
+|---|---|
+| `verified` | Continue only when `renderReadiness.ready=true`. |
+| `needs_repair` | Show at most three repair issues, apply only supported repair hints, and run `artifact validate` again. Never reuse the old Verification after changing the Spec. |
+| `blocked` | Show at most three blocking issues and stop. Do not call a Renderer or select another target. |
+
+Display only the validation result, evidence coverage, render readiness, and at most three blocking or repair issues. Ask at most one user question when a repair requires a genuine semantic choice. Do not expose the complete Verification object by default.
+
+Handle structured failures without bypassing the binding:
+
+- `PLAN_CONTEXT_MISMATCH`: rebuild the Plan from the current Context.
+- `DATA_CONTEXT_MISMATCH`: analyze the current data and rebuild the Plan; do not patch hashes.
+- `SPEC_KIND_MISMATCH`: use the Spec kind selected by the Plan.
+- `ARTIFACT_TARGET_BLOCKED` or `PLAN_TARGET_UNAVAILABLE`: stop; do not fall back to a different Catalog item.
+- `PLAN_NOT_EXECUTABLE`: create a fresh V2 Plan.
+
+## Return to the established renderer
+
+If Verification is `verified`, use its `specKind` to read `report.md` or `deck.md` and continue with the existing Renderer. Preserve the same Context, data, and Spec that produced the Verification.
+
+Do not render after the Spec, Context, Plan, or data changes until a fresh Verification succeeds. Do not claim that density, tone, locale, brand, quality gates, or output formats were applied when they appear in `deferredConstraints`.
