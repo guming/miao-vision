@@ -1,0 +1,24 @@
+{
+  "intent": { "raw": "收入和订单量分析", "coverage": "partial", "assumptions": [] },
+  "fields": [],
+  "evidence": [],
+  "catalog": {
+    "charts": [],
+    "blockedCharts": [],
+    "recommendedPlan": [],
+    "scenes": [],
+    "templates": [],
+    "deckPatterns": []
+  },
+  "sampleWarnings": [],
+  "promptRules": [],
+  "clarificationQuestions": [
+    {
+      "id": "primary_measure",
+      "question": "收入和订单量中，哪个是本次成果的主指标？",
+      "options": ["收入", "订单量", "两者并重"],
+      "blocking": true,
+      "appliesTo": "measure"
+    }
+  ]
+}

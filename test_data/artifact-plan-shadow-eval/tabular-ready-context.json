@@ -1,0 +1,40 @@
+{
+  "intent": { "raw": "business performance", "coverage": "full", "assumptions": [] },
+  "fields": [],
+  "evidence": [],
+  "catalog": {
+    "charts": [],
+    "blockedCharts": [],
+    "recommendedPlan": [],
+    "scenes": [
+      {
+        "id": "business-overview",
+        "name": "Business overview",
+        "description": "KPI-led business performance overview.",
+        "score": 0.94,
+        "keywords": ["business", "performance"],
+        "requiredRoles": [],
+        "metricSemantics": [],
+        "templates": ["executive-overview"],
+        "blocks": ["kpi-grid", "trend-overview"]
+      }
+    ],
+    "templates": [
+      {
+        "id": "executive-overview",
+        "score": 0.9,
+        "bestFor": ["overview"],
+        "requires": [],
+        "blocks": ["kpi-grid"],
+        "density": "medium"
+      }
+    ],
+    "deckPatterns": [
+      { "id": "executive-brief", "score": 0.9, "density": "compact", "blocks": ["kpi-snapshot"] },
+      { "id": "business-review", "score": 0.92, "density": "medium", "blocks": ["kpi-snapshot", "ranking-slide"] }
+    ]
+  },
+  "sampleWarnings": [],
+  "promptRules": [],
+  "clarificationQuestions": []
+}

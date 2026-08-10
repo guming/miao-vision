@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "shadow-eval-v1",
+  "cases": [
+    {
+      "id": "zh-boss-meeting",
+      "language": "zh-CN",
+      "draftBrief": {
+        "schemaVersion": "1", "rawRequest": "给老板开会看本月经营情况",
+        "audience": { "role": "老板", "scope": "internal" },
+        "delivery": { "context": "meeting", "density": "concise", "tone": "executive" }
+      },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "presentation", "renderer": "deck", "pattern": "executive-brief", "clarification": false, "reasonCode": "presentation_score_higher" }
+    },
+    {
+      "id": "zh-management-email",
+      "language": "zh-CN",
+      "draftBrief": {
+        "schemaVersion": "1", "rawRequest": "发邮件给管理层自行阅读",
+        "audience": { "role": "管理层", "scope": "internal" },
+        "delivery": { "context": "email", "density": "detailed", "tone": "analytical" }
+      },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "report", "renderer": "report", "pattern": "business-overview", "clarification": false, "reasonCode": "report_score_higher" }
+    },
+    {
+      "id": "zh-analysis-archive",
+      "language": "zh-CN",
+      "draftBrief": {
+        "schemaVersion": "1", "rawRequest": "做一份完整分析用于归档",
+        "delivery": { "context": "archive", "density": "detailed", "tone": "analytical" }
+      },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "report", "renderer": "report", "pattern": "business-overview", "clarification": false, "reasonCode": "report_score_higher" }
+    },
+    {
+      "id": "zh-monthly-review",
+      "language": "zh-CN",
+      "draftBrief": {
+        "schemaVersion": "1", "rawRequest": "每月经营复盘",
+        "goal": { "purpose": "review" },
+        "lifecycle": { "mode": "recurring", "cadence": "monthly" }
+      },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "report", "renderer": "report", "pattern": "business-overview", "clarification": false, "reasonCode": "report_score_higher" }
+    },
+    {
+      "id": "zh-one-page-brief",
+      "language": "zh-CN",
+      "draftBrief": {
+        "schemaVersion": "1", "rawRequest": "做一页内部简报",
+        "audience": { "scope": "internal" },
+        "delivery": { "form": "brief", "density": "concise" }
+      },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "brief", "renderer": "report", "pattern": "business-overview", "clarification": false, "reasonCode": "brief_uses_report" }
+    },
+    {
+      "id": "en-explicit-report",
+      "language": "en",
+      "draftBrief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "report", "renderer": "report", "pattern": "business-overview", "clarification": false, "reasonCode": "explicit_report" }
+    },
+    {
+      "id": "en-explicit-presentation",
+      "language": "en",
+      "draftBrief": { "schemaVersion": "1", "rawRequest": "Create a presentation", "delivery": { "form": "presentation" } },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "ready_with_assumptions", "form": "presentation", "renderer": "deck", "pattern": "business-review", "clarification": false, "reasonCode": "explicit_presentation" }
+    },
+    {
+      "id": "zh-public-communication",
+      "language": "zh-CN",
+      "draftBrief": { "schemaVersion": "1", "rawRequest": "用于公开传播", "audience": { "scope": "public" }, "delivery": { "context": "public" } },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "unsupported", "form": null, "renderer": null, "pattern": null, "clarification": false, "reasonCode": "public_requires_infographic_adapter", "shareSafetyRequired": true, "sensitiveDetailsAllowed": false }
+    },
+    {
+      "id": "zh-external-client-privacy-unspecified",
+      "language": "zh-CN",
+      "draftBrief": { "schemaVersion": "1", "rawRequest": "交付给外部客户", "audience": { "role": "客户", "scope": "external" }, "delivery": { "context": "client" } },
+      "contextFixture": "tabular-ready-context.json",
+      "expected": { "status": "needs_clarification", "form": null, "renderer": null, "pattern": null, "clarification": true, "reasonCode": "form_scores_close", "shareSafetyRequired": true, "sensitiveDetailsAllowed": false }
+    },
+    {
+      "id": "zh-revenue-orders-ambiguous",
+      "language": "zh-CN",
+      "draftBrief": { "schemaVersion": "1", "rawRequest": "分析收入和订单量", "delivery": { "form": "report" } },
+      "contextFixture": "tabular-ambiguous-context.json",
+      "expected": { "status": "needs_clarification", "form": null, "renderer": null, "pattern": null, "clarification": true, "reasonCode": "data_semantics_before_form" }
+    }
+  ]
+}
