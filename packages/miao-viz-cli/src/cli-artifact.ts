@@ -1,4 +1,6 @@
 import { agentError, isAgentError } from './errors'
+import * as YAML from 'yaml'
+import { instantiateArtifactPlan } from './artifact-instantiator'
 import { compactArtifactPlanV2 } from './artifact-plan-v2-schema'
 import { planArtifact } from './artifact-planner'
 import { parseAnalyzeContext } from './context-schema'
@@ -9,6 +11,16 @@ import {
 } from './cli-utils'
 
 export function runArtifactCommand(args: CliArgs): unknown {
+  if (args.subcommand === 'plan') return runArtifactPlan(args)
+  if (args.subcommand === 'instantiate') return runArtifactInstantiate(args)
+  return fail(agentError(
+    'UNKNOWN_SUBCOMMAND',
+    `Unknown artifact subcommand: ${args.subcommand ?? '(none)'}. Available: plan, instantiate`,
+    { subcommand: args.subcommand, available: ['plan', 'instantiate'] }
+  ))
+}
+
+function runArtifactPlan(args: CliArgs): unknown {
   if (args.subcommand !== 'plan') {
     return fail(agentError(
       'UNKNOWN_SUBCOMMAND',
@@ -55,6 +67,39 @@ export function runArtifactCommand(args: CliArgs): unknown {
     }))
   }
   return { ok: true, value: { output: outputPath, status: plan.status, briefHash: plan.briefHash } }
+}
+
+function runArtifactInstantiate(args: CliArgs): unknown {
+  const planPath = requiredFlag(args, 'plan')
+  const contextPath = requiredFlag(args, 'context')
+  if (isAgentError(planPath)) return fail(planPath)
+  if (isAgentError(contextPath)) return fail(contextPath)
+
+  const rawPlan = readArtifactInput(planPath, 'ARTIFACT_PLAN_READ_FAILED')
+  if (isAgentError(rawPlan)) return fail(rawPlan)
+  const rawContext = readArtifactInput(contextPath, 'ANALYZE_CONTEXT_READ_FAILED')
+  if (isAgentError(rawContext)) return fail(rawContext)
+  const context = parseAnalyzeContext(unwrapResult(rawContext))
+  if (!context) {
+    return fail(agentError('INVALID_ANALYZE_CONTEXT', 'Analyze Context format is invalid.', { contextPath }))
+  }
+
+  const instantiated = instantiateArtifactPlan(unwrapResult(rawPlan), context, {
+    confirmPlan: args.flags['confirm-plan'] === true
+  })
+  if (isAgentError(instantiated)) return fail(instantiated)
+  const outputPath = stringFlag(args, 'output')
+  if (!outputPath) return { ok: true, value: instantiated }
+
+  try {
+    writeOutput(outputPath, YAML.stringify(instantiated.spec))
+  } catch (error) {
+    return fail(agentError('ARTIFACT_SPEC_WRITE_FAILED', 'Could not write instantiated Artifact Spec.', {
+      outputPath, detail: error instanceof Error ? error.message : String(error)
+    }))
+  }
+  const { spec: _spec, ...summary } = instantiated
+  return { ok: true, value: { ...summary, output: outputPath } }
 }
 
 function readArtifactInput(path: string, code: string): unknown {

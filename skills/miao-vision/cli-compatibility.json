@@ -11,6 +11,10 @@
       "stdoutIncludes": "artifact plan"
     },
     {
+      "args": ["artifact", "instantiate", "--help"],
+      "stdoutIncludes": "artifact instantiate"
+    },
+    {
       "args": ["deck", "instantiate", "--help"],
       "stdoutIncludes": "deck instantiate"
     },

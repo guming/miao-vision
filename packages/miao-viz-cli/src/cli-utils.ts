@@ -13,7 +13,7 @@ const GROUP_SUBCOMMANDS: Record<string, Set<string>> = {
   deck:   new Set(['validate', 'instantiate']),
   report: new Set(['init', 'update', 'info', 'history', 'clean']),
   render: new Set(['report', 'deck', 'article']),
-  artifact: new Set(['plan']),
+  artifact: new Set(['plan', 'instantiate']),
 }
 
 export interface CliArgs {
@@ -26,7 +26,7 @@ export interface CliArgs {
 export const BOOLEAN_FLAGS = new Set([
   'h', 'help', 'summary', 'reliable-only', 'interactive', 'no-interactive',
   'strict', 'trusted', 'patch-hints', 'verify', 'for-llm', 'compact', 'verbose'
-  ,'dry-run', 'confirm', 'copy-input', 'keep-temp'
+  ,'dry-run', 'confirm', 'confirm-plan', 'copy-input', 'keep-temp'
 ])
 
 function parseRest(args: string[]): { positional: string[]; flags: Record<string, string | boolean> } {

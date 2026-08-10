@@ -9,6 +9,16 @@ Options:
   --output <file>    Write the plan result to this path (default: stdout)
   --compact          Return the compact Agent-facing plan
 `,
+  'artifact.instantiate': `Usage: miao-viz artifact instantiate --plan <file> --context <file> [options]
+
+Instantiate a V2 Artifact Plan as a ReportSpec or DeckSpec without validating, rendering, or delivering it.
+
+Options:
+  --plan <file>       Full or compact Artifact Plan V2 JSON
+  --context <file>    Full or compact Analyze Context JSON used to create the plan
+  --confirm-plan      Confirm a plan whose nextAction is confirm
+  --output <file>     Write the generated Spec as YAML (default: structured stdout)
+`,
   'data.analyze': `Usage: miao-viz data analyze <file> [options]
 
 Compile a scoped evidence pack and catalog for LLM report generation.
@@ -225,6 +235,7 @@ Plan visual outcomes in optional Shadow Mode.
 
 Commands:
   plan      Plan a tabular report or presentation without generating it
+  instantiate Generate a Spec from a confirmed executable plan
 `,
   data: `
 Usage: miao-viz data <command> [options]
