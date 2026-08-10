@@ -1,23 +1,86 @@
 import { agentError, isAgentError } from './errors'
+import { resolve } from 'node:path'
 import * as YAML from 'yaml'
+import { verifyArtifact } from './artifact-verifier'
 import { instantiateArtifactPlan } from './artifact-instantiator'
 import { compactArtifactPlanV2 } from './artifact-plan-v2-schema'
 import { planArtifact } from './artifact-planner'
 import { parseAnalyzeContext } from './context-schema'
 import { draftOutcomeBriefSchema } from './outcome-brief-schema'
 import { resolveOutcomeBrief } from './outcome-brief-resolver'
+import { loadDataset } from './data-loader'
 import {
-  fail, readJson, requiredFlag, stringFlag, writeOutput, type CliArgs
+  fail, readJson, readSpec, requiredFlag, stringFlag, writeOutput, type CliArgs
 } from './cli-utils'
 
 export function runArtifactCommand(args: CliArgs): unknown {
   if (args.subcommand === 'plan') return runArtifactPlan(args)
   if (args.subcommand === 'instantiate') return runArtifactInstantiate(args)
+  if (args.subcommand === 'validate') return runArtifactValidate(args)
   return fail(agentError(
     'UNKNOWN_SUBCOMMAND',
-    `Unknown artifact subcommand: ${args.subcommand ?? '(none)'}. Available: plan, instantiate`,
-    { subcommand: args.subcommand, available: ['plan', 'instantiate'] }
+    `Unknown artifact subcommand: ${args.subcommand ?? '(none)'}. Available: plan, instantiate, validate`,
+    { subcommand: args.subcommand, available: ['plan', 'instantiate', 'validate'] }
   ))
+}
+
+function runArtifactValidate(args: CliArgs): unknown {
+  const planPath = requiredFlag(args, 'plan')
+  const contextPath = requiredFlag(args, 'context')
+  const inputPath = requiredFlag(args, 'input')
+  const specPath = requiredFlag(args, 'spec')
+  if (isAgentError(planPath)) return fail(planPath)
+  if (isAgentError(contextPath)) return fail(contextPath)
+  if (isAgentError(inputPath)) return fail(inputPath)
+  if (isAgentError(specPath)) return fail(specPath)
+
+  const rawPlan = readArtifactInput(planPath, 'ARTIFACT_PLAN_READ_FAILED')
+  if (isAgentError(rawPlan)) return fail(rawPlan)
+  const rawContext = readArtifactInput(contextPath, 'ANALYZE_CONTEXT_READ_FAILED')
+  if (isAgentError(rawContext)) return fail(rawContext)
+  const context = parseAnalyzeContext(unwrapResult(rawContext))
+  if (!context) return fail(agentError('INVALID_ANALYZE_CONTEXT', 'Analyze Context format is invalid.', { contextPath }))
+
+  const dataset = loadDataset(inputPath, { sheet: stringFlag(args, 'sheet') })
+  if (isAgentError(dataset)) return fail(dataset)
+  let spec: unknown
+  try {
+    spec = unwrapResult(readSpec(specPath))
+  } catch (error) {
+    return fail(agentError('ARTIFACT_SPEC_READ_FAILED', `Could not read ${specPath}.`, {
+      specPath, detail: error instanceof Error ? error.message : String(error)
+    }))
+  }
+
+  const verification = verifyArtifact({ plan: unwrapResult(rawPlan), context, dataset: dataset.value, spec })
+  if (isAgentError(verification)) return fail(verification)
+  const value = args.flags.compact === true ? compactVerification(verification) : verification
+  const result = { ok: true as const, value }
+  const outputPath = stringFlag(args, 'output')
+  if (!outputPath) return result
+  if ([planPath, contextPath, inputPath, specPath].some(path => resolve(path) === resolve(outputPath))) {
+    return fail(agentError('ARTIFACT_VERIFICATION_WRITE_FAILED', 'Verification output cannot overwrite an input file.', {
+      outputPath
+    }))
+  }
+  try {
+    writeOutput(outputPath, `${JSON.stringify(result, null, 2)}\n`)
+  } catch (error) {
+    return fail(agentError('ARTIFACT_VERIFICATION_WRITE_FAILED', 'Could not write Artifact Verification.', {
+      outputPath, detail: error instanceof Error ? error.message : String(error)
+    }))
+  }
+  return { ok: true, value: { output: outputPath, status: verification.status, specHash: verification.specHash } }
+}
+
+function compactVerification(verification: ReturnType<typeof verifyArtifact>): unknown {
+  if (isAgentError(verification)) return verification
+  return {
+    ...verification,
+    checks: verification.checks.map(({ code, status, path }) => ({ code, status, ...(path ? { path } : {}) })),
+    warnings: verification.warnings.map(({ code, path }) => ({ code, ...(path ? { path } : {}) })),
+    repairHints: verification.repairHints.map(({ code, path, action }) => ({ code, path, action }))
+  }
 }
 
 function runArtifactPlan(args: CliArgs): unknown {

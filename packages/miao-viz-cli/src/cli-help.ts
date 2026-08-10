@@ -19,6 +19,19 @@ Options:
   --confirm-plan      Confirm a plan whose nextAction is confirm
   --output <file>     Write the generated Spec as YAML (default: structured stdout)
 `,
+  'artifact.validate': `Usage: miao-viz artifact validate --plan <file> --context <file> --input <file> --spec <file> [options]
+
+Verify that a planned ReportSpec or DeckSpec is compatible with its Plan, Analyze Context, and local data.
+This command does not repair, render, deliver, publish, or call an LLM.
+
+Options:
+  --plan <file>       Full or compact Artifact Plan V2 JSON
+  --context <file>    Full or compact Analyze Context JSON used to create the plan
+  --input <file>      Local tabular data to validate against the Spec
+  --spec <file>       ReportSpec or DeckSpec YAML/JSON
+  --output <file>     Write Artifact Verification JSON (default: structured stdout)
+  --compact           Omit diagnostic messages without changing verification status
+`,
   'data.analyze': `Usage: miao-viz data analyze <file> [options]
 
 Compile a scoped evidence pack and catalog for LLM report generation.
@@ -236,6 +249,7 @@ Plan visual outcomes in optional Shadow Mode.
 Commands:
   plan      Plan a tabular report or presentation without generating it
   instantiate Generate a Spec from a confirmed executable plan
+  validate  Verify a planned Spec against its Context and local data
 `,
   data: `
 Usage: miao-viz data <command> [options]

@@ -22,6 +22,7 @@ function fixtures(compact = false) {
   const root = mkdtempSync(join(tmpdir(), 'miao-artifact-plan-'))
   const briefPath = join(root, 'brief.json')
   const contextPath = join(root, 'context.json')
+  const inputPath = join(root, 'sales.csv')
   writeFileSync(briefPath, JSON.stringify({
     schemaVersion: '1', rawRequest: '给老板开会看',
     delivery: { context: 'meeting', form: 'presentation', tone: 'executive' }
@@ -30,8 +31,9 @@ function fixtures(compact = false) {
     file: 'sales.csv', columns: ['region', 'sales'],
     rows: [{ region: 'East', sales: 10 }, { region: 'West', sales: 20 }]
   })
+  writeFileSync(inputPath, 'region,sales\nEast,10\nWest,20\n')
   writeFileSync(contextPath, JSON.stringify(compact ? toCompactAnalyzeContext(analyzed) : analyzed))
-  return { root, briefPath, contextPath }
+  return { root, briefPath, contextPath, inputPath }
 }
 
 describe('runArtifactCommand', () => {
@@ -193,5 +195,67 @@ describe('runArtifactCommand', () => {
     writeFileSync(fixture.contextPath, '{}')
     expect(runArtifactCommand(args({ plan: planPath, context: fixture.contextPath }, 'instantiate')))
       .toMatchObject({ ok: false, code: 'INVALID_ANALYZE_CONTEXT' })
+  })
+
+  it('validates a planned Spec and writes full or compact Verification JSON', () => {
+    for (const compact of [false, true]) {
+      const fixture = fixtures(compact)
+      const planned = runArtifactCommand(args({
+        brief: fixture.briefPath, context: fixture.contextPath, ...(compact ? { compact: true } : {})
+      })) as any
+      const planPath = join(fixture.root, 'plan.json')
+      const specPath = join(fixture.root, 'spec.yaml')
+      const verificationPath = join(fixture.root, 'verification.json')
+      writeFileSync(planPath, JSON.stringify(planned.value))
+      const instantiated = runArtifactCommand(args({ plan: planPath, context: fixture.contextPath }, 'instantiate')) as any
+      writeFileSync(specPath, YAML.stringify(instantiated.value.spec))
+      const result = runArtifactCommand(args({
+        plan: planPath, context: fixture.contextPath, input: fixture.inputPath, spec: specPath,
+        output: verificationPath, ...(compact ? { compact: true } : {})
+      }, 'validate')) as any
+      expect(result).toMatchObject({ ok: true, value: { output: verificationPath, status: 'verified' } })
+      const written = JSON.parse(readFileSync(verificationPath, 'utf8'))
+      expect(written.value.status).toBe('verified')
+      if (compact) expect(written.value.checks[0]).not.toHaveProperty('message')
+    }
+  })
+
+  it('returns repair and blocked verification states without treating them as CLI crashes', () => {
+    const fixture = fixtures()
+    const planned = runArtifactCommand(args({ brief: fixture.briefPath, context: fixture.contextPath })) as any
+    const planPath = join(fixture.root, 'plan.json')
+    const specPath = join(fixture.root, 'spec.yaml')
+    writeFileSync(planPath, JSON.stringify(planned.value))
+    const instantiated = runArtifactCommand(args({ plan: planPath, context: fixture.contextPath }, 'instantiate')) as any
+    const spec = instantiated.value.spec
+    const encoding = Object.values(spec.slides[1].charts[0].encoding)[0] as any
+    encoding.field = 'missing_field'
+    writeFileSync(specPath, YAML.stringify(spec))
+    expect(runArtifactCommand(args({
+      plan: planPath, context: fixture.contextPath, input: fixture.inputPath, spec: specPath
+    }, 'validate'))).toMatchObject({ ok: true, value: { status: 'needs_repair' } })
+
+    writeFileSync(planPath, JSON.stringify({ ...planned.value, contextHash: 'b'.repeat(64) }))
+    expect(runArtifactCommand(args({
+      plan: planPath, context: fixture.contextPath, input: fixture.inputPath, spec: specPath
+    }, 'validate'))).toMatchObject({ ok: true, value: { status: 'blocked' } })
+  })
+
+  it('rejects missing inputs, unreadable Specs, V1 plans, and output overwrites', () => {
+    const fixture = fixtures()
+    expect(runArtifactCommand(args({}, 'validate'))).toMatchObject({ ok: false, code: 'MISSING_FLAG' })
+    const planned = runArtifactCommand(args({ brief: fixture.briefPath, context: fixture.contextPath })) as any
+    const planPath = join(fixture.root, 'plan.json')
+    writeFileSync(planPath, JSON.stringify(planned.value))
+    expect(runArtifactCommand(args({
+      plan: planPath, context: fixture.contextPath, input: fixture.inputPath, spec: '/missing/spec.yaml'
+    }, 'validate'))).toMatchObject({ ok: false, code: 'ARTIFACT_SPEC_READ_FAILED' })
+
+    const specPath = join(fixture.root, 'spec.yaml')
+    const instantiated = runArtifactCommand(args({ plan: planPath, context: fixture.contextPath }, 'instantiate')) as any
+    writeFileSync(specPath, YAML.stringify(instantiated.value.spec))
+    expect(runArtifactCommand(args({
+      plan: planPath, context: fixture.contextPath, input: fixture.inputPath, spec: specPath, output: specPath
+    }, 'validate'))).toMatchObject({ ok: false, code: 'ARTIFACT_VERIFICATION_WRITE_FAILED' })
   })
 })
