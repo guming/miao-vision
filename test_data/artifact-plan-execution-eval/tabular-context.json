@@ -1,0 +1,60 @@
+{
+  "intent": { "raw": "Sales performance", "coverage": "full", "assumptions": [] },
+  "fields": [
+    { "name": "month", "role": "time", "type": "date", "distinctCount": 3, "timePeriods": 3 },
+    { "name": "region", "role": "dimension", "type": "string", "distinctCount": 2 },
+    { "name": "sales", "role": "measure", "type": "number", "distinctCount": 3 }
+  ],
+  "evidence": [
+    { "id": "total", "query": "sum sales", "values": { "total_sales": 60 } },
+    {
+      "id": "by_dimension", "query": "sales by region",
+      "rows": [
+        { "region": "East", "total_sales": 40 },
+        { "region": "West", "total_sales": 20 }
+      ]
+    },
+    {
+      "id": "by_time", "query": "sales by month",
+      "rows": [
+        { "month": "2026-01-01", "total_sales": 10 },
+        { "month": "2026-02-01", "total_sales": 20 },
+        { "month": "2026-03-01", "total_sales": 30 }
+      ]
+    }
+  ],
+  "catalog": {
+    "charts": ["bigvalue", "bar", "line", "table"],
+    "blockedCharts": [],
+    "recommendedPlan": [],
+    "scenes": [
+      {
+        "id": "business-overview", "name": "Business Overview", "description": "",
+        "score": 0.94, "keywords": [], "requiredRoles": ["measure", "dimension"],
+        "metricSemantics": [], "templates": ["trend-ranking-overview", "snapshot-overview"],
+        "blocks": ["trend-ranking", "snapshot-ranking"]
+      }
+    ],
+    "blockedScenes": [],
+    "templates": [
+      {
+        "id": "trend-ranking-overview", "score": 0.9, "bestFor": [],
+        "requires": ["measure", "dimension", "time"], "blocks": ["trend-ranking"],
+        "density": "full"
+      },
+      {
+        "id": "snapshot-overview", "score": 0.8, "bestFor": [],
+        "requires": ["measure", "dimension"], "blocks": ["kpi-summary", "snapshot-ranking"],
+        "density": "compact"
+      }
+    ],
+    "blockedTemplates": [],
+    "deckPatterns": [
+      { "id": "executive-brief", "score": 0.9, "density": "compact", "blocks": ["cover-claim", "kpi-snapshot", "trend-overview-slide", "ranking-slide"] },
+      { "id": "business-review", "score": 0.92, "density": "medium", "blocks": ["cover-claim", "kpi-snapshot", "trend-overview-slide", "ranking-slide"] }
+    ]
+  },
+  "sampleWarnings": [],
+  "promptRules": [],
+  "clarificationQuestions": []
+}

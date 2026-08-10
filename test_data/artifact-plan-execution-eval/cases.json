@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "execution-eval-v1",
+  "contextFixture": "tabular-context.json",
+  "cases": [
+    {
+      "id": "explicit-report", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Create a report", "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": true, "specKind": "report", "code": null }
+    },
+    {
+      "id": "explicit-presentation", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Create a presentation", "delivery": { "form": "presentation" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "deck-pattern", "targetId": "business-review", "canInstantiate": true, "specKind": "deck", "code": null }
+    },
+    {
+      "id": "automatic-report", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Archive a detailed analysis", "goal": { "keyQuestion": "What changed?" }, "delivery": { "context": "archive", "density": "detailed" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": true, "specKind": "report", "code": null }
+    },
+    {
+      "id": "automatic-presentation", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "给老板开会看", "goal": { "decision": "决定行动" }, "delivery": { "context": "meeting", "tone": "executive" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "deck-pattern", "targetId": "executive-brief", "canInstantiate": true, "specKind": "deck", "code": null }
+    },
+    {
+      "id": "one-page-brief", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "一页内部简报", "delivery": { "form": "brief", "density": "concise" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": true, "specKind": "report", "code": null }
+    },
+    {
+      "id": "report-scene", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Scene report", "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": true, "specKind": "report", "code": null }
+    },
+    {
+      "id": "report-template-fallback", "variant": "template-only",
+      "brief": { "schemaVersion": "1", "rawRequest": "Template report", "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-template", "targetId": "trend-ranking-overview", "canInstantiate": true, "specKind": "report", "code": null }
+    },
+    {
+      "id": "executive-deck", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Executive deck", "delivery": { "form": "presentation", "tone": "executive" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "deck-pattern", "targetId": "executive-brief", "canInstantiate": true, "specKind": "deck", "code": null }
+    },
+    {
+      "id": "business-review-deck", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Business review", "delivery": { "form": "presentation", "density": "detailed" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "deck-pattern", "targetId": "business-review", "canInstantiate": true, "specKind": "deck", "code": null }
+    },
+    {
+      "id": "external-confirmation", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Client report", "audience": { "scope": "external" }, "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "confirm", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": false, "specKind": null, "code": "PLAN_CONFIRMATION_REQUIRED" }
+    },
+    {
+      "id": "draft-evidence", "variant": "ready",
+      "brief": { "schemaVersion": "1", "rawRequest": "Internal draft", "delivery": { "form": "report" }, "trust": { "privacy": "internal", "evidencePolicy": "draft" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": true, "specKind": "report", "code": null, "warning": "draft_not_recipient_ready" }
+    },
+    {
+      "id": "stale-context", "variant": "stale-after-plan",
+      "brief": { "schemaVersion": "1", "rawRequest": "Stale report", "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": false, "specKind": null, "code": "PLAN_CONTEXT_MISMATCH" }
+    },
+    {
+      "id": "data-clarification", "variant": "data-clarification",
+      "brief": { "schemaVersion": "1", "rawRequest": "Analyze measures", "delivery": { "form": "report" } },
+      "expected": { "status": "needs_clarification", "nextAction": "clarify", "adapter": null, "targetId": null, "canInstantiate": false, "specKind": null, "code": "PLAN_STATUS_BLOCKED" }
+    },
+    {
+      "id": "blocked-target", "variant": "blocked-after-plan",
+      "brief": { "schemaVersion": "1", "rawRequest": "Blocked report", "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": false, "specKind": null, "code": "PLAN_TARGET_BLOCKED" }
+    },
+    {
+      "id": "no-target", "variant": "no-target",
+      "brief": { "schemaVersion": "1", "rawRequest": "No pattern report", "delivery": { "form": "report" } },
+      "expected": { "status": "unsupported", "nextAction": "stop", "adapter": null, "targetId": null, "canInstantiate": false, "specKind": null, "code": "PLAN_STATUS_BLOCKED" }
+    },
+    {
+      "id": "v1-plan", "variant": "v1-plan",
+      "brief": { "schemaVersion": "1", "rawRequest": "Legacy report", "delivery": { "form": "report" } },
+      "expected": { "status": "ready_with_assumptions", "nextAction": "instantiate", "adapter": "report-scene", "targetId": "business-overview", "canInstantiate": false, "specKind": null, "code": "PLAN_NOT_EXECUTABLE" }
+    }
+  ]
+}
