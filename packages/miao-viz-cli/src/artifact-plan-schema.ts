@@ -2,6 +2,10 @@ import { z } from 'zod'
 import {
   outcomeAssumptionSchema, outcomeClarificationSchema, resolvedOutcomeBriefSchema
 } from './outcome-brief-schema'
+import {
+  artifactPlanV2Schema, compactArtifactPlanV2Schema,
+  type ArtifactPlanV2, type CompactArtifactPlanV2
+} from './artifact-plan-v2-schema'
 
 const planStatusSchema = z.enum([
   'ready', 'ready_with_assumptions', 'needs_clarification', 'unsupported'
@@ -90,6 +94,28 @@ export const compactArtifactPlanSchema = z.object({
 
 export type ArtifactPlan = z.infer<typeof artifactPlanSchema>
 export type CompactArtifactPlan = z.infer<typeof compactArtifactPlanSchema>
+
+export type ReadableArtifactPlan =
+  | { schemaVersion: '1'; executable: false; plan: ArtifactPlan | CompactArtifactPlan }
+  | { schemaVersion: '2'; executable: true; plan: ArtifactPlanV2 | CompactArtifactPlanV2 }
+
+export function parseReadableArtifactPlan(value: unknown): ReadableArtifactPlan | null {
+  const version = value && typeof value === 'object'
+    ? (value as { schemaVersion?: unknown }).schemaVersion : undefined
+  if (version === '2') {
+    const full = artifactPlanV2Schema.safeParse(value)
+    if (full.success) return { schemaVersion: '2', executable: true, plan: full.data }
+    const compact = compactArtifactPlanV2Schema.safeParse(value)
+    return compact.success ? { schemaVersion: '2', executable: true, plan: compact.data } : null
+  }
+  if (version === '1') {
+    const full = artifactPlanSchema.safeParse(value)
+    if (full.success) return { schemaVersion: '1', executable: false, plan: full.data }
+    const compact = compactArtifactPlanSchema.safeParse(value)
+    return compact.success ? { schemaVersion: '1', executable: false, plan: compact.data } : null
+  }
+  return null
+}
 
 export function compactArtifactPlan(plan: ArtifactPlan): CompactArtifactPlan {
   return compactArtifactPlanSchema.parse({
