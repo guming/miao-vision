@@ -43,7 +43,7 @@ describe('planArtifact routing matrix', () => {
     ['external explicit report', { audience: { scope: 'external' }, delivery: { form: 'report' } }, 'report', 'report', 'business-overview', 'explicit_report']
   ] as const)('%s', (_name, draft, form, renderer, pattern, reason) => {
     const result = plan(draft as Omit<DraftOutcomeBrief, 'schemaVersion' | 'rawRequest'>)
-    expect([result.form, result.renderer, result.pattern]).toEqual([form, renderer, pattern])
+    expect([result.form, result.renderer, result.target?.id]).toEqual([form, renderer, pattern])
     expect(result.selectionReasons[0]?.code).toBe(reason)
   })
 
@@ -76,7 +76,7 @@ describe('planArtifact routing matrix', () => {
   it('never selects blocked report catalog items', () => {
     const ctx = context()
     ctx.catalog.blockedScenes = [{ id: 'business-overview', reason: 'blocked' }]
-    expect(plan({ delivery: { form: 'report' } }, ctx).pattern).toBe('lower')
+    expect(plan({ delivery: { form: 'report' } }, ctx).target?.id).toBe('lower')
   })
 
   it('returns unsupported instead of guessing without an allowed pattern', () => {
@@ -93,5 +93,34 @@ describe('planArtifact routing matrix', () => {
       schemaVersion: '1', rawRequest: 'x', delivery: { context: 'archive', density: 'detailed' }
     })
     expect(planArtifact(brief, context())).toEqual(planArtifact(brief, context()))
+  })
+
+  it.each([
+    ['external defaults', { audience: { scope: 'external' }, delivery: { form: 'report' } }, 'confirm'],
+    ['public explicit report defaults', { audience: { scope: 'public' }, delivery: { form: 'report' } }, 'confirm'],
+    ['external privacy explicit', { audience: { scope: 'external' }, delivery: { form: 'report' }, trust: { privacy: 'external' } }, 'confirm'],
+    ['external evidence explicit', { audience: { scope: 'external' }, delivery: { form: 'report' }, trust: { evidencePolicy: 'strict' } }, 'confirm'],
+    ['external trust explicit', { audience: { scope: 'external' }, delivery: { form: 'report' }, trust: { privacy: 'external', evidencePolicy: 'strict' } }, 'instantiate'],
+    ['internal defaults', { audience: { scope: 'internal' }, delivery: { form: 'report' } }, 'instantiate']
+  ] as const)('sets confirmation policy for %s', (_name, draft, nextAction) => {
+    const result = plan(draft as Omit<DraftOutcomeBrief, 'schemaVersion' | 'rawRequest'>)
+    expect(result.nextAction).toBe(nextAction)
+  })
+
+  it('allows draft spec generation but warns that it is not recipient-ready', () => {
+    const result = plan({
+      audience: { scope: 'internal' }, delivery: { form: 'report' },
+      trust: { privacy: 'internal', evidencePolicy: 'draft' }
+    })
+    expect(result.nextAction).toBe('instantiate')
+    expect(result.warnings.some(item => item.code === 'draft_not_recipient_ready')).toBe(true)
+  })
+
+  it('emits a stable context hash and discriminated targets', () => {
+    const report = plan({ delivery: { form: 'report' } })
+    const deck = plan({ delivery: { form: 'presentation' } })
+    expect(report.contextHash).toMatch(/^[a-f0-9]{64}$/)
+    expect(report.target).toEqual({ adapter: 'report-scene', id: 'business-overview' })
+    expect(deck.target).toEqual({ adapter: 'deck-pattern', id: 'business-review' })
   })
 })

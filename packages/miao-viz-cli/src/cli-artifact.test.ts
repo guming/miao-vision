@@ -38,8 +38,8 @@ describe('runArtifactCommand', () => {
     const compactResult = runArtifactCommand(args({ brief: compact.briefPath, context: compact.contextPath })) as any
     expect(fullResult.ok).toBe(true)
     expect(compactResult.ok).toBe(true)
-    expect([compactResult.value.form, compactResult.value.renderer, compactResult.value.pattern])
-      .toEqual([fullResult.value.form, fullResult.value.renderer, fullResult.value.pattern])
+    expect([compactResult.value.form, compactResult.value.renderer, compactResult.value.target])
+      .toEqual([fullResult.value.form, fullResult.value.renderer, fullResult.value.target])
   })
 
   it('returns compact output without changing planning fields', () => {
@@ -51,7 +51,7 @@ describe('runArtifactCommand', () => {
     expect(compact.value).not.toHaveProperty('resolvedBrief')
     expect(compact.value.briefHash).toBe(full.value.briefHash)
     expect(compact.value.status).toBe(full.value.status)
-    expect(compact.value.pattern).toBe(full.value.pattern)
+    expect(compact.value.target).toEqual(full.value.target)
   })
 
   it('writes the selected representation to --output', () => {

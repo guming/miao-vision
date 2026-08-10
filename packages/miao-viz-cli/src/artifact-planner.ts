@@ -1,14 +1,15 @@
-import { artifactPlanSchema, type ArtifactPlan } from './artifact-plan-schema'
+import { artifactPlanV2Schema, type ArtifactPlanV2 } from './artifact-plan-v2-schema'
+import { fingerprintAnalyzeContext } from './analyze-context-fingerprint'
 import type { AnalyzeContext, CompactAnalyzeContext } from './context-schema'
 import type { OutcomeClarification, ResolvedOutcomeBrief } from './outcome-brief-schema'
 import type { ResolvedOutcomeBriefResult } from './outcome-brief-resolver'
 
 type PlannerContext = AnalyzeContext | CompactAnalyzeContext
-type PlannedForm = NonNullable<ArtifactPlan['form']>
+type PlannedForm = NonNullable<ArtifactPlanV2['form']>
 
 interface Selection {
   form: PlannedForm
-  renderer: NonNullable<ArtifactPlan['renderer']>
+  renderer: NonNullable<ArtifactPlanV2['renderer']>
   reasonCode: string
   reason: string
 }
@@ -16,7 +17,7 @@ interface Selection {
 export function planArtifact(
   briefResult: ResolvedOutcomeBriefResult,
   context: PlannerContext
-): ArtifactPlan {
+): ArtifactPlanV2 {
   const { resolvedBrief: brief, assumptions, briefHash } = briefResult
   const dataClarification = firstBlockingDataClarification(context)
   if (dataClarification) {
@@ -56,9 +57,10 @@ export function planArtifact(
 
   return buildPlan(briefResult, context, {
     status: assumptions.length > 0 ? 'ready_with_assumptions' : 'ready',
+    nextAction: requiresConfirmation(briefResult) ? 'confirm' : 'instantiate',
     form: selected.form,
     renderer: selected.renderer,
-    pattern: pattern.id,
+    target: { adapter: pattern.adapter, id: pattern.id } as ArtifactPlanV2['target'],
     structureRoles: structureRoles(selected.form, pattern.blocks),
     formats: ['html', 'pdf'],
     selectionReasons: [
@@ -134,7 +136,7 @@ function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, contex
       ? 'executive-brief' : 'business-review'
     const item = patterns.find(pattern => pattern.id === preferred) ?? highest(patterns)
     return item && {
-      ...item, reasonCode: `catalog_deck_${item.id}`,
+      ...item, adapter: 'deck-pattern' as const, reasonCode: `catalog_deck_${item.id}`,
       reason: `Selected allowed deck pattern ${item.id} from the analyze catalog.`
     }
   }
@@ -148,7 +150,7 @@ function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, contex
     .filter(item => !blockedScenes.has(item.id))
   const scene = highest(scenes)
   if (scene) return {
-    ...scene, reasonCode: `catalog_scene_${scene.id}`,
+    ...scene, adapter: 'report-scene' as const, reasonCode: `catalog_scene_${scene.id}`,
     reason: `Selected highest-scoring allowed scene ${scene.id} from the analyze catalog.`
   }
 
@@ -161,7 +163,7 @@ function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, contex
     .filter(item => !blockedTemplates.has(item.id))
   const template = highest(templates)
   return template && {
-    ...template, reasonCode: `catalog_template_${template.id}`,
+    ...template, adapter: 'report-template' as const, reasonCode: `catalog_template_${template.id}`,
     reason: `Selected highest-scoring allowed template ${template.id} from the analyze catalog.`
   }
 }
@@ -186,26 +188,36 @@ function firstBlockingDataClarification(context: PlannerContext): OutcomeClarifi
 function buildPlan(
   briefResult: ResolvedOutcomeBriefResult,
   context: PlannerContext,
-  overrides: Partial<ArtifactPlan> & Pick<ArtifactPlan, 'status' | 'selectionReasons'>
-): ArtifactPlan {
+  overrides: Partial<ArtifactPlanV2> & Pick<ArtifactPlanV2, 'status' | 'selectionReasons'>
+): ArtifactPlanV2 {
   const density = briefResult.resolvedBrief.delivery.density
   const budget = density === 'concise' ? [4, 3] : density === 'detailed' ? [10, 8] : [7, 5]
-  const gates: ArtifactPlan['qualityGates'] = ['evidence_validation', 'data_semantics', 'catalog_compliance', 'readability']
+  const gates: ArtifactPlanV2['qualityGates'] = ['evidence_validation', 'data_semantics', 'catalog_compliance', 'readability']
   if (briefResult.resolvedBrief.trust.shareSafetyRequired) gates.push('share_safety')
-  return artifactPlanSchema.parse({
-    schemaVersion: '1', briefHash: briefResult.briefHash,
-    status: overrides.status, sourceKind: 'tabular',
+  const warnings = contextWarnings(context)
+  if (briefResult.resolvedBrief.trust.evidencePolicy === 'draft') {
+    warnings.push({
+      code: 'draft_not_recipient_ready',
+      message: 'Draft evidence policy permits spec generation but not recipient-ready delivery.'
+    })
+  }
+  return artifactPlanV2Schema.parse({
+    schemaVersion: '2', briefHash: briefResult.briefHash,
+    contextHash: fingerprintAnalyzeContext(context),
+    status: overrides.status,
+    nextAction: overrides.status === 'needs_clarification' ? 'clarify' : 'stop',
+    sourceKind: 'tabular',
     resolvedBrief: briefResult.resolvedBrief, assumptions: briefResult.assumptions,
-    form: null, renderer: null, pattern: null, structureRoles: [],
+    form: null, renderer: null, target: null, structureRoles: [],
     densityBudget: { level: density, maxSections: budget[0], maxPrimaryVisuals: budget[1] },
     qualityGates: gates, formats: [],
     selectionReasons: overrides.selectionReasons,
-    warnings: contextWarnings(context), clarification: null,
+    warnings, clarification: null,
     ...overrides
   })
 }
 
-function contextWarnings(context: PlannerContext): ArtifactPlan['warnings'] {
+function contextWarnings(context: PlannerContext): ArtifactPlanV2['warnings'] {
   return isCompact(context)
     ? context.warnings.map(([code, message]) => ({ code, message }))
     : context.sampleWarnings.map(({ code, message }) => ({ code, message }))
@@ -214,6 +226,14 @@ function contextWarnings(context: PlannerContext): ArtifactPlan['warnings'] {
 function structureRoles(form: PlannedForm, blocks: string[]): string[] {
   const lead = form === 'presentation' ? ['cover-claim'] : ['executive-summary']
   return [...new Set([...lead, ...blocks])]
+}
+
+function requiresConfirmation(briefResult: ResolvedOutcomeBriefResult): boolean {
+  if (!briefResult.resolvedBrief.trust.shareSafetyRequired) return false
+  return briefResult.assumptions.some(assumption =>
+    assumption.source === 'default'
+    && (assumption.field === 'trust.privacy' || assumption.field === 'trust.evidencePolicy')
+  )
 }
 
 function isCompact(context: PlannerContext): context is CompactAnalyzeContext {

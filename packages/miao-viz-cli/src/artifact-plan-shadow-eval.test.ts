@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { describe, expect, it } from 'vitest'
-import { compactArtifactPlan } from './artifact-plan-schema'
+import { compactArtifactPlanV2 } from './artifact-plan-v2-schema'
 import { planArtifact } from './artifact-planner'
 import { analyzeContextSchema } from './context-schema'
 import { draftOutcomeBriefSchema } from './outcome-brief-schema'
@@ -18,6 +18,7 @@ const corpus = JSON.parse(readFileSync(corpusPath, 'utf8')) as {
     contextFixture: string
     expected: {
       status: string
+      nextAction: string
       form: string | null
       renderer: string | null
       pattern: string | null
@@ -50,13 +51,14 @@ describe('Artifact Plan shadow eval corpus', () => {
       plannerTimes.push(performance.now() - plannerStart)
 
       expect(plan.status, evalCase.id).toBe(evalCase.expected.status)
+      expect(plan.nextAction, evalCase.id).toBe(evalCase.expected.nextAction)
       expect(plan.form, evalCase.id).toBe(evalCase.expected.form)
       expect(plan.renderer, evalCase.id).toBe(evalCase.expected.renderer)
-      expect(plan.pattern, evalCase.id).toBe(evalCase.expected.pattern)
+      expect(plan.target?.id ?? null, evalCase.id).toBe(evalCase.expected.pattern)
       expect(Boolean(plan.clarification), evalCase.id).toBe(evalCase.expected.clarification)
       expect(plan.selectionReasons[0]?.code, evalCase.id).toBe(evalCase.expected.reasonCode)
       expect(plan.clarification === null ? 0 : 1, evalCase.id).toBeLessThanOrEqual(1)
-      expect(Buffer.byteLength(JSON.stringify(compactArtifactPlan(plan))), evalCase.id).toBeLessThan(2048)
+      expect(Buffer.byteLength(JSON.stringify(compactArtifactPlanV2(plan))), evalCase.id).toBeLessThan(2048)
       if (evalCase.expected.shareSafetyRequired !== undefined) {
         expect(plan.resolvedBrief.trust.shareSafetyRequired, evalCase.id)
           .toBe(evalCase.expected.shareSafetyRequired)

@@ -1,5 +1,5 @@
 import { agentError, isAgentError } from './errors'
-import { compactArtifactPlan } from './artifact-plan-schema'
+import { compactArtifactPlanV2 } from './artifact-plan-v2-schema'
 import { planArtifact } from './artifact-planner'
 import { parseAnalyzeContext } from './context-schema'
 import { draftOutcomeBriefSchema } from './outcome-brief-schema'
@@ -42,7 +42,7 @@ export function runArtifactCommand(args: CliArgs): unknown {
   }
 
   const plan = planArtifact(resolveOutcomeBrief(parsedBrief.data), context)
-  const value = args.flags['compact'] === true ? compactArtifactPlan(plan) : plan
+  const value = args.flags['compact'] === true ? compactArtifactPlanV2(plan) : plan
   const result = { ok: true as const, value }
   const outputPath = stringFlag(args, 'output')
   if (!outputPath) return result
