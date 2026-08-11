@@ -25,6 +25,8 @@ miao-viz render article ./article.md --style editorial --format html --output /t
 
 `artifact plan` deterministically selects a Report or Presentation for local tabular data. `artifact instantiate` can then convert an executable V2 Plan into a ReportSpec or DeckSpec:
 
+Project-local Outcome Memory can optionally reuse explicitly confirmed delivery preferences. See [`docs/outcome-memory.md`](../../docs/outcome-memory.md) for its persistence and privacy contract.
+
 ```bash
 miao-viz artifact plan \
   --brief ./brief.json \
