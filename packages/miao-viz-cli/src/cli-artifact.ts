@@ -59,8 +59,10 @@ function runArtifactValidate(args: CliArgs): unknown {
   const verification = verifyArtifact({ plan: unwrapResult(rawPlan), context, dataset: dataset.value, spec })
   if (isAgentError(verification)) return fail(verification)
   const summary = args.flags.summary === true
-  const value = summary
-    ? guidanceFromVerification(verification, localeFromPlan(unwrapResult(rawPlan)))
+  const guidance = summary
+    ? guidanceFromVerification(verification, localeFromPlan(unwrapResult(rawPlan))) : null
+  const value = guidance
+    ? guidance
     : args.flags.compact === true ? compactVerification(verification) : verification
   const result = { ok: true as const, value }
   const outputPath = stringFlag(args, 'output')
@@ -78,7 +80,7 @@ function runArtifactValidate(args: CliArgs): unknown {
     }))
   }
   return summary
-    ? { ok: true, value: { output: outputPath, state: value.state } }
+    ? { ok: true, value: { output: outputPath, state: guidance?.state } }
     : { ok: true, value: { output: outputPath, status: verification.status, specHash: verification.specHash } }
 }
 
@@ -139,8 +141,8 @@ function runArtifactPlan(args: CliArgs): unknown {
   }
   const plan = planArtifact(resolveOutcomeBrief(parsedBrief.data, { memory }), context)
   const summary = args.flags.summary === true
-  const value = summary ? guidanceFromPlan(plan)
-    : args.flags.compact === true ? compactArtifactPlanV2(plan) : plan
+  const guidance = summary ? guidanceFromPlan(plan) : null
+  const value = guidance ?? (args.flags.compact === true ? compactArtifactPlanV2(plan) : plan)
   const result = { ok: true as const, value }
   const outputPath = stringFlag(args, 'output')
   if (!outputPath) return result
@@ -153,7 +155,7 @@ function runArtifactPlan(args: CliArgs): unknown {
     }))
   }
   return summary
-    ? { ok: true, value: { output: outputPath, state: value.state } }
+    ? { ok: true, value: { output: outputPath, state: guidance?.state } }
     : { ok: true, value: { output: outputPath, status: plan.status, briefHash: plan.briefHash } }
 }
 

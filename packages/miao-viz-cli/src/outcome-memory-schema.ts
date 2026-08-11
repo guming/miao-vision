@@ -3,6 +3,12 @@ import { z } from 'zod'
 const nonEmptyText = z.string().trim().min(1)
 const timestampSchema = z.iso.datetime({ offset: true })
 const sourceSchema = z.enum(['explicit', 'confirmed'])
+export const OUTCOME_MEMORY_FIELDS = [
+  'audience.role', 'audience.scope', 'audience.dataLiteracy', 'goal.purpose',
+  'delivery.context', 'delivery.form', 'delivery.density', 'delivery.tone',
+  'trust.evidencePolicy', 'trust.privacy', 'presentation.locale',
+  'presentation.brandProfileRef', 'lifecycle.mode', 'lifecycle.cadence'
+] as const
 
 function preference<const T extends string, S extends z.ZodType>(field: T, value: S) {
   return z.object({
@@ -60,9 +66,7 @@ export const outcomeMemoryProposalSchema = z.object({
   preferences: uniquePreferences(outcomeMemoryPreferenceSchema).min(1)
 }).strict()
 
-export const outcomeMemoryFieldSchema = outcomeMemoryPreferenceSchema.options
-  .map(option => option.shape.field)
-  .reduce((union, field) => z.union([union, field]))
+export const outcomeMemoryFieldSchema = z.enum(OUTCOME_MEMORY_FIELDS)
 
 export type OutcomeMemory = z.infer<typeof outcomeMemorySchema>
 export type OutcomeMemoryPreference = z.infer<typeof outcomeMemoryPreferenceSchema>

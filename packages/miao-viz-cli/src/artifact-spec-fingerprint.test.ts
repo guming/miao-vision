@@ -12,7 +12,7 @@ const report: AgentReportSpec = {
   theme: 'standard-white',
   charts: [{
     id: 'sales-trend', type: 'line', title: 'Sales trend',
-    data: { source: 'sales', transform: [{ op: 'sort', by: 'month', order: 'asc' }] },
+    data: { source: 'sales', transform: [{ type: 'sort', field: 'month', order: 'asc' }] },
     encoding: { x: { field: 'month', type: 'temporal' }, y: { field: 'sales', type: 'quantitative' } },
     provenance: { derivedFrom: ['$evidence:sales_trend.rows'] }
   }]
@@ -29,7 +29,10 @@ const deck: DeckSpec = {
 describe('fingerprintArtifactSpec', () => {
   it('is stable across object key order and equivalent JSON/YAML', () => {
     const yamlValue = YAML.parse(YAML.stringify(report)) as AgentReportSpec
-    const reordered = { charts: report.charts, theme: report.theme, title: report.title, layout: report.layout, specVersion: 1 }
+    const reordered: AgentReportSpec = {
+      charts: report.charts, theme: report.theme, title: report.title,
+      layout: report.layout, specVersion: 1
+    }
     expect(fingerprintArtifactSpec('report', yamlValue)).toBe(fingerprintArtifactSpec('report', reordered))
   })
 

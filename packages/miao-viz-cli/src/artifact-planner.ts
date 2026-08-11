@@ -18,7 +18,7 @@ export function planArtifact(
   briefResult: ResolvedOutcomeBriefResult,
   context: PlannerContext
 ): ArtifactPlanV2 {
-  const { resolvedBrief: brief, assumptions, briefHash } = briefResult
+  const { resolvedBrief: brief, assumptions } = briefResult
   const dataClarification = firstBlockingDataClarification(context)
   if (dataClarification) {
     return buildPlan(briefResult, context, {
@@ -127,11 +127,17 @@ function selectForm(brief: ResolvedOutcomeBrief): Selection
 }
 
 function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, context: PlannerContext) {
+  return isCompact(context)
+    ? selectCompactPattern(selection, brief, context)
+    : selectFullPattern(selection, brief, context)
+}
+
+function selectCompactPattern(
+  selection: Selection, brief: ResolvedOutcomeBrief, context: CompactAnalyzeContext
+) {
   const catalog = context.catalog
   if (selection.renderer === 'deck') {
-    const patterns = isCompact(context)
-      ? (catalog.deckPatterns ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
-      : (catalog.deckPatterns ?? []).map(item => ({ id: item.id, score: item.score, blocks: item.blocks }))
+    const patterns = (catalog.deckPatterns ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
     const preferred = brief.delivery.density === 'concise' || brief.delivery.tone === 'executive'
       ? 'executive-brief' : 'business-review'
     const item = patterns.find(pattern => pattern.id === preferred) ?? highest(patterns)
@@ -141,12 +147,8 @@ function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, contex
     }
   }
 
-  const blockedScenes = new Set(isCompact(context)
-    ? (catalog.blockedScenes ?? []).map(item => item[0])
-    : (catalog.blockedScenes ?? []).map(item => item.id))
-  const scenes = (isCompact(context)
-    ? (catalog.scenes ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
-    : (catalog.scenes ?? []).map(item => ({ id: item.id, score: item.score, blocks: item.blocks })))
+  const blockedScenes = new Set((catalog.blockedScenes ?? []).map(item => item[0]))
+  const scenes = (catalog.scenes ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
     .filter(item => !blockedScenes.has(item.id))
   const scene = highest(scenes)
   if (scene) return {
@@ -154,13 +156,43 @@ function selectPattern(selection: Selection, brief: ResolvedOutcomeBrief, contex
     reason: `Selected highest-scoring allowed scene ${scene.id} from the analyze catalog.`
   }
 
-  const blockedTemplates = new Set(isCompact(context)
-    ? (catalog.blockedTemplates ?? []).map(item => item[0])
-    : (catalog.blockedTemplates ?? []).map(item => item.id))
-  const templates = (isCompact(context)
-    ? (catalog.templates ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
-    : (catalog.templates ?? []).map(item => ({ id: item.id, score: item.score, blocks: item.blocks })))
+  const blockedTemplates = new Set((catalog.blockedTemplates ?? []).map(item => item[0]))
+  const templates = (catalog.templates ?? []).map(([id, score, , blocks]) => ({ id, score, blocks }))
     .filter(item => !blockedTemplates.has(item.id))
+  const template = highest(templates)
+  return template && {
+    ...template, adapter: 'report-template' as const, reasonCode: `catalog_template_${template.id}`,
+    reason: `Selected highest-scoring allowed template ${template.id} from the analyze catalog.`
+  }
+}
+
+function selectFullPattern(selection: Selection, brief: ResolvedOutcomeBrief, context: AnalyzeContext) {
+  const catalog = context.catalog
+  if (selection.renderer === 'deck') {
+    const patterns = (catalog.deckPatterns ?? []).map(item => ({
+      id: item.id, score: item.score, blocks: item.blocks
+    }))
+    const preferred = brief.delivery.density === 'concise' || brief.delivery.tone === 'executive'
+      ? 'executive-brief' : 'business-review'
+    const item = patterns.find(pattern => pattern.id === preferred) ?? highest(patterns)
+    return item && {
+      ...item, adapter: 'deck-pattern' as const, reasonCode: `catalog_deck_${item.id}`,
+      reason: `Selected allowed deck pattern ${item.id} from the analyze catalog.`
+    }
+  }
+  const blockedScenes = new Set((catalog.blockedScenes ?? []).map(item => item.id))
+  const scenes = (catalog.scenes ?? []).map(item => ({
+    id: item.id, score: item.score, blocks: item.blocks
+  })).filter(item => !blockedScenes.has(item.id))
+  const scene = highest(scenes)
+  if (scene) return {
+    ...scene, adapter: 'report-scene' as const, reasonCode: `catalog_scene_${scene.id}`,
+    reason: `Selected highest-scoring allowed scene ${scene.id} from the analyze catalog.`
+  }
+  const blockedTemplates = new Set((catalog.blockedTemplates ?? []).map(item => item.id))
+  const templates = (catalog.templates ?? []).map(item => ({
+    id: item.id, score: item.score, blocks: item.blocks
+  })).filter(item => !blockedTemplates.has(item.id))
   const template = highest(templates)
   return template && {
     ...template, adapter: 'report-template' as const, reasonCode: `catalog_template_${template.id}`,
@@ -173,15 +205,25 @@ function highest<T extends { id: string; score: number }>(items: T[]): T | undef
 }
 
 function firstBlockingDataClarification(context: PlannerContext): OutcomeClarification | null {
-  const item = (context.clarificationQuestions ?? [])
-    .find(question => isCompact(context) ? question[3] : question.blocking)
+  if (isCompact(context)) return firstCompactClarification(context)
+  const item = (context.clarificationQuestions ?? []).find(question => question.blocking)
   if (!item) return null
-  const question = isCompact(context) ? item[1] : item.question
-  const options = (isCompact(context) ? item[2] : item.options).slice(0, 3)
+  const options = item.options.slice(0, 3)
   if (options.length < 2) options.push('Use the current assumption')
   return {
-    field: `data.${isCompact(context) ? item[4] : item.appliesTo}`,
-    question, options, reasonCode: 'data_semantics_blocking', blocking: true
+    field: `data.${item.appliesTo}`, question: item.question,
+    options, reasonCode: 'data_semantics_blocking', blocking: true
+  }
+}
+
+function firstCompactClarification(context: CompactAnalyzeContext): OutcomeClarification | null {
+  const item = (context.clarificationQuestions ?? []).find(question => question[3])
+  if (!item) return null
+  const options = item[2].slice(0, 3)
+  if (options.length < 2) options.push('Use the current assumption')
+  return {
+    field: `data.${item[4]}`, question: item[1], options,
+    reasonCode: 'data_semantics_blocking', blocking: true
   }
 }
 
@@ -204,14 +246,12 @@ function buildPlan(
   return artifactPlanV2Schema.parse({
     schemaVersion: '2', briefHash: briefResult.briefHash,
     contextHash: fingerprintAnalyzeContext(context),
-    status: overrides.status,
     nextAction: overrides.status === 'needs_clarification' ? 'clarify' : 'stop',
     sourceKind: 'tabular',
     resolvedBrief: briefResult.resolvedBrief, assumptions: briefResult.assumptions,
     form: null, renderer: null, target: null, structureRoles: [],
     densityBudget: { level: density, maxSections: budget[0], maxPrimaryVisuals: budget[1] },
     qualityGates: gates, formats: [],
-    selectionReasons: overrides.selectionReasons,
     warnings, clarification: null,
     ...overrides
   })

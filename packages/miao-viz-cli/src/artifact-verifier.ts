@@ -178,7 +178,7 @@ function check(code: string, status: 'passed' | 'warning' | 'failed', message: s
 
 function repairHints(error: AgentError): ArtifactRepairHint[] {
   const issues = Array.isArray(error.issues) ? error.issues : Array.isArray(error.errors) ? error.errors : [error]
-  return issues.slice(0, 20).map((raw, index) => {
+  return issues.slice(0, 20).map(raw => {
     const issue = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {}
     return {
       code: String(issue.code ?? error.code ?? 'SPEC_VALIDATION_FAILED'),

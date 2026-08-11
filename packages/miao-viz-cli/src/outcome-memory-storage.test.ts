@@ -34,10 +34,10 @@ describe('outcome memory domain operations', () => {
 
   it('overwrites a matching field without duplicating it', () => {
     const confirmed = proposal('delivery.tone', 'executive')
-    const explicit = {
+    const explicit = outcomeMemoryProposalSchema.parse({
       ...confirmed,
       preferences: [{ ...confirmed.preferences[0], value: 'analytical' as const, source: 'explicit' as const }]
-    }
+    })
     const memory = updateOutcomeMemory(updateOutcomeMemory(createEmptyOutcomeMemory(first), confirmed), explicit)
     expect(memory.preferences).toHaveLength(1)
     expect(memory.preferences[0]).toMatchObject({ value: 'analytical', source: 'explicit' })
