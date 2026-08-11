@@ -64,8 +64,9 @@ Supported formats: **CSV, TSV, XLSX, JSON**: all read locally. Reports cite pre-
 
 ### Option A: Install the cross-host plugin (recommended)
 
-Download `miao-vision-plugin.zip` from
-[GitHub Releases](https://github.com/miaoshou-dev/miao-vision/releases). It is
+Download [`miao-vision-plugin.zip`](https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-plugin.zip) from the
+[latest GitHub Release](https://github.com/miaoshou-dev/miao-vision/releases/latest). The current release is
+[`v0.2.0`](https://github.com/miaoshou-dev/miao-vision/releases/tag/skill-v0.2.0). It is
 one bundle with one Skill and one CLI compatibility contract:
 
 | Host | Installation |
@@ -181,18 +182,49 @@ Output includes `fields[]`, `evidence[]`, `catalog`, and `promptRules[]`: a comp
 
 #### 2. More accurate output
 
-Agents cite pre-computed evidence. They don't compute numbers.
+Agents bind KPIs, charts, and insights to pre-computed evidence. They don't
+invent numbers or infer where a displayed result came from.
 
-Every insight in the spec uses `$evidence:` directives that bind to pre-computed query results at render time:
+Each analytical object declares provenance. A single value can use the compact
+form; a claim that needs verification uses the full form:
 
 ```yaml
+charts:
+  - id: total-sales
+    type: bigvalue
+    encoding:
+      value: { field: total_sales, type: quantitative }
+    provenance:
+      evidence: [total]
+      derivedFrom: [$evidence:total.values.total_sales]
+      check: value_match
+      claimArgs:
+        value: $evidence:total.values.total_sales
+        expected: $evidence:total.values.total_sales
 insights:
-  - "East contributed $evidence:by_region.rows[0].total: the largest region in this dataset."
+  - text: "East contributed the largest share of sales."
+    type: share
+    provenance:
+      evidence: [by_dimension, total]
+      derivedFrom:
+        - $evidence:by_dimension.rows[0].total_sales
+        - $evidence:total.values.total_sales
+      check: share_formula
+      claimArgs:
+        numerator: $evidence:by_dimension.rows[0].total_sales
+        denominator: $evidence:total.values.total_sales
+        expected: 0.42
 ```
 
-The CLI resolves every `$evidence:` path during `spec validate`. If a path doesn't exist, the agent gets `EVIDENCE_PATH_NOT_FOUND`: a hard error: before any HTML is produced. Hallucinated statistics fail fast, not silently.
+`spec validate --context context.json --verify --strict` resolves every path,
+checks chart and recipe compatibility, runs required claim checks, and reports
+object coverage plus claim-check coverage. Publishing requires both to be
+100%. Invalid bindings return structured `PROVENANCE_*` errors before output is
+published.
 
-`spec validate --verify` adds a second layer: it flags forbidden language (`trend`, `significant`, `strong correlation`) used without statistical backing, and catches missing caveats when sample sizes are small.
+Rendered reports expose a plain-language “View evidence” panel. Calculation,
+scope, filters, sample size, and verification status appear first; evidence IDs
+and technical paths stay in a collapsed details section.
 
 #### 3. Machine-readable fixes
 
@@ -216,7 +248,7 @@ The agent applies the patch, re-validates, and renders. No human intervention re
 | | |
 |---|---|
 | **AI-native pipeline** | Every CLI command returns structured JSON. Agents read briefings, not raw data. Specs are compact YAML: never raw chart code. |
-| **Evidence-grounded output** | Insights cite pre-computed evidence via `$evidence:` directives. Every path is validated before rendering. Hallucinated statistics fail fast. |
+| **Evidence-grounded output** | KPIs, charts, and insights declare provenance. Strict publishing requires 100% object and claim-check coverage, and reports explain the calculation in plain language. |
 | **Machine-readable fixes** | `spec validate --patch-hints` returns `patches[]` the agent applies directly. No retry loops, no free-form error parsing. |
 | **Your data stays local** | Nothing leaves your machine. No upload, no API call with your data. |
 | **Files made to share** | HTML opens anywhere; direct PDF output is ready to print, email, or archive. No hosted viewer needed. |

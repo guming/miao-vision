@@ -10,10 +10,10 @@
     })
   }
 
-  let npmText = 'npm install -g @miao-vision/cli'
-  let npxText = 'npx skills add miaoshou-dev/miao-vision -g -a codex -y\n# Claude Code: replace codex with claude-code'
-  let claudeZipText = 'curl -L https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-skill.zip -o skill.zip\nmkdir -p ~/.claude/skills && unzip skill.zip -d ~/.claude/skills/'
-  let codexZipText = 'curl -L https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-skill.zip -o skill.zip\nmkdir -p ~/.codex/skills && unzip skill.zip -d ~/.codex/skills/'
+  let pluginText = 'curl -L https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-plugin.zip -o miao-vision-plugin.zip'
+  let cliText = 'npm install -g @miao-vision/cli@0.2.0'
+  let claudeText = 'claude plugin marketplace add miaoshou-dev/miao-vision\nclaude plugin install miao-vision@miao-vision'
+  let codexText = '# Download miao-vision-plugin.zip, then install it through the Codex plugin surface.'
   let promptExamples = [
     'Analyze this sales spreadsheet and create an HTML report with key metrics and charts.',
     'Export this report as a printable A4 PDF.',
@@ -24,53 +24,53 @@
 <section id="install" class="install-section" aria-labelledby="install-title">
   <div class="section-heading">
     <p class="section-kicker">Install</p>
-    <h2 id="install-title">Install the CLI, then give your agent the skill</h2>
+    <h2 id="install-title">Install one plugin for Codex or Claude</h2>
   </div>
   <div class="install-grid">
     <article class="install-card">
-      <h3>Quick Install &mdash; Codex / Claude</h3>
-      <p>One-line CLI install plus an explicit global skill target. Naming the agent avoids selecting project-only targets such as PromptScript.</p>
+      <h3>Cross-host Plugin v0.2.0</h3>
+      <p>The recommended bundle includes the Skill and a versioned CLI compatibility contract. The second command is an optional direct CLI install. Your data stays local.</p>
       <div class="install-steps">
         <div class="install-step">
           <span class="step-badge">1</span>
           <div class="code-block">
-            <button class="copy-btn" onclick={() => copy(npmText, 'npm')} aria-label="Copy">
-              {#if copied === 'npm'}<Check size={14} />{:else}<Copy size={14} />{/if}
+            <button class="copy-btn" onclick={() => copy(pluginText, 'plugin')} aria-label="Copy">
+              {#if copied === 'plugin'}<Check size={14} />{:else}<Copy size={14} />{/if}
             </button>
-            <pre><code>{npmText}</code></pre>
+            <pre><code>{pluginText}</code></pre>
           </div>
         </div>
         <div class="install-step">
           <span class="step-badge">2</span>
           <div class="code-block">
-            <button class="copy-btn" onclick={() => copy(npxText, 'npx')} aria-label="Copy">
-              {#if copied === 'npx'}<Check size={14} />{:else}<Copy size={14} />{/if}
+            <button class="copy-btn" onclick={() => copy(cliText, 'cli')} aria-label="Copy">
+              {#if copied === 'cli'}<Check size={14} />{:else}<Copy size={14} />{/if}
             </button>
-            <pre><code>{npxText}</code></pre>
+            <pre><code>{cliText}</code></pre>
           </div>
         </div>
       </div>
     </article>
 
     <article class="install-card">
-      <h3>For Claude</h3>
-      <p>Offline ZIP install. Ships the skill file and reference docs directly to <code>~/.claude/skills/</code>.</p>
+      <h3>Claude Code</h3>
+      <p>Add the repository marketplace, then install the published plugin.</p>
       <div class="code-block">
-        <button class="copy-btn" onclick={() => copy(claudeZipText, 'claude-zip')} aria-label="Copy">
-          {#if copied === 'claude-zip'}<Check size={14} />{:else}<Copy size={14} />{/if}
+        <button class="copy-btn" onclick={() => copy(claudeText, 'claude')} aria-label="Copy">
+          {#if copied === 'claude'}<Check size={14} />{:else}<Copy size={14} />{/if}
         </button>
-        <pre><code>{claudeZipText}</code></pre>
+        <pre><code>{claudeText}</code></pre>
       </div>
     </article>
 
     <article class="install-card">
-      <h3>For Codex</h3>
-      <p>Offline ZIP install. Ships the skill file and reference docs directly to <code>~/.codex/skills/</code>.</p>
+      <h3>Codex</h3>
+      <p>Install the same cross-host ZIP through the Codex plugin surface.</p>
       <div class="code-block">
-        <button class="copy-btn" onclick={() => copy(codexZipText, 'codex-zip')} aria-label="Copy">
-          {#if copied === 'codex-zip'}<Check size={14} />{:else}<Copy size={14} />{/if}
+        <button class="copy-btn" onclick={() => copy(codexText, 'codex')} aria-label="Copy">
+          {#if copied === 'codex'}<Check size={14} />{:else}<Copy size={14} />{/if}
         </button>
-        <pre><code>{codexZipText}</code></pre>
+        <pre><code>{codexText}</code></pre>
       </div>
     </article>
   </div>

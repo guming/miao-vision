@@ -14,6 +14,7 @@ Miao Vision is now focused on three product directions around `miao-viz-cli`:
 - [Feature Roadmap](./roadmap/FEATURE_ROADMAP.md)
 - [Article-to-Infographic Implementation Plan](./article-to-infographic-implementation-plan.md)
 - [Interactive Runtime PRD](./miao-viz-interactive-runtime-prd.md)
+- [Trusted Interactive Report PRD](./trusted-interactive-report-prd.md)
 
 ## Getting Started
 

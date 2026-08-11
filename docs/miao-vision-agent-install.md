@@ -5,6 +5,10 @@ Miao Vision ships as a cross-host plugin backed by one local CLI:
 - `miao-viz` CLI: local data profiling, spec validation, and HTML rendering.
 - `miao-vision` plugin: shared Skill and metadata for Codex, Claude Code, and OpenClaw.
 
+Current release: [`v0.2.0`](https://github.com/miaoshou-dev/miao-vision/releases/tag/skill-v0.2.0).
+The release contains the plugin ZIP, compatibility Skill ZIP, checksums, and
+native CLI binaries. The npm CLI is `@miao-vision/cli@0.2.0`.
+
 ## Requirements
 
 - Node.js 20 or newer
@@ -32,7 +36,8 @@ For another agent, pass its explicit `--agent` id only if it supports global
 skills. Otherwise omit `--global` and install at project scope. In particular,
 PromptScript does not support global skill installation.
 
-The main GitHub Release artifact is `miao-vision-plugin.zip`. See the install
+The main GitHub Release artifact is
+[`miao-vision-plugin.zip`](https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-plugin.zip). See the install
 documents inside `skills/miao-vision/install/` for Codex, Claude Code, and
 OpenClaw commands.
 
@@ -82,10 +87,27 @@ Browser/app-hosted Claude environments may not be able to execute local shell co
 The skill will run:
 
 ```bash
+miao-viz data analyze ~/data/sales.csv \
+  --intent "key metrics and trends" \
+  --output /tmp/miao-vision/context.json
 miao-viz data profile ~/data/sales.csv
-miao-viz spec validate --spec /tmp/miao-vision/report.yaml --profile /tmp/miao-vision/profile.json
-miao-viz render report --input ~/data/sales.csv --spec /tmp/miao-vision/report.yaml --format html --output /tmp/miao-vision/report.html
+miao-viz spec validate \
+  --spec /tmp/miao-vision/report.yaml \
+  --profile /tmp/miao-vision/profile.json \
+  --context /tmp/miao-vision/context.json \
+  --verify --strict
+miao-viz render report \
+  --input ~/data/sales.csv \
+  --spec /tmp/miao-vision/report.yaml \
+  --context /tmp/miao-vision/context.json \
+  --format html \
+  --output /tmp/miao-vision/report.html
 ```
+
+For reports, strict publication also validates provenance for every KPI, chart,
+and insight. Both object coverage and required claim-check coverage must reach
+100%. The generated HTML exposes business-readable evidence details while
+keeping evidence IDs and paths under Technical details.
 
 ## Common Errors
 
