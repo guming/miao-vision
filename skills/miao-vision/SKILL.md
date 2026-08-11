@@ -60,9 +60,19 @@ Use the same executable throughout the task. In workflow examples, `miao-viz` me
 
 - Keep explicit Report requests on the existing Report workflow, explicit Deck/Presentation requests on the existing Deck workflow, and all Article requests on the existing Article workflow. Do not add a Planner call to those paths.
 - For materially ambiguous local tabular requests or explicit plan-first requests, read `references/outcome-brief.md`, construct a minimal Draft Brief without showing a field form, and follow the returned `nextAction`.
+- For that route only, use `./miao-vision/outcome-memory.json` from the task's initial working directory when it already exists. Pass it explicitly with `--memory`; never search parent directories or create it from inferred/default values.
 - After `artifact instantiate`, run `artifact validate` with the same Plan, Context, local data, and generated Spec. Render only when its Artifact Verification is `verified` with `renderReadiness.ready=true`.
 - For `needs_repair`, apply only the returned repair hints, then create a fresh Verification. For `blocked`, stop; never enter a Renderer or guess a fallback.
 - Artifact Verification is a validation receipt, not rendering, delivery, publication, or sharing authorization. Keep explicit Report/Deck/Article requests on their existing validation paths without adding Planner calls.
+
+## Conversational Preferences
+
+- Treat “这次”, “当前文件”, a named period, and ordinary edit requests as task-local. Apply them to the current Draft or Spec only.
+- Treat “以后”, “默认”, “每次”, or “这个项目都” as a possible durable preference. State the exact preference to remember and ask for confirmation before writing it.
+- Persist only the fields allowed by `artifact memory`; never persist raw requests, questions, decisions, periods, data, evidence, or paths. Never persist values inferred by the agent, Source Hints, or product defaults.
+- On confirmation, create a minimal proposal and call `artifact memory update --confirm`. A refusal affects only persistence; continue the current task normally.
+- For a forget request, show the field to remove, confirm once, then call `artifact memory forget --confirm`. Without `--field`, this clears all project preferences.
+- Existing-artifact edits do not update Outcome Memory unless the user separately asks for a durable default.
 
 ## Artifact Delivery
 
