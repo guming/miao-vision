@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { hashBrief, resolveOutcomeBrief } from './outcome-brief-resolver'
+import { outcomeMemorySchema } from './outcome-memory-schema'
+
+const timestamp = '2026-08-11T10:00:00.000Z'
+const memory = outcomeMemorySchema.parse({
+  schemaVersion: '1', createdAt: timestamp, updatedAt: timestamp,
+  preferences: [
+    { field: 'delivery.tone', value: 'executive', source: 'confirmed', updatedAt: timestamp },
+    { field: 'delivery.density', value: 'concise', source: 'explicit', updatedAt: timestamp },
+    { field: 'trust.privacy', value: 'external', source: 'confirmed', updatedAt: timestamp },
+    { field: 'trust.evidencePolicy', value: 'cited', source: 'confirmed', updatedAt: timestamp }
+  ]
+})
 
 describe('resolveOutcomeBrief', () => {
   it('applies explicit, project, source hint, then default priority', () => {
@@ -29,6 +41,40 @@ describe('resolveOutcomeBrief', () => {
       presentation: { locale: 'zh-CN' },
       lifecycle: { mode: 'one-off' }
     })
+  })
+
+  it('applies explicit values before memory, then project, source hint, and defaults', () => {
+    const result = resolveOutcomeBrief({
+      schemaVersion: '1', rawRequest: 'Current task', delivery: { density: 'detailed' }
+    }, {
+      memory,
+      project: { delivery: { density: 'standard', tone: 'editorial' } },
+      sourceHint: { delivery: { context: 'email', tone: 'analytical' } }
+    })
+    expect(result.resolvedBrief.delivery).toMatchObject({
+      density: 'detailed', tone: 'executive', context: 'email', form: 'auto'
+    })
+    expect(result.assumptions.some(item => item.field === 'delivery.tone')).toBe(false)
+    expect(result.assumptions.find(item => item.field === 'delivery.context')?.source).toBe('source_hint')
+  })
+
+  it('does not repeatedly confirm remembered safety preferences', () => {
+    const result = resolveOutcomeBrief({ schemaVersion: '1', rawRequest: 'Client result' }, { memory })
+    expect(result.resolvedBrief.trust).toMatchObject({
+      privacy: 'external', evidencePolicy: 'cited', shareSafetyRequired: true,
+      sensitiveDetailsAllowed: false, recipientReady: true
+    })
+    expect(result.assumptions.some(item => item.field.startsWith('trust.'))).toBe(false)
+  })
+
+  it('is unchanged when no memory is supplied', () => {
+    const draft = { schemaVersion: '1' as const, rawRequest: 'No memory' }
+    expect(resolveOutcomeBrief(draft)).toEqual(resolveOutcomeBrief(draft, {}))
+  })
+
+  it('produces stable resolved output and hash for the same memory', () => {
+    const draft = { schemaVersion: '1' as const, rawRequest: 'Stable' }
+    expect(resolveOutcomeBrief(draft, { memory })).toEqual(resolveOutcomeBrief(draft, { memory }))
   })
 
   it('requires share safety and suppresses sensitive details for external outcomes', () => {
