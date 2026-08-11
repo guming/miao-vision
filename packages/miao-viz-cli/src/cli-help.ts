@@ -9,6 +9,7 @@ Options:
   --memory <file>    Optional project Outcome Memory JSON; the CLI does not search implicitly
   --output <file>    Write the plan result to this path (default: stdout)
   --compact          Return the compact Agent-facing plan
+  --summary          Return user-facing guidance without protocol internals
 `,
   'artifact.memory': `Usage: miao-viz artifact memory <action> --memory <file> [options]
 
@@ -47,6 +48,7 @@ Options:
   --spec <file>       ReportSpec or DeckSpec YAML/JSON
   --output <file>     Write Artifact Verification JSON (default: structured stdout)
   --compact           Omit diagnostic messages without changing verification status
+  --summary           Return user-facing guidance without protocol internals
 `,
   'data.analyze': `Usage: miao-viz data analyze <file> [options]
 

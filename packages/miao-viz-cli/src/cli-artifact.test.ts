@@ -136,6 +136,18 @@ describe('runArtifactCommand', () => {
     expect(compact.value.target).toEqual(full.value.target)
   })
 
+  it('returns user-facing plan guidance without changing the underlying decision', () => {
+    const fixture = fixtures()
+    const full = runArtifactCommand(args({ brief: fixture.briefPath, context: fixture.contextPath })) as any
+    const summary = runArtifactCommand(args({
+      brief: fixture.briefPath, context: fixture.contextPath, summary: true
+    })) as any
+    expect(summary).toMatchObject({
+      ok: true, value: { state: 'proceed', form: full.value.form, locale: 'zh-CN' }
+    })
+    expect(JSON.stringify(summary.value)).not.toMatch(/briefHash|contextHash|adapter|catalog|rawRequest/)
+  })
+
   it('writes the selected representation to --output', () => {
     const fixture = fixtures()
     const output = join(fixture.root, 'plan.json')
@@ -315,6 +327,22 @@ describe('runArtifactCommand', () => {
     expect(runArtifactCommand(args({
       plan: planPath, context: fixture.contextPath, input: fixture.inputPath, spec: specPath
     }, 'validate'))).toMatchObject({ ok: true, value: { status: 'blocked' } })
+  })
+
+  it('returns user-facing verification guidance with --summary', () => {
+    const fixture = fixtures()
+    const planned = runArtifactCommand(args({ brief: fixture.briefPath, context: fixture.contextPath })) as any
+    const planPath = join(fixture.root, 'plan.json')
+    const specPath = join(fixture.root, 'spec.yaml')
+    writeFileSync(planPath, JSON.stringify(planned.value))
+    const instantiated = runArtifactCommand(args({ plan: planPath, context: fixture.contextPath }, 'instantiate')) as any
+    writeFileSync(specPath, YAML.stringify(instantiated.value.spec))
+    const result = runArtifactCommand(args({
+      plan: planPath, context: fixture.contextPath, input: fixture.inputPath,
+      spec: specPath, summary: true
+    }, 'validate')) as any
+    expect(result).toMatchObject({ ok: true, value: { state: 'ready', locale: 'zh-CN' } })
+    expect(JSON.stringify(result.value)).not.toMatch(/specHash|contextHash|adapter|targetId/)
   })
 
   it('rejects missing inputs, unreadable Specs, V1 plans, and output overwrites', () => {

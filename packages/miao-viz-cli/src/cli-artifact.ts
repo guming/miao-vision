@@ -10,6 +10,7 @@ import { draftOutcomeBriefSchema } from './outcome-brief-schema'
 import { resolveOutcomeBrief } from './outcome-brief-resolver'
 import { loadOutcomeMemorySync, OutcomeMemoryStorageError } from './outcome-memory-storage'
 import { runArtifactMemory } from './cli-artifact-memory'
+import { guidanceFromPlan, guidanceFromVerification } from './artifact-guidance'
 import { loadDataset } from './data-loader'
 import {
   fail, readJson, readSpec, requiredFlag, stringFlag, writeOutput, type CliArgs
@@ -57,7 +58,10 @@ function runArtifactValidate(args: CliArgs): unknown {
 
   const verification = verifyArtifact({ plan: unwrapResult(rawPlan), context, dataset: dataset.value, spec })
   if (isAgentError(verification)) return fail(verification)
-  const value = args.flags.compact === true ? compactVerification(verification) : verification
+  const summary = args.flags.summary === true
+  const value = summary
+    ? guidanceFromVerification(verification, localeFromPlan(unwrapResult(rawPlan)))
+    : args.flags.compact === true ? compactVerification(verification) : verification
   const result = { ok: true as const, value }
   const outputPath = stringFlag(args, 'output')
   if (!outputPath) return result
@@ -73,7 +77,9 @@ function runArtifactValidate(args: CliArgs): unknown {
       outputPath, detail: error instanceof Error ? error.message : String(error)
     }))
   }
-  return { ok: true, value: { output: outputPath, status: verification.status, specHash: verification.specHash } }
+  return summary
+    ? { ok: true, value: { output: outputPath, state: value.state } }
+    : { ok: true, value: { output: outputPath, status: verification.status, specHash: verification.specHash } }
 }
 
 function compactVerification(verification: ReturnType<typeof verifyArtifact>): unknown {
@@ -132,7 +138,9 @@ function runArtifactPlan(args: CliArgs): unknown {
     }
   }
   const plan = planArtifact(resolveOutcomeBrief(parsedBrief.data, { memory }), context)
-  const value = args.flags['compact'] === true ? compactArtifactPlanV2(plan) : plan
+  const summary = args.flags.summary === true
+  const value = summary ? guidanceFromPlan(plan)
+    : args.flags.compact === true ? compactArtifactPlanV2(plan) : plan
   const result = { ok: true as const, value }
   const outputPath = stringFlag(args, 'output')
   if (!outputPath) return result
@@ -144,7 +152,9 @@ function runArtifactPlan(args: CliArgs): unknown {
       outputPath, detail: error instanceof Error ? error.message : String(error)
     }))
   }
-  return { ok: true, value: { output: outputPath, status: plan.status, briefHash: plan.briefHash } }
+  return summary
+    ? { ok: true, value: { output: outputPath, state: value.state } }
+    : { ok: true, value: { output: outputPath, status: plan.status, briefHash: plan.briefHash } }
 }
 
 function runArtifactInstantiate(args: CliArgs): unknown {
@@ -195,4 +205,14 @@ function unwrapResult(value: unknown): unknown {
     return (value as { value?: unknown }).value
   }
   return value
+}
+
+function localeFromPlan(value: unknown): string {
+  if (!value || typeof value !== 'object') return 'en'
+  const brief = (value as { resolvedBrief?: unknown }).resolvedBrief
+  if (!brief || typeof brief !== 'object') return 'en'
+  const presentation = (brief as { presentation?: unknown }).presentation
+  if (!presentation || typeof presentation !== 'object') return 'en'
+  const locale = (presentation as { locale?: unknown }).locale
+  return typeof locale === 'string' && locale.trim() ? locale : 'en'
 }
