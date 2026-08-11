@@ -19,6 +19,10 @@
       "stdoutIncludes": "artifact validate"
     },
     {
+      "args": ["artifact", "memory", "--help"],
+      "stdoutIncludes": "artifact memory"
+    },
+    {
       "args": ["deck", "instantiate", "--help"],
       "stdoutIncludes": "deck instantiate"
     },

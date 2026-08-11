@@ -13,7 +13,7 @@ const GROUP_SUBCOMMANDS: Record<string, Set<string>> = {
   deck:   new Set(['validate', 'instantiate']),
   report: new Set(['init', 'update', 'info', 'history', 'clean']),
   render: new Set(['report', 'deck', 'article']),
-  artifact: new Set(['plan', 'instantiate', 'validate']),
+  artifact: new Set(['plan', 'instantiate', 'validate', 'memory']),
 }
 
 export interface CliArgs {

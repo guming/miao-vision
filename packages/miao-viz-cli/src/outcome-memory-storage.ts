@@ -1,4 +1,5 @@
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import {
   outcomeMemorySchema,
@@ -36,11 +37,18 @@ export async function loadOutcomeMemory(path: string): Promise<OutcomeMemory> {
     }
     throw new OutcomeMemoryStorageError('INVALID_OUTCOME_MEMORY', `Could not read Outcome Memory: ${path}`)
   }
+  return parseOutcomeMemory(source, path)
+}
+
+export function loadOutcomeMemorySync(path: string): OutcomeMemory {
   try {
-    return outcomeMemorySchema.parse(JSON.parse(source))
+    return parseOutcomeMemory(readFileSync(path, 'utf8'), path)
   } catch (error) {
-    const issues = typeof error === 'object' && error && 'issues' in error ? error.issues : undefined
-    throw new OutcomeMemoryStorageError('INVALID_OUTCOME_MEMORY', `Invalid Outcome Memory: ${path}`, issues)
+    if (error instanceof OutcomeMemoryStorageError) throw error
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      throw new OutcomeMemoryStorageError('MEMORY_NOT_FOUND', `Outcome Memory not found: ${path}`)
+    }
+    throw new OutcomeMemoryStorageError('INVALID_OUTCOME_MEMORY', `Could not read Outcome Memory: ${path}`)
   }
 }
 
@@ -91,6 +99,32 @@ export async function writeOutcomeMemory(path: string, memory: OutcomeMemory): P
       `Could not write Outcome Memory: ${path}`,
       isNodeError(error) ? error.code : undefined
     )
+  }
+}
+
+export function writeOutcomeMemorySync(path: string, memory: OutcomeMemory): void {
+  const validated = outcomeMemorySchema.parse(memory)
+  const directory = dirname(path)
+  const temporary = join(directory, `.${basename(path)}.${process.pid}.tmp`)
+  try {
+    mkdirSync(directory, { recursive: true })
+    writeFileSync(temporary, `${JSON.stringify(validated, null, 2)}\n`, { encoding: 'utf8', flag: 'wx' })
+    renameSync(temporary, path)
+  } catch (error) {
+    try { unlinkSync(temporary) } catch { /* no temporary file to clean */ }
+    throw new OutcomeMemoryStorageError(
+      'MEMORY_WRITE_FAILED', `Could not write Outcome Memory: ${path}`,
+      isNodeError(error) ? error.code : undefined
+    )
+  }
+}
+
+function parseOutcomeMemory(source: string, path: string): OutcomeMemory {
+  try {
+    return outcomeMemorySchema.parse(JSON.parse(source))
+  } catch (error) {
+    const issues = typeof error === 'object' && error && 'issues' in error ? error.issues : undefined
+    throw new OutcomeMemoryStorageError('INVALID_OUTCOME_MEMORY', `Invalid Outcome Memory: ${path}`, issues)
   }
 }
 

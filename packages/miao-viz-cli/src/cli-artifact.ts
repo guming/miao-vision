@@ -8,6 +8,8 @@ import { planArtifact } from './artifact-planner'
 import { parseAnalyzeContext } from './context-schema'
 import { draftOutcomeBriefSchema } from './outcome-brief-schema'
 import { resolveOutcomeBrief } from './outcome-brief-resolver'
+import { loadOutcomeMemorySync, OutcomeMemoryStorageError } from './outcome-memory-storage'
+import { runArtifactMemory } from './cli-artifact-memory'
 import { loadDataset } from './data-loader'
 import {
   fail, readJson, readSpec, requiredFlag, stringFlag, writeOutput, type CliArgs
@@ -17,10 +19,11 @@ export function runArtifactCommand(args: CliArgs): unknown {
   if (args.subcommand === 'plan') return runArtifactPlan(args)
   if (args.subcommand === 'instantiate') return runArtifactInstantiate(args)
   if (args.subcommand === 'validate') return runArtifactValidate(args)
+  if (args.subcommand === 'memory') return runArtifactMemory(args)
   return fail(agentError(
     'UNKNOWN_SUBCOMMAND',
-    `Unknown artifact subcommand: ${args.subcommand ?? '(none)'}. Available: plan, instantiate, validate`,
-    { subcommand: args.subcommand, available: ['plan', 'instantiate', 'validate'] }
+    `Unknown artifact subcommand: ${args.subcommand ?? '(none)'}. Available: plan, instantiate, validate, memory`,
+    { subcommand: args.subcommand, available: ['plan', 'instantiate', 'validate', 'memory'] }
   ))
 }
 
@@ -116,7 +119,19 @@ function runArtifactPlan(args: CliArgs): unknown {
     return fail(agentError('INVALID_ANALYZE_CONTEXT', 'Analyze Context format is invalid.', { contextPath }))
   }
 
-  const plan = planArtifact(resolveOutcomeBrief(parsedBrief.data), context)
+  const memoryPath = stringFlag(args, 'memory')
+  let memory
+  if (memoryPath) {
+    try {
+      memory = loadOutcomeMemorySync(memoryPath)
+    } catch (error) {
+      if (error instanceof OutcomeMemoryStorageError) {
+        return fail(agentError(error.code, error.message, error.issues === undefined ? {} : { issues: error.issues }))
+      }
+      return fail(agentError('INVALID_OUTCOME_MEMORY', `Could not load Outcome Memory: ${memoryPath}.`))
+    }
+  }
+  const plan = planArtifact(resolveOutcomeBrief(parsedBrief.data, { memory }), context)
   const value = args.flags['compact'] === true ? compactArtifactPlanV2(plan) : plan
   const result = { ok: true as const, value }
   const outputPath = stringFlag(args, 'output')

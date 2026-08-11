@@ -6,8 +6,24 @@ Plan a tabular outcome as a report or presentation without generating a spec or 
 Options:
   --brief <file>     Draft Outcome Brief JSON
   --context <file>   Full or compact Analyze Context JSON
+  --memory <file>    Optional project Outcome Memory JSON; the CLI does not search implicitly
   --output <file>    Write the plan result to this path (default: stdout)
   --compact          Return the compact Agent-facing plan
+`,
+  'artifact.memory': `Usage: miao-viz artifact memory <action> --memory <file> [options]
+
+Inspect or explicitly update project-local Outcome Memory.
+
+Actions:
+  inspect                      Read and validate the current Memory
+  update --proposal <file>     Merge a validated preference proposal
+  forget [--field <path>]      Forget one field, or clear all preferences
+
+Options:
+  --memory <file>              Explicit Outcome Memory JSON path
+  --proposal <file>            Outcome Memory Proposal JSON for update
+  --field <path>               Persistable preference field to forget
+  --confirm                    Required for update and forget
 `,
   'artifact.instantiate': `Usage: miao-viz artifact instantiate --plan <file> --context <file> [options]
 
@@ -250,6 +266,7 @@ Commands:
   plan      Plan a tabular report or presentation without generating it
   instantiate Generate a Spec from a confirmed executable plan
   validate  Verify a planned Spec against its Context and local data
+  memory    Inspect or explicitly update project-local Outcome Memory
 `,
   data: `
 Usage: miao-viz data <command> [options]

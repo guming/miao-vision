@@ -18,6 +18,10 @@ function args(flags: CliArgs['flags'], subcommand = 'plan'): CliArgs {
   return { command: 'artifact', subcommand, positional: [], flags }
 }
 
+function memoryArgs(action: string, flags: CliArgs['flags']): CliArgs {
+  return { command: 'artifact', subcommand: 'memory', positional: [action], flags }
+}
+
 function fixtures(compact = false) {
   const root = mkdtempSync(join(tmpdir(), 'miao-artifact-plan-'))
   const briefPath = join(root, 'brief.json')
@@ -37,6 +41,78 @@ function fixtures(compact = false) {
 }
 
 describe('runArtifactCommand', () => {
+  it('creates, inspects, updates, forgets, and clears confirmed project memory', () => {
+    const fixture = fixtures()
+    const memoryPath = join(fixture.root, 'miao-vision', 'outcome-memory.json')
+    const proposalPath = join(fixture.root, 'proposal.json')
+    writeFileSync(proposalPath, JSON.stringify({
+      schemaVersion: '1', preferences: [{
+        field: 'delivery.tone', value: 'executive', source: 'confirmed',
+        updatedAt: '2026-08-11T10:00:00.000Z'
+      }]
+    }))
+    expect(runArtifactCommand(memoryArgs('update', { memory: memoryPath, proposal: proposalPath })))
+      .toMatchObject({ ok: false, code: 'MEMORY_CONFIRMATION_REQUIRED' })
+    expect(() => readFileSync(memoryPath)).toThrow()
+
+    expect(runArtifactCommand(memoryArgs('update', {
+      memory: memoryPath, proposal: proposalPath, confirm: true
+    }))).toMatchObject({ ok: true, value: { preferences: [{ field: 'delivery.tone' }] } })
+    expect(runArtifactCommand(memoryArgs('inspect', { memory: memoryPath })))
+      .toMatchObject({ ok: true, value: { preferences: [{ value: 'executive' }] } })
+    expect(runArtifactCommand(memoryArgs('forget', {
+      memory: memoryPath, field: 'delivery.tone', confirm: true
+    }))).toMatchObject({ ok: true, value: { preferences: [] } })
+    expect(runArtifactCommand(memoryArgs('forget', { memory: memoryPath, confirm: true })))
+      .toMatchObject({ ok: true, value: { preferences: [] } })
+  })
+
+  it('rejects invalid proposals and memory actions without writing', () => {
+    const fixture = fixtures()
+    const memoryPath = join(fixture.root, 'memory.json')
+    const proposalPath = join(fixture.root, 'proposal.json')
+    writeFileSync(proposalPath, JSON.stringify({
+      schemaVersion: '1', preferences: [{
+        field: 'rawRequest', value: 'secret', source: 'explicit', updatedAt: '2026-08-11T10:00:00.000Z'
+      }]
+    }))
+    expect(runArtifactCommand(memoryArgs('update', {
+      memory: memoryPath, proposal: proposalPath, confirm: true
+    }))).toMatchObject({ ok: false, code: 'INVALID_OUTCOME_MEMORY_PROPOSAL' })
+    expect(() => readFileSync(memoryPath)).toThrow()
+    expect(runArtifactCommand(memoryArgs('guess', { memory: memoryPath })))
+      .toMatchObject({ ok: false, code: 'UNKNOWN_SUBCOMMAND' })
+  })
+
+  it('plans with explicit memory while current Brief values remain authoritative', () => {
+    const fixture = fixtures()
+    const memoryPath = join(fixture.root, 'memory.json')
+    writeFileSync(memoryPath, JSON.stringify({
+      schemaVersion: '1', createdAt: '2026-08-11T10:00:00.000Z', updatedAt: '2026-08-11T10:00:00.000Z',
+      preferences: [
+        { field: 'delivery.form', value: 'report', source: 'confirmed', updatedAt: '2026-08-11T10:00:00.000Z' },
+        { field: 'delivery.tone', value: 'analytical', source: 'confirmed', updatedAt: '2026-08-11T10:00:00.000Z' }
+      ]
+    }))
+    const remembered = runArtifactCommand(args({
+      brief: fixture.briefPath, context: fixture.contextPath, memory: memoryPath, compact: true
+    })) as any
+    expect(remembered.value.form).toBe('presentation')
+    expect(remembered.value.assumptions?.some((item: any) => item.field === 'delivery.tone')).not.toBe(true)
+  })
+
+  it('fails explicitly for missing or invalid memory', () => {
+    const fixture = fixtures()
+    expect(runArtifactCommand(args({
+      brief: fixture.briefPath, context: fixture.contextPath, memory: join(fixture.root, 'missing.json')
+    }))).toMatchObject({ ok: false, code: 'MEMORY_NOT_FOUND' })
+    const invalid = join(fixture.root, 'invalid-memory.json')
+    writeFileSync(invalid, '{}')
+    expect(runArtifactCommand(args({
+      brief: fixture.briefPath, context: fixture.contextPath, memory: invalid
+    }))).toMatchObject({ ok: false, code: 'INVALID_OUTCOME_MEMORY' })
+  })
+
   it('plans from full and compact Analyze Context without changing the decision', () => {
     const full = fixtures(false)
     const compact = fixtures(true)
