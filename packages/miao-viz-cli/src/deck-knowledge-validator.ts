@@ -54,9 +54,11 @@ export function collectDeckKnowledgeIssues(
     const base = `slides[${slideIndex}]`
     const issueStart = issues.length
     collectWarningRefs(slide.warningRefs ?? [], `${base}.warningRefs`, warningCodes, coveredWarnings, issues)
-    validateEvidenceIds(slide, base, evidenceIds, issues)
-    validateDerivedPaths(slide, base, context, issues)
-    validateClaim(slide, base, context, strict, issues)
+    if (slide.claimStatus !== 'source-text' && slide.claimStatus !== 'author-claim') {
+      validateEvidenceIds(slide, base, evidenceIds, issues)
+      validateDerivedPaths(slide, base, context, issues)
+      validateClaim(slide, base, context, strict, issues)
+    }
     validateRecommendation(slide, base, strict, issues)
     validateDensity(slide, base, strict, issues)
     collectHeadlineWarnings(slide, base, issues)

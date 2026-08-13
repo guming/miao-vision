@@ -1,12 +1,21 @@
 import type { AnalyzeContext, AnalyzeEvidence, AnalyzeField } from './context-schema'
 import type { DeckClaimType, DeckIntent, DeckSpec, SlideLayout, SlideSpec } from './deck-types'
+import type { DeckContext } from './deck-context-schema'
+import { DECK_PLAN_BLOCK_IDS, DECK_PLAN_PATTERNS } from './deck-plan-schema'
+
+export type DeckPatternId = (typeof DECK_PLAN_PATTERNS)[number]
+export type DeckSlideBlockId = (typeof DECK_PLAN_BLOCK_IDS)[number]
+export type DeckSourceKind = 'narrative' | 'data' | 'hybrid'
 
 export interface DeckSlideBlockKnowledge {
-  id: 'cover-claim' | 'kpi-snapshot' | 'trend-overview-slide' | 'ranking-slide' | 'data-quality-slide'
+  id: DeckSlideBlockId
   purpose: string
+  supportedSources: DeckSourceKind[]
   requiredRoles: AnalyzeField['role'][]
   requiredEvidence: string[]
+  requiredContent: Array<'section' | 'quote' | 'comparison' | 'decision'>
   supportedLayouts: SlideLayout[]
+  targetLayouts?: string[]
   supportedCharts: string[]
   allowedClaimTypes: DeckClaimType[]
   maxMetrics: number
@@ -15,7 +24,7 @@ export interface DeckSlideBlockKnowledge {
 }
 
 export interface DeckBlockDecision {
-  id: DeckSlideBlockKnowledge['id']
+  id: DeckSlideBlockId
   ok: boolean
   score: number
   reasonCode?: string
@@ -23,22 +32,31 @@ export interface DeckBlockDecision {
 }
 
 export const DECK_SLIDE_BLOCKS: DeckSlideBlockKnowledge[] = [
-  { id: 'cover-claim', purpose: 'State one verified conclusion or the primary question.', requiredRoles: [], requiredEvidence: [], supportedLayouts: ['cover'], supportedCharts: [], allowedClaimTypes: ['descriptive', 'rank', 'delta', 'trend', 'share', 'comparative'], maxMetrics: 0, maxCharts: 0, repairHints: ['Use a question title when no reliable main claim exists.'] },
-  { id: 'kpi-snapshot', purpose: 'Show up to four current-scale metrics.', requiredRoles: ['measure'], requiredEvidence: ['total'], supportedLayouts: ['metrics-chart'], supportedCharts: ['bar', 'line'], allowedClaimTypes: ['descriptive'], maxMetrics: 4, maxCharts: 1, repairHints: ['Add total evidence and at least one measure.'] },
-  { id: 'trend-overview-slide', purpose: 'Show a measure across at least three time periods.', requiredRoles: ['time', 'measure'], requiredEvidence: ['by_time'], supportedLayouts: ['chart-full', 'metrics-chart'], supportedCharts: ['line', 'area'], allowedClaimTypes: ['trend', 'delta'], maxMetrics: 4, maxCharts: 1, repairHints: ['Use a delta or ranking slide when fewer than three periods exist.'] },
-  { id: 'ranking-slide', purpose: 'Show an ordered dimension by a primary measure.', requiredRoles: ['dimension', 'measure'], requiredEvidence: ['by_dimension'], supportedLayouts: ['chart-full', 'text-chart'], supportedCharts: ['bar'], allowedClaimTypes: ['rank', 'share', 'comparative'], maxMetrics: 0, maxCharts: 1, repairHints: ['Add grouped and sorted by_dimension evidence.'] },
-  { id: 'data-quality-slide', purpose: 'Disclose data limitations that affect interpretation.', requiredRoles: [], requiredEvidence: [], supportedLayouts: ['text-points'], supportedCharts: [], allowedClaimTypes: ['descriptive'], maxMetrics: 0, maxCharts: 0, repairHints: ['Reference every AnalyzeContext sample warning by code.'] }
+  dataBlock('cover-claim', 'State one verified conclusion or the primary question.', [], [], ['cover']),
+  dataBlock('kpi-snapshot', 'Show up to four current-scale metrics.', ['measure'], ['total'], ['metrics-chart'], 4, 1),
+  dataBlock('trend-overview-slide', 'Show a measure across at least three time periods.', ['time', 'measure'], ['by_time'], ['chart-full', 'metrics-chart'], 4, 1),
+  dataBlock('ranking-slide', 'Show an ordered dimension by a primary measure.', ['dimension', 'measure'], ['by_dimension'], ['chart-full', 'text-chart'], 0, 1),
+  dataBlock('data-quality-slide', 'Disclose data limitations that affect interpretation.', [], [], ['text-points']),
+  narrativeBlock('narrative-cover', 'Frame the topic, audience, and objective.', [], ['cover']),
+  narrativeBlock('section-summary', 'Summarize one sourced section.', ['section'], ['section-summary']),
+  narrativeBlock('quote-focus', 'Present one sourced quotation.', ['quote'], ['quote-focus']),
+  narrativeBlock('text-comparison', 'Compare two sourced positions or approaches.', ['comparison'], ['comparison-text']),
+  narrativeBlock('decision-request', 'State a sourced decision request and its limits.', ['decision'], ['decision']),
+  narrativeBlock('narrative-ending', 'Close with a sourced summary or next step.', ['section'], ['ending'])
 ]
 
-const PATTERNS: Record<DeckIntent, DeckSlideBlockKnowledge['id'][]> = {
+export const DECK_PATTERNS: Record<DeckPatternId, DeckSlideBlockId[]> = {
   'executive-brief': ['cover-claim', 'kpi-snapshot', 'trend-overview-slide', 'ranking-slide', 'data-quality-slide'],
-  'business-review': ['cover-claim', 'kpi-snapshot', 'trend-overview-slide', 'ranking-slide', 'data-quality-slide']
+  'business-review': ['cover-claim', 'kpi-snapshot', 'trend-overview-slide', 'ranking-slide', 'data-quality-slide'],
+  'topic-explainer': ['narrative-cover', 'section-summary', 'quote-focus', 'narrative-ending'],
+  'project-update': ['narrative-cover', 'section-summary', 'decision-request', 'narrative-ending'],
+  proposal: ['narrative-cover', 'section-summary', 'text-comparison', 'decision-request']
 }
 
 export function evaluateDeckBlocks(context: AnalyzeContext): DeckBlockDecision[] {
   const roles = new Set(context.fields.map(field => field.role))
   const evidence = new Set(context.evidence.map(item => item.id))
-  return DECK_SLIDE_BLOCKS.map(block => {
+  return DECK_SLIDE_BLOCKS.filter(block => block.supportedSources.includes('data')).map(block => {
     if (block.id === 'data-quality-slide' && context.sampleWarnings.length === 0) {
       return { id: block.id, ok: false, score: 0, reasonCode: 'NO_SAMPLE_WARNINGS', reason: 'No analyze warnings require a data-quality slide.' }
     }
@@ -58,7 +76,7 @@ export function buildDeckCatalog(context: AnalyzeContext): Pick<AnalyzeContext['
   const decisions = evaluateDeckBlocks(context)
   const allowed = new Set(decisions.filter(item => item.ok).map(item => item.id))
   return {
-    deckPatterns: (Object.keys(PATTERNS) as DeckIntent[]).map(id => ({ id, score: 0.9, density: id === 'executive-brief' ? 'compact' : 'medium', blocks: PATTERNS[id].filter(block => allowed.has(block)) })),
+    deckPatterns: (['executive-brief', 'business-review'] as DeckIntent[]).map(id => ({ id, score: 0.9, density: id === 'executive-brief' ? 'compact' : 'medium', blocks: DECK_PATTERNS[id].filter(block => allowed.has(block)) })),
     slideBlocks: decisions.filter(item => item.ok).map(item => {
       const block = DECK_SLIDE_BLOCKS.find(candidate => candidate.id === item.id)!
       return { id: item.id, score: item.score, requiredRoles: block.requiredRoles, requiredEvidence: block.requiredEvidence }
@@ -69,17 +87,18 @@ export function buildDeckCatalog(context: AnalyzeContext): Pick<AnalyzeContext['
 
 export function instantiateDeck(intent: DeckIntent, context: AnalyzeContext): DeckSpec {
   const allowed = new Set(evaluateDeckBlocks(context).filter(item => item.ok).map(item => item.id))
-  const slides = PATTERNS[intent].filter(id => allowed.has(id)).map(id => instantiateSlide(id, context))
+  const slides = DECK_PATTERNS[intent].filter(id => allowed.has(id)).map(id => instantiateSlide(id, context))
   return {
     title: context.intent.raw || (intent === 'executive-brief' ? 'Executive Brief' : 'Business Review'),
     description: 'Generated deterministically from AnalyzeContext evidence.',
     intent,
+    pattern: intent,
     ...(context.sampleWarnings.length ? { caveats: context.sampleWarnings.map(warning => ({ text: warning.message, warningRefs: [warning.code] })) } : {}),
     slides
   }
 }
 
-function instantiateSlide(id: DeckSlideBlockKnowledge['id'], context: AnalyzeContext): SlideSpec {
+function instantiateSlide(id: DeckSlideBlockId, context: AnalyzeContext): SlideSpec {
   const measure = context.fields.find(field => field.role === 'measure' || field.role === 'score')
   const dimension = context.fields.find(field => ['dimension', 'status', 'geo', 'flag'].includes(field.role))
   const time = context.fields.find(field => field.role === 'time')
@@ -114,6 +133,47 @@ function instantiateSlide(id: DeckSlideBlockKnowledge['id'], context: AnalyzeCon
     return { layout: 'chart-full', slideRole: id, eyebrow: 'Ranking', title: `${measure.name} by ${dimension.name}`, claim: `${subject} ranks first in the observed data.`, claimType: 'rank', evidence: ['by_dimension'], derivedFrom: [`$evidence:by_dimension.rows[0].${dimension.name}`, `$evidence:by_dimension.rows[0].${measureKey}`], check: 'rank_position', claimArgs: { rows: '$evidence:by_dimension.rows', subjectField: dimension.name, valueField: measureKey, subject, expectedRank: 1, order: 'desc' }, charts: [rankingChart(dimension.name, measure.name, measureKey)] }
   }
   return { layout: 'text-points', slideRole: 'data-quality-slide', eyebrow: 'Data quality', title: 'Interpretation notes', bullets: context.sampleWarnings.map(warning => warning.message), warningRefs: context.sampleWarnings.map(warning => warning.code) }
+}
+
+export function evaluateNarrativeDeckBlocks(context: DeckContext): DeckBlockDecision[] {
+  const sourceKind: DeckSourceKind = context.data ? 'hybrid' : 'narrative'
+  return DECK_SLIDE_BLOCKS
+    .filter(block => block.supportedSources.includes(sourceKind) || block.supportedSources.includes('narrative'))
+    .map(block => {
+      const missing = block.requiredContent.find(requirement => !hasNarrativeContent(context, requirement))
+      return missing
+        ? { id: block.id, ok: false, score: 0, reasonCode: `MISSING_${missing.toUpperCase()}_CONTENT`, reason: `Requires narrative ${missing} content.` }
+        : { id: block.id, ok: true, score: block.id === 'narrative-cover' ? 1 : 0.9 }
+    })
+}
+
+export function buildNarrativeDeckCatalog(context: DeckContext) {
+  const decisions = evaluateNarrativeDeckBlocks(context)
+  const allowed = new Set(decisions.filter(decision => decision.ok).map(decision => decision.id))
+  return {
+    deckPatterns: (['topic-explainer', 'project-update', 'proposal'] as DeckPatternId[]).map(id => ({
+      id, score: 0.9, blocks: DECK_PATTERNS[id].filter(block => allowed.has(block))
+    })),
+    slideBlocks: decisions.filter(decision => decision.ok),
+    blockedSlideBlocks: decisions.filter(decision => !decision.ok)
+  }
+}
+
+function hasNarrativeContent(context: DeckContext, requirement: DeckSlideBlockKnowledge['requiredContent'][number]): boolean {
+  const narrative = context.narrative
+  if (!narrative) return false
+  if (requirement === 'section') return narrative.sections.length > 0
+  if (requirement === 'quote') return narrative.quotes.length > 0
+  if (requirement === 'comparison') return narrative.sections.length >= 2
+  return narrative.keyPoints.some(point => /\b(decide|decision|approve|choose|next step)\b|决策|批准|选择|下一步/i.test(point.text))
+}
+
+function dataBlock(id: DeckSlideBlockId, purpose: string, requiredRoles: AnalyzeField['role'][], requiredEvidence: string[], supportedLayouts: SlideLayout[], maxMetrics = 0, maxCharts = 0): DeckSlideBlockKnowledge {
+  return { id, purpose, supportedSources: ['data', 'hybrid'], requiredRoles, requiredEvidence, requiredContent: [], supportedLayouts, supportedCharts: [], allowedClaimTypes: [], maxMetrics, maxCharts, repairHints: [] }
+}
+
+function narrativeBlock(id: DeckSlideBlockId, purpose: string, requiredContent: DeckSlideBlockKnowledge['requiredContent'], targetLayouts: string[]): DeckSlideBlockKnowledge {
+  return { id, purpose, supportedSources: ['narrative', 'hybrid'], requiredRoles: [], requiredEvidence: [], requiredContent, supportedLayouts: [], targetLayouts, supportedCharts: [], allowedClaimTypes: [], maxMetrics: 0, maxCharts: 0, repairHints: [] }
 }
 
 function buildCover(context: AnalyzeContext, measureKey: string): SlideSpec {

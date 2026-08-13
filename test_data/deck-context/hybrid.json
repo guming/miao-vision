@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "request": { "rawIntent": "Explain progress and measured impact", "audience": "executives" },
+  "sources": [
+    { "id": "src:8f41c2d0", "kind": "markdown", "path": "notes/project.md", "title": "Project" },
+    { "id": "src:1234abcd", "kind": "data", "path": "metrics.csv" }
+  ],
+  "narrative": {
+    "title": "Project",
+    "sections": [{ "id": "src:8f41c2d0:sec:1", "sourceId": "src:8f41c2d0", "heading": "Progress", "level": 2, "paragraphIds": ["src:8f41c2d0:p:1"], "listItemIds": [] }],
+    "keyPoints": [{ "id": "src:8f41c2d0:p:1", "sourceId": "src:8f41c2d0", "sectionId": "src:8f41c2d0:sec:1", "kind": "paragraph", "text": "The team reports higher adoption." }],
+    "quotes": [],
+    "explicitClaims": [],
+    "images": []
+  },
+  "data": {
+    "intent": { "raw": "Explain progress and measured impact", "coverage": "full", "assumptions": [] },
+    "fields": [],
+    "evidence": [],
+    "catalog": { "charts": [], "blockedCharts": [], "recommendedPlan": [] },
+    "sampleWarnings": [],
+    "promptRules": []
+  },
+  "planning": { "recommendedPatterns": [{ "id": "project-update", "score": 0.9, "reasons": ["Narrative and data sources are available."] }], "blockedPatterns": [] }
+}

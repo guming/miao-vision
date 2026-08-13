@@ -1,99 +1,84 @@
 # Browser Deck Workflow
 
-Use this workflow for an HTML or PDF deck from local structured data. Do not offer native PowerPoint, 4:3 output, speaker-note export, or a live data connection.
+Use this workflow for self-contained 16:9 HTML or PDF slides. Inputs may be local structured data, local Markdown/text, or both. Do not offer native PowerPoint, 4:3 output, speaker-note export, a live data connection, or remote image downloading.
 
-## Create
+Choose exactly one mode:
 
-1. Analyze the data:
+| Mode | Source | Default patterns |
+|---|---|---|
+| Data | CSV/TSV/XLSX/JSON | `executive-brief`, `business-review` |
+| Narrative | Markdown/text | `topic-explainer`, `project-update`, `proposal` |
+| Hybrid | Markdown/text plus structured data | Any applicable pattern |
 
-```bash
-miao-viz data analyze /path/to/data.csv \
-  --intent "user request and audience" \
-  --output SYSTEM_TEMP/miao-vision/context.json
-```
+## Data Deck
 
-2. Instantiate the closest deterministic DeckSpec:
-
-```bash
-miao-viz deck instantiate executive-brief \
-  --context SYSTEM_TEMP/miao-vision/context.json \
-  --output SYSTEM_TEMP/miao-vision/deck.yaml
-```
-
-Use `business-review` for a longer periodic review. Preserve generated evidence metadata and omit blocked slides.
-
-3. Review the narrative:
-
-| Intent | Length | Default sequence |
-|---|---:|---|
-| `executive-brief` | 5–7 slides | claim, KPI, change/ranking, risk, next step |
-| `business-review` | 6–10 slides | summary, KPI, trend, ranking, composition, caveat/appendix |
-
-Use at most one claim, four metrics, and one chart per main slide. Put detailed tables in an appendix or report. Add a trend slide only with at least three time periods; use a delta for two periods.
-
-4. Validate with the same context:
+Keep the established data workflow unchanged:
 
 ```bash
-miao-viz deck validate \
-  --spec SYSTEM_TEMP/miao-vision/deck.yaml \
-  --context SYSTEM_TEMP/miao-vision/context.json \
-  --verify \
-  --strict
+miao-viz data analyze /path/to/data.csv --intent "request and audience" --output SYSTEM_TEMP/miao-vision/context.json
+miao-viz deck instantiate executive-brief --context SYSTEM_TEMP/miao-vision/context.json --output SYSTEM_TEMP/miao-vision/deck.yaml
+miao-viz deck validate --spec SYSTEM_TEMP/miao-vision/deck.yaml --context SYSTEM_TEMP/miao-vision/context.json --verify --strict
+miao-viz render deck --input /path/to/data.csv --spec SYSTEM_TEMP/miao-vision/deck.yaml --context SYSTEM_TEMP/miao-vision/context.json --strict --output ARTIFACT_PATH
 ```
 
-Repair the first issue path and rerun validation. Never remove grounding metadata to silence a warning.
+Use `business-review` for a longer periodic review. Data and legacy decks require `--input`. Preserve generated evidence metadata, omit blocked slides, and never invent a metric.
 
-5. Resolve the concrete `artifactPath` using the shared delivery-directory rule, then render. In the schematic command below, `ARTIFACT_PATH` means that already-resolved literal path; do not pass the token itself to the CLI.
+## Narrative Deck
+
+Analyze a local Markdown or text document with the user's goal and audience in the intent:
 
 ```bash
-miao-viz render deck \
-  --input /path/to/data.csv \
-  --spec SYSTEM_TEMP/miao-vision/deck.yaml \
-  --context SYSTEM_TEMP/miao-vision/context.json \
-  --strict \
-  --theme <theme> \
-  --output ARTIFACT_PATH
+miao-viz deck analyze /path/to/brief.md --intent "explain the migration plan to engineering leadership" --output SYSTEM_TEMP/miao-vision/deck-context.json
+miao-viz deck instantiate topic-explainer --context SYSTEM_TEMP/miao-vision/deck-context.json --output SYSTEM_TEMP/miao-vision/deck.yaml
+miao-viz deck validate --spec SYSTEM_TEMP/miao-vision/deck.yaml --context SYSTEM_TEMP/miao-vision/deck-context.json --verify --strict
+miao-viz render deck --spec SYSTEM_TEMP/miao-vision/deck.yaml --context SYSTEM_TEMP/miao-vision/deck-context.json --strict --output ARTIFACT_PATH
 ```
 
-Default to `magazine` when the user has no theme preference. Supported themes are `standard-white`, `magazine`, `standard-dark`, `minimal`, `nyt`, `bloomberg`, and `tableau`.
+Use `project-update` for status, progress, risks, and next steps. Use `proposal` for problem, approach, trade-offs, decision, and action. Narrative render does not require `--input`.
 
-## Grounding
+The analyzer records remote image references but never downloads them. Treat source statements as `source-text` and agent-authored synthesis as `author-claim`; neither is data-verified. Every slide must retain valid source, section, or point references.
 
-Use factual claims only when they declare `claimType`, `evidence`, `derivedFrom`, and `check`. Descriptive, ranking, delta, trend, share, comparative, and evaluative claims need structured grounding. Evaluative claims also require a benchmark, target, baseline, or historical comparison.
+## Hybrid Deck
 
-Every chart and KPI metric also needs `provenance`. KPI metrics require an exact
-single-value path plus `value_match`; ordinary charts require evidence ids and the
-chart-ready `rows` path but no claim check unless the title makes a ranking, trend,
-share, or change claim. Strict validation requires both provenance coverage values
-to equal `1`.
+Use the same local data file in analyze and render:
 
-Block causal and predictive claims. An `analytical-next-step` may propose more analysis; an `operational-recommendation` requires evidence, derived paths, and a caveat. Do not generate strategic decisions, budget commitments, staffing actions, or deterministic forecasts from descriptive data.
+```bash
+miao-viz deck analyze /path/to/update.md --data /path/to/data.csv --intent "review progress and decide the next phase" --output SYSTEM_TEMP/miao-vision/deck-context.json
+miao-viz deck instantiate project-update --context SYSTEM_TEMP/miao-vision/deck-context.json --output SYSTEM_TEMP/miao-vision/deck.yaml
+miao-viz deck validate --spec SYSTEM_TEMP/miao-vision/deck.yaml --context SYSTEM_TEMP/miao-vision/deck-context.json --verify --strict
+miao-viz render deck --input /path/to/data.csv --spec SYSTEM_TEMP/miao-vision/deck.yaml --context SYSTEM_TEMP/miao-vision/deck-context.json --strict --output ARTIFACT_PATH
+```
 
-Required slide roles:
+Hybrid decks merge narrative structure with grounded data slides. Strict validation must report `objectCoverage: 1` and `claimCheckCoverage: 1` for data-grounded content. If render reports `DECK_DATA_SOURCE_MISMATCH`, use the exact data source recorded during `deck analyze`; do not substitute another file.
 
-| Role | Requirement |
-|---|---|
-| `cover-claim` | One verified claim, or a question when no claim is reliable |
-| `kpi-snapshot` | Up to four grounded metrics |
-| `trend-overview-slide` | Time plus measure over at least three periods |
-| `ranking-slide` | Dimension, measure, and ordered-row evidence |
-| `data-quality-slide` | Relevant `sampleWarnings` caveats |
+## Narrative And Grounding Rules
 
-## PDF And Repair
+- Use at most one claim, four metrics, and one chart per main slide. Put detailed tables in an appendix or report.
+- Data claims require `claimType`, `evidence`, `derivedFrom`, and `check`. Evaluative claims also require a real benchmark, target, baseline, or historical comparison.
+- Every data chart and KPI needs provenance. Strict data/hybrid validation requires both provenance coverage values to equal `1`.
+- Block causal and predictive claims. Do not infer strategic decisions, budgets, staffing actions, or forecasts from descriptive data.
+- Preserve applicable `sampleWarnings` as caveats. A warning is not evidence and must not be hidden.
+- Keep source-derived narrative distinguishable from agent-authored synthesis. Never label an author claim as verified.
 
-For PDF, use the same validated spec with `--format pdf` and a `.pdf` output. Deck PDF is fixed at 16:9 and each slide must produce one page. Playwright Chromium is required; surface `PDF_*` errors and layout diagnostics.
+## Review And Repair
 
-Repair structured errors as follows:
+Review the generated plan and DeckSpec before rendering. Repair the first structured issue, rerun strict validation, and never remove provenance or source references merely to silence a warning.
 
-- Evidence id/path errors: use an existing `context.evidence` id and valid `$evidence:` path.
-- Ungrounded numeric claim: add `claimType`, `evidence`, `derivedFrom`, and `check`.
-- Trend-period error: rewrite as delta or remove the trend slide.
+- Invalid source/section/point reference: select an identifier that exists in the same DeckContext.
+- Missing pattern role: add the required role using supported content from the context.
+- Narrative content budget: split or shorten the slide.
+- Data block without data: remove it or re-analyze with `--data`.
+- Evidence id/path error: use an existing evidence id and valid `$evidence:` path.
+- Ungrounded numeric claim: add the complete grounding fields or rewrite it as non-numeric source text.
+- Trend-period error: rewrite as a delta or remove the trend slide.
 - Evaluative claim without benchmark: add a real benchmark or use descriptive language.
-- Missing caveat: reference applicable `sampleWarnings[].code`.
-- Overloaded slide: split it or reduce metrics/charts.
+- Missing caveat: reference the applicable `sampleWarnings[].code`.
+- Data source mismatch: render with the same file used by hybrid analysis.
 
-Return only after strict validation succeeds and the requested artifact is rendered.
+## Render And Deliver
 
-## Deliver the artifact
+Resolve `ARTIFACT_PATH` using the shared delivery-directory rule; never pass the placeholder itself. Default to `magazine` when the user has no theme preference. Supported themes are `standard-white`, `magazine`, `standard-dark`, `minimal`, `nyt`, `bloomberg`, and `tableau`.
 
-Prefer `value.delivery`. Show the status, first-slide PNG preview, primary HTML/PDF link, and only the verified metrics or claims included in the manifest. Do not reread the complete deck or invent a narrative summary. Display at most three actions and keep the response below the shared 300-token budget. If preview generation fails, retain the successfully rendered deck and report the warning. Use the shared Markdown fallback when local images are unavailable.
+For PDF, reuse the strictly validated spec with `--format pdf` and a `.pdf` output. Each slide must produce one page. Playwright Chromium is required; surface structured `PDF_*` errors and layout diagnostics.
+
+Prefer `value.delivery`. Show status, preview when available, and the primary HTML/PDF link. Include only claims or metrics present in the manifest, and never reread the full deck to invent a summary.

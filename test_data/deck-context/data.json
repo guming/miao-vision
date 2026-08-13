@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "request": { "rawIntent": "Review sales" },
+  "sources": [{ "id": "src:1234abcd", "kind": "data", "path": "sales.csv" }],
+  "data": {
+    "intent": { "raw": "Review sales", "coverage": "full", "assumptions": [] },
+    "fields": [],
+    "evidence": [],
+    "catalog": { "charts": [], "blockedCharts": [], "recommendedPlan": [] },
+    "sampleWarnings": [],
+    "promptRules": []
+  },
+  "planning": { "recommendedPatterns": [{ "id": "executive-brief", "score": 0.8, "reasons": ["Structured data is available."] }], "blockedPatterns": [] }
+}

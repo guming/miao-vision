@@ -13,6 +13,7 @@ import {
   renderTableFullSlide,
   renderEndingSlide
 } from './deck-layouts'
+import { renderComparisonTextSlide, renderDecisionSlide, renderQuoteFocusSlide, renderSectionSummarySlide } from './deck-narrative-layouts'
 
 const SLIDE_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -58,6 +59,13 @@ const SLIDE_CSS = `
   .slide-recommendation { border-left: 2px solid var(--mv-brand); padding: 7px 0 7px 14px; font-family: var(--mv-serif); font-size: 14px; line-height: 1.45; color: var(--mv-soft); margin-top: 10px; }
   .slide-caveat { position: absolute; left: 80px; right: 80px; bottom: 38px; font-family: var(--mv-mono); font-size: 9px; line-height: 1.35; color: var(--mv-muted); }
   .slide-annotation { font-family: var(--mv-serif); font-size: 14px; color: var(--mv-muted); line-height: 1.55; margin-bottom: 14px; font-style: italic; }
+  .slide-quote-focus { justify-content: center; }
+  .slide-quote-focus blockquote { font-family: var(--mv-serif); font-size: 46px; line-height: 1.2; color: var(--mv-ink); max-width: 22ch; }
+  .quote-source { margin-top: 28px; font-family: var(--mv-mono); font-size: 12px; color: var(--mv-muted); }
+  .narrative-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; flex: 1; }
+  .narrative-comparison > div { border-top: 2px solid var(--mv-brand); padding-top: 22px; }
+  .decision-request { font-family: var(--mv-serif); font-size: 34px; line-height: 1.25; color: var(--mv-ink); max-width: 28ch; margin-bottom: 28px; }
+  .decision-limit { margin-top: auto; font-family: var(--mv-mono); font-size: 11px; color: var(--mv-muted); }
   .slide-body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
   .slide-chart-full { display: flex; align-items: center; overflow: hidden; }
   .slide-chart-full svg, .slide-chart-full .miao-table-wrap { width: 100%; }
@@ -186,7 +194,15 @@ function renderSlide(
     case 'metrics-chart':  return renderMetricsChartSlide(slide, rows, svgTheme, index, total)
     case 'chart-full':     return renderChartFullSlide(slide, rows, svgTheme, index, total)
     case 'table-full':     return renderTableFullSlide(slide, rows, svgTheme, index, total)
+    case 'quote-focus':    return renderQuoteFocusSlide(slide, index, total)
+    case 'section-summary': return renderSectionSummarySlide(slide, index, total)
+    case 'comparison-text': return renderComparisonTextSlide(slide, index, total)
+    case 'decision':       return renderDecisionSlide(slide, index, total)
     case 'ending':         return renderEndingSlide(slide, rows, svgTheme, index, total)
+    default: {
+      const unsupported: never = slide.layout
+      throw new Error(`Unsupported deck layout: ${unsupported}`)
+    }
   }
 }
 

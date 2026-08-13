@@ -9,6 +9,10 @@ export type SlideLayout =
   | 'metrics-chart'
   | 'chart-full'
   | 'table-full'
+  | 'quote-focus'
+  | 'section-summary'
+  | 'comparison-text'
+  | 'decision'
   | 'ending'
 
 export interface SlideMetric {
@@ -22,6 +26,15 @@ export interface SlideMetric {
 }
 
 export type DeckIntent = 'executive-brief' | 'business-review'
+export type DeckPattern = DeckIntent | 'topic-explainer' | 'project-update' | 'proposal'
+export type DeckClaimStatus = 'source-text' | 'author-claim' | 'verified-claim'
+
+export interface ContentProvenance {
+  sourceId: string
+  sectionId?: string
+  paragraphIds?: string[]
+  kind: DeckClaimStatus
+}
 
 export type DeckClaimType =
   | 'descriptive'
@@ -87,6 +100,9 @@ export interface DeckCaveat {
 export interface SlideSpec {
   layout: SlideLayout
   slideRole?: string
+  purpose?: string
+  sourceRefs?: ContentProvenance[]
+  claimStatus?: DeckClaimStatus
   eyebrow?: string
   title?: string
   claim?: string
@@ -100,6 +116,7 @@ export interface SlideSpec {
   warningRefs?: string[]
   recommendation?: DeckRecommendation
   bullets?: string[]
+  comparison?: { left: string[]; right: string[] }
   callout?: string
   annotation?: string
   metrics?: SlideMetric[]
@@ -114,6 +131,9 @@ export interface DeckSpec {
   title?: string
   description?: string
   intent?: DeckIntent
+  pattern?: DeckPattern
+  audience?: string
+  objective?: string
   caveats?: DeckCaveat[]
   theme?: ThemeName
   interactions?: DeckInteractions

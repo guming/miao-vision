@@ -3,7 +3,8 @@ name: miao-vision
 description: >
   Create a self-contained Miao Vision artifact when the user explicitly invokes
   $miao-vision and supplies an article URL or local Markdown/text for an infographic,
-  or a local CSV, TSV, XLSX, or JSON file for an HTML/PDF report or browser deck.
+  or local Markdown/text and optional CSV, TSV, XLSX, or JSON data for an
+  HTML/PDF report or browser deck.
   Also validate a user-supplied Miao Vision report or deck spec. Do not trigger from
   isolated keywords such as chart, report, dashboard, slides, infographic, or PDF.
 ---
@@ -27,7 +28,7 @@ Proceed only after the user explicitly invokes `$miao-vision` for a supported ar
 |---|---|
 | Article URL, Markdown, or long-form text to infographic | `references/article.md` |
 | Local CSV/TSV/XLSX/JSON to report, static dashboard, findings artifact, recurring report, business-scene report, executive summary, report edit, multi-file merge, or PNG/PDF export | `references/report.md` |
-| Browser-based HTML/PDF slides, deck, or briefing | `references/deck.md` |
+| Browser-based HTML/PDF slides, deck, or briefing from local Markdown/text, structured data, or both | `references/deck.md` |
 | Local tabular data with a materially ambiguous artifact form, or an explicit plan-first request | `references/outcome-brief.md`, then the workflow selected by its V2 Plan |
 | Report or deck spec validation | The matching report or deck workflow above |
 

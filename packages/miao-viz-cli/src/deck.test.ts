@@ -43,12 +43,26 @@ describe('deckSpecSchema', () => {
     expect(result.success).toBe(false)
   })
 
-  it('accepts all 8 layout types', () => {
-    const layouts = ['cover', 'title-only', 'text-points', 'text-chart', 'metrics-chart', 'chart-full', 'table-full', 'ending']
+  it('accepts all 12 layout types', () => {
+    const layouts = ['cover', 'title-only', 'text-points', 'text-chart', 'metrics-chart', 'chart-full', 'table-full', 'quote-focus', 'section-summary', 'comparison-text', 'decision', 'ending']
     for (const layout of layouts) {
       const result = deckSpecSchema.safeParse({ slides: [{ layout }] })
       expect(result.success, `layout '${layout}' should be valid`).toBe(true)
     }
+  })
+
+  it('renders every narrative layout as exactly one slide', () => {
+    const spec: DeckSpec = { slides: [
+      { layout: 'quote-focus', claim: 'A sourced quote.', callout: 'Source' },
+      { layout: 'section-summary', title: 'Summary', bullets: ['One', 'Two'] },
+      { layout: 'comparison-text', title: 'Compare', bullets: ['A', 'B', 'C', 'D'] },
+      { layout: 'decision', title: 'Decision', claim: 'Approve the next step.', caveat: 'Subject to review.' }
+    ] }
+    const html = renderDeckHtml(spec, [])
+    expect((html.match(/class="slide(?: |")/g) ?? [])).toHaveLength(4)
+    expect(html).toContain('slide-quote-focus')
+    expect(html).toContain('narrative-comparison')
+    expect(html).toContain('decision-request')
   })
 
   it('accepts optional theme field', () => {
@@ -78,6 +92,34 @@ describe('deckSpecSchema', () => {
       }]
     })
     expect(result.success).toBe(true)
+  })
+
+  it.each(['executive-brief', 'business-review', 'topic-explainer', 'project-update', 'proposal'] as const)(
+    'accepts pattern %s', pattern => {
+      expect(parseDeckSpec({ pattern, slides: [{ layout: 'title-only' }] }).ok).toBe(true)
+    }
+  )
+
+  it('normalizes legacy intent to canonical pattern', () => {
+    const parsed = parseDeckSpec({ intent: 'executive-brief', slides: [{ layout: 'title-only' }] })
+    expect(parsed.ok).toBe(true)
+    if (parsed.ok) expect(parsed.value.pattern).toBe('executive-brief')
+  })
+
+  it('rejects conflicting intent and pattern', () => {
+    const parsed = parseDeckSpec({ intent: 'executive-brief', pattern: 'business-review', slides: [{ layout: 'title-only' }] })
+    expect(parsed).toMatchObject({ ok: false, code: 'DECK_PATTERN_MISMATCH', path: 'pattern' })
+  })
+
+  it('accepts all three sourced claim states with valid combinations', () => {
+    expect(parseDeckSpec({ slides: [{ layout: 'title-only', claimStatus: 'source-text', sourceRefs: [{ sourceId: 'src:1234abcd', kind: 'source-text' }] }] }).ok).toBe(true)
+    expect(parseDeckSpec({ slides: [{ layout: 'title-only', claimStatus: 'author-claim', claim: 'The author reports growth.' }] }).ok).toBe(true)
+    expect(parseDeckSpec({ slides: [{ layout: 'title-only', claimStatus: 'verified-claim', claimType: 'descriptive', evidence: ['total'], derivedFrom: ['$evidence:total.values.sales'], check: 'value_match' }] }).ok).toBe(true)
+  })
+
+  it('rejects invalid sourced claim combinations', () => {
+    expect(parseDeckSpec({ slides: [{ layout: 'title-only', claimStatus: 'verified-claim' }] }).ok).toBe(false)
+    expect(parseDeckSpec({ slides: [{ layout: 'title-only', claimStatus: 'author-claim', claimType: 'descriptive', evidence: ['total'], derivedFrom: ['$evidence:total.values.sales'], check: 'value_match' }] }).ok).toBe(false)
   })
 
   it('rejects invalid Deck Knowledge enums', () => {

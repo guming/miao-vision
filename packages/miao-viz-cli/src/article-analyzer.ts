@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { extname, basename } from 'node:path'
 import { agentError, ok } from './errors'
 import type { AgentResult } from './types'
+import { DOCUMENT_EXTENSIONS, parseDocumentStructure } from './document-structure'
 
 export interface ArticleHeading {
   level: number
@@ -65,62 +66,6 @@ function extractTermCandidates(text: string): string[] {
   return [...candidates].sort()
 }
 
-function extractHeadings(lines: string[]): ArticleHeading[] {
-  return lines
-    .map(line => line.trim().match(/^(#{1,6})\s+(.+)/))
-    .filter((m): m is RegExpMatchArray => m !== null)
-    .map(m => ({ level: m[1].length, text: m[2].replace(/[`*_]/g, '').trim() }))
-}
-
-function extractSections(lines: string[]): ArticleSection[] {
-  const sections: ArticleSection[] = []
-  let currentHeading: string | null = null
-  let currentContent: string[] = []
-
-  function flush() {
-    const text = currentContent.join(' ').replace(/\s+/g, ' ').trim()
-    if (text) {
-      sections.push({
-        heading: currentHeading,
-        content: text,
-        wordCount: text.split(/\s+/).filter(Boolean).length
-      })
-    }
-    currentContent = []
-  }
-
-  for (const line of lines) {
-    const headingMatch = line.trim().match(/^#{1,6}\s+/)
-    if (headingMatch) {
-      flush()
-      currentHeading = line.trim().replace(/^#+\s*/, '').replace(/[`*_]/g, '').trim()
-    } else {
-      const stripped = line.trim()
-      if (stripped) currentContent.push(stripped)
-    }
-  }
-  flush()
-
-  return sections
-}
-
-function stripFrontmatter(lines: string[]): string[] {
-  if (lines.length > 0 && lines[0].trim() === '---') {
-    const end = lines.findIndex((l, i) => i > 0 && l.trim() === '---')
-    if (end > 0) return lines.slice(end + 1)
-  }
-  return lines
-}
-
-function extractMetadata(lines: string[]): { source?: string; title?: string } {
-  const sourceLine = lines.find(line => line.match(/^(source|url):\s*/i))
-  const titleLine = lines.find(line => line.match(/^title:\s*/i))
-  return {
-    source: sourceLine?.replace(/^(source|url):\s*/i, '').replace(/^["\s]+|["\s]+$/g, '').trim(),
-    title: titleLine?.replace(/^title:\s*/i, '').replace(/^["\s]+|["\s]+$/g, '').trim()
-  }
-}
-
 function findTitle(lines: string[], frontmatterTitle?: string, file?: string): string {
   if (frontmatterTitle) return frontmatterTitle
   const heading = lines.find(line => line.trim().match(/^#\s+\S/))
@@ -131,27 +76,18 @@ function findTitle(lines: string[], frontmatterTitle?: string, file?: string): s
   return 'Untitled'
 }
 
-function cleanMarkdown(value: string): string {
-  return value
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/^#+\s*/, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function extractTableRows(lines: string[]): string[][] {
-  return lines
-    .filter(line => line.includes('|') && !line.match(/^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/))
-    .map(line => line.split('|').map(cell => cleanMarkdown(cell)).filter(Boolean))
-    .filter(row => row.length > 1)
+function legacyMetadata(lines: string[]): { source?: string; title?: string } {
+  const sourceLine = lines.find(line => line.match(/^(source|url):\s*/i))
+  const titleLine = lines.find(line => line.match(/^title:\s*/i))
+  return {
+    source: sourceLine?.replace(/^(source|url):\s*/i, '').replace(/^["\s]+|["\s]+$/g, '').trim(),
+    title: titleLine?.replace(/^title:\s*/i, '').replace(/^["\s]+|["\s]+$/g, '').trim()
+  }
 }
 
 export function analyzeArticle(file: string): AgentResult<ArticleContext> {
   const extension = extname(file).toLowerCase()
-  if (extension && !['.md', '.markdown', '.txt'].includes(extension)) {
+  if (extension && !DOCUMENT_EXTENSIONS.includes(extension as (typeof DOCUMENT_EXTENSIONS)[number])) {
     return agentError('UNSUPPORTED_ARTICLE_INPUT', 'Article input must be a Markdown or plain-text file.', {
       supportedExtensions: ['.md', '.markdown', '.txt']
     })
@@ -164,68 +100,31 @@ export function analyzeArticle(file: string): AgentResult<ArticleContext> {
     return agentError('ARTICLE_INPUT_UNREADABLE', error instanceof Error ? error.message : 'Article input could not be read.', { file })
   }
 
-  const normalized = raw
-    .replace(/\r\n/g, '\n')
-    .replace(/\t/g, ' ')
-    .split('\n')
-    .map(line => line.replace(/[ \u00a0]+$/g, ''))
-    .join('\n')
-    .trim()
-
-  if (!normalized) {
+  const document = parseDocumentStructure(raw)
+  if (!document.normalized) {
     return agentError('EMPTY_ARTICLE_INPUT', 'Article input is empty after normalization.', { file })
   }
 
-  const lines = normalized.split('\n')
-  const bodyLines = stripFrontmatter(lines)
-  const metadata = extractMetadata(lines)
-  const title = findTitle(bodyLines, metadata.title, file)
-
-  const contentLines = bodyLines.filter(line => {
-    const trimmed = line.trim()
-    return !trimmed.match(/^#\s+/) && !trimmed.match(/^(source|url|author|date|title|published|created|tags?|description):\s*/i)
-  })
-
-  const quotes = contentLines
-    .filter(line => line.trim().startsWith('>'))
-    .map(line => cleanMarkdown(line.replace(/^>\s?/, '')))
-    .filter(Boolean)
-
-  const listItems = contentLines
-    .filter(line => line.trim().match(/^[-*+]\s+/) || line.trim().match(/^\d+\.\s+/))
-    .map(line => cleanMarkdown(line.replace(/^\s*(?:[-*+]|\d+\.)\s+/, '')))
-    .filter(Boolean)
-
-  const tables = extractTableRows(contentLines)
-
-  const paragraphs = contentLines
-    .join('\n')
-    .split(/\n{2,}/)
-    .map(block => cleanMarkdown(block.replace(/\n/g, ' ')))
-    .filter(block => block.length > 0 && !block.startsWith('|') && !block.match(/^[-*+]\s+/))
-
-  const headings = extractHeadings(bodyLines)
-  const sections = extractSections(bodyLines)
-
-  const allText = paragraphs.join(' ')
+  const metadata = legacyMetadata(document.lines)
+  const title = findTitle(document.bodyLines, document.frontmatter.title ?? metadata.title, file)
+  const allText = document.paragraphs.join(' ')
   const wordCount = allText.split(/\s+/).filter(Boolean).length
-
-  const termCandidates = extractTermCandidates(normalized)
+  const termCandidates = extractTermCandidates(document.normalized)
 
   return ok({
     title,
-    source: metadata.source,
-    headings,
-    sections,
-    paragraphs,
-    listItems,
-    quotes,
-    tables,
+    source: document.frontmatter.source ?? document.frontmatter.url ?? metadata.source,
+    headings: document.headings,
+    sections: document.sections,
+    paragraphs: document.paragraphs,
+    listItems: document.listItems,
+    quotes: document.quotes,
+    tables: document.tables,
     metadata: {
       inputFile: file,
       wordCount,
       estimatedReadingMinutes: Math.max(1, Math.round(wordCount / 200)),
-      lineCount: lines.length
+      lineCount: document.lines.length
     },
     termCandidates
   })

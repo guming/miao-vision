@@ -4,13 +4,23 @@ import type { DeckSpec, SlideMetric, SlideSpec } from './deck-types'
 
 const SLIDE_LAYOUTS = [
   'cover', 'title-only', 'text-points', 'text-chart',
-  'metrics-chart', 'chart-full', 'table-full', 'ending'
+  'metrics-chart', 'chart-full', 'table-full',
+  'quote-focus', 'section-summary', 'comparison-text', 'decision', 'ending'
 ] as const
 
 const deckClaimTypeSchema = z.enum([
   'descriptive', 'rank', 'delta', 'trend', 'share',
   'comparative', 'evaluative', 'causal', 'predictive'
 ])
+
+const deckPatternSchema = z.enum(['executive-brief', 'business-review', 'topic-explainer', 'project-update', 'proposal'])
+const claimStatusSchema = z.enum(['source-text', 'author-claim', 'verified-claim'])
+const contentProvenanceSchema = z.object({
+  sourceId: z.string().min(1),
+  sectionId: z.string().min(1).optional(),
+  paragraphIds: z.array(z.string().min(1)).optional(),
+  kind: claimStatusSchema
+})
 
 const deckClaimCheckSchema = z.enum([
   'evidence_ref_exists', 'value_match', 'rank_position', 'delta_formula',
@@ -73,6 +83,9 @@ const slideMetricSchema: z.ZodType<SlideMetric> = z.object({
 const slideSpecSchema: z.ZodType<SlideSpec> = z.object({
   layout: z.enum(SLIDE_LAYOUTS),
   slideRole: z.string().min(1).optional(),
+  purpose: z.string().min(1).optional(),
+  sourceRefs: z.array(contentProvenanceSchema).optional(),
+  claimStatus: claimStatusSchema.optional(),
   eyebrow: z.string().optional(),
   title: z.string().optional(),
   claim: z.string().optional(),
@@ -86,6 +99,7 @@ const slideSpecSchema: z.ZodType<SlideSpec> = z.object({
   warningRefs: z.array(z.string().min(1)).optional(),
   recommendation: deckRecommendationSchema.optional(),
   bullets: z.array(z.string()).optional(),
+  comparison: z.object({ left: z.array(z.string()), right: z.array(z.string()) }).optional(),
   callout: z.string().optional(),
   annotation: z.string().optional(),
   metrics: z.array(slideMetricSchema).optional(),
@@ -100,6 +114,9 @@ export const deckSpecSchema: z.ZodType<DeckSpec> = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   intent: z.enum(['executive-brief', 'business-review']).optional(),
+  pattern: deckPatternSchema.optional(),
+  audience: z.string().min(1).optional(),
+  objective: z.string().min(1).optional(),
   caveats: z.array(z.object({
     text: z.string().min(1),
     warningRefs: z.array(z.string().min(1)).min(1)

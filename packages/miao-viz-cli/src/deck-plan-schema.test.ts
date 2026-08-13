@@ -6,7 +6,10 @@ const FIXTURES = [
   'executive-brief.json',
   'business-review.json',
   'two-period.json',
-  'sample-warning.json'
+  'sample-warning.json',
+  'topic-explainer.json',
+  'project-update.json',
+  'proposal.json'
 ]
 
 function readFixture(name: string): unknown {
@@ -30,5 +33,22 @@ describe('deckPlanSchema', () => {
     const parsed = deckPlanSchema.parse(readFixture('sample-warning.json'))
     expect(parsed.deckPlan.warningRefs).toContain('small_sample')
     expect(parsed.deckPlan.slideOutline.some(slide => slide.role === 'data-quality-slide')).toBe(true)
+  })
+
+  it('reports precise paths for missing narrative fields', () => {
+    const fixture = readFixture('project-update.json') as any
+    delete fixture.deckPlan.objective
+    delete fixture.deckPlan.slideOutline[1].speakerGoal
+    const parsed = deckPlanSchema.safeParse(fixture)
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) expect(parsed.error.issues.map(issue => issue.path.join('.'))).toEqual(expect.arrayContaining([
+      'deckPlan.objective', 'deckPlan.slideOutline.1.speakerGoal'
+    ]))
+  })
+
+  it('rejects an unregistered role', () => {
+    const fixture = readFixture('project-update.json') as any
+    fixture.deckPlan.slideOutline[0].role = 'current-state'
+    expect(deckPlanSchema.safeParse(fixture).success).toBe(false)
   })
 })

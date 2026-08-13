@@ -159,16 +159,17 @@ Options:
   --scale <n>       PNG device scale factor (default: 1)
   --png-timeout <ms> PNG render timeout (default: 30000)
 `,
-  'render.deck': `Usage: miao-viz render deck --input <file> --spec <file> --output <file> [options]
+  'render.deck': `Usage: miao-viz render deck --spec <file> --output <file> [options]
 
-Render a deck spec to HTML slides.
+Render a deck spec to HTML or PDF slides. Narrative decks need no data input;
+data, hybrid, and legacy decks require --input.
 
 Options:
-  --input <file>    Path to data file
+  --input <file>    Data file (required for data, hybrid, and legacy decks)
   --spec <file>     Path to deck spec YAML/JSON
   --output <file>   Output file path
   --theme <name>    Theme: standard-white, magazine, standard-dark, minimal, nyt, bloomberg, tableau
-  --context <file>  AnalyzeContext used for claim, evidence, and caveat checks
+  --context <file>  DeckContext or legacy AnalyzeContext used for validation
   --verify          Request deck knowledge verification
   --strict          Treat high-risk deck knowledge warnings as errors; requires --context
   --sheet <name>    Sheet name (Excel only)
@@ -176,17 +177,23 @@ Options:
 `,
   'deck.validate': `Usage: miao-viz deck validate --spec <file> --context <file> [options]
 
-Validate a DeckSpec against AnalyzeContext evidence and quality warnings.
+Validate a DeckSpec against DeckContext or legacy AnalyzeContext.
 
 Options:
   --spec <file>     Path to deck spec YAML/JSON
-  --context <file>  Path to context.json from "miao-viz data analyze"
+  --context <file>  Path from "deck analyze" or legacy "data analyze"
   --verify          Verify claim grounding, evidence paths, and caveat coverage
   --strict          Treat high-risk deck knowledge warnings as errors
 `,
-  'deck.instantiate': `Usage: miao-viz deck instantiate <executive-brief|business-review> --context <file> [--output <file>]
+  'deck.analyze': `Usage: miao-viz deck analyze <file> [--data <file>] --intent <text> [--output <context.json>]
 
-Instantiate a deterministic DeckSpec from AnalyzeContext knowledge candidates.
+Analyze a local Markdown or text document into a deterministic DeckContext.
+Use --data to add structured evidence for a Hybrid Deck.
+Remote images are recorded but never downloaded.
+`,
+  'deck.instantiate': `Usage: miao-viz deck instantiate <executive-brief|business-review|topic-explainer|project-update|proposal> --context <file> [--output <file>]
+
+Instantiate a deterministic DeckSpec from DeckContext or legacy AnalyzeContext.
 `,
   'render.article': `Usage:
   miao-viz render article <file> --output <file> [options]
@@ -313,7 +320,9 @@ Usage: miao-viz deck <command> [options]
 Plan and validate browser deck specs.
 
 Commands:
-  validate  Validate a DeckSpec against AnalyzeContext
+  analyze   Analyze Markdown or text into DeckContext
+  instantiate  Instantiate a deterministic DeckSpec
+  validate  Validate a DeckSpec against DeckContext or AnalyzeContext
 `,
   render: `
 Usage: miao-viz render <command> [options]

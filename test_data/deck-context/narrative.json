@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "request": { "rawIntent": "Explain the project", "durationMinutes": 10, "desiredLength": "short" },
+  "sources": [{ "id": "src:8f41c2d0", "kind": "markdown", "path": "notes/project.md", "title": "Project" }],
+  "narrative": {
+    "title": "Project",
+    "sections": [{ "id": "src:8f41c2d0:sec:1", "sourceId": "src:8f41c2d0", "heading": "Progress", "level": 2, "paragraphIds": ["src:8f41c2d0:p:1"], "listItemIds": [] }],
+    "keyPoints": [{ "id": "src:8f41c2d0:p:1", "sourceId": "src:8f41c2d0", "sectionId": "src:8f41c2d0:sec:1", "kind": "paragraph", "text": "Adoption reached 42%." }],
+    "quotes": [],
+    "explicitClaims": [{ "id": "src:8f41c2d0:claim:1", "sourceId": "src:8f41c2d0", "sectionId": "src:8f41c2d0:sec:1", "pointId": "src:8f41c2d0:p:1", "text": "Adoption reached 42%.", "status": "author-claim", "signals": ["numeric"] }],
+    "images": []
+  },
+  "planning": { "recommendedPatterns": [{ "id": "topic-explainer", "score": 0.9, "reasons": ["Structured explanatory content."] }], "blockedPatterns": [] }
+}

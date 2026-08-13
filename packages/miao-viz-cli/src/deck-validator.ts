@@ -25,22 +25,53 @@ export interface DeckValidationIssue {
 }
 
 export function parseDeckSpec(spec: unknown): AgentResult<DeckSpec> {
+  if (spec && typeof spec === 'object') {
+    const candidate = spec as { intent?: unknown; pattern?: unknown }
+    if (candidate.intent && candidate.pattern && candidate.intent !== candidate.pattern) {
+      return agentError('DECK_PATTERN_MISMATCH', 'Deck intent and pattern must match when both are provided.', {
+        path: 'pattern', intent: candidate.intent, pattern: candidate.pattern,
+        hint: 'Use pattern as the canonical field, or give legacy intent the same value.'
+      })
+    }
+  }
   const parsed = deckSpecSchema.safeParse(spec)
   if (!parsed.success) {
     const errors = formatDeckSpecIssues(parsed.error)
     return agentError('INVALID_DECK_SPEC', errors[0]?.message ?? 'DeckSpec is invalid.', { errors })
   }
-  const semanticErrors = validateDeckSpecSemantics(parsed.data)
+  const normalized = parsed.data.pattern || !parsed.data.intent
+    ? parsed.data
+    : { ...parsed.data, pattern: parsed.data.intent }
+  const semanticErrors = validateDeckSpecSemantics(normalized)
   if (semanticErrors.length > 0) {
     return agentError('INVALID_DECK_SPEC', semanticErrors[0].message, { errors: semanticErrors })
   }
-  return ok(parsed.data)
+  return ok(normalized)
 }
 
 function validateDeckSpecSemantics(spec: DeckSpec): DeckValidationIssue[] {
   const errors: DeckValidationIssue[] = []
 
   spec.slides.forEach((slide, index) => {
+    if (slide.claimStatus === 'verified-claim') {
+      const missing = [
+        ['claimType', slide.claimType], ['evidence', slide.evidence?.length],
+        ['derivedFrom', slide.derivedFrom?.length], ['check', slide.check]
+      ].find(([, value]) => !value)
+      if (missing) errors.push({
+        path: `slides[${index}].${missing[0]}`,
+        message: `slides[${index}]: verified-claim requires claimType, evidence, derivedFrom, and check.`,
+        hint: 'Add complete data grounding or use author-claim/source-text.'
+      })
+    }
+    if ((slide.claimStatus === 'source-text' || slide.claimStatus === 'author-claim') &&
+      (slide.claimType || slide.evidence?.length || slide.derivedFrom?.length || slide.check)) {
+      errors.push({
+        path: `slides[${index}].claimStatus`,
+        message: `slides[${index}]: ${slide.claimStatus} cannot carry verified data grounding.`,
+        hint: 'Remove data grounding fields or change claimStatus to verified-claim.'
+      })
+    }
     if (['text-chart', 'metrics-chart', 'chart-full'].includes(slide.layout) && !slide.charts?.length) {
       const path = `slides[${index}].charts`
       errors.push({

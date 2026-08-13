@@ -23,6 +23,10 @@
       "stdoutIncludes": "artifact memory"
     },
     {
+      "args": ["deck", "analyze", "--help"],
+      "stdoutIncludes": "deck analyze"
+    },
+    {
       "args": ["deck", "instantiate", "--help"],
       "stdoutIncludes": "deck instantiate"
     },

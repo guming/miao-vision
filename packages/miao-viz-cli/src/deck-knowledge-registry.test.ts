@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { analyzeDataset } from './analyzer'
-import { instantiateDeck } from './deck-knowledge-registry'
+import { buildDeckCatalog, buildNarrativeDeckCatalog, instantiateDeck } from './deck-knowledge-registry'
 import { toCompactAnalyzeContext, parseAnalyzeContext } from './context-schema'
+import { deckContextSchema } from './deck-context-schema'
 
 const dataset = {
   file: 'sales.csv', columns: ['month', 'region', 'sales'], rows: [
@@ -34,5 +36,26 @@ describe('deck knowledge registry', () => {
     const context = analyzeDataset({ ...dataset, rows: dataset.rows.slice(0, 2) }, { intent: 'review' })
     expect(context.catalog.blockedSlideBlocks?.find(item => item.id === 'trend-overview-slide')).toBeTruthy()
     expect(instantiateDeck('executive-brief', context).slides.some(slide => slide.slideRole === 'trend-overview-slide')).toBe(false)
+  })
+
+  it('recommends narrative blocks without data-only blocks', () => {
+    const context = deckContextSchema.parse(JSON.parse(readFileSync('test_data/deck-context/narrative.json', 'utf8')))
+    const catalog = buildNarrativeDeckCatalog(context)
+    expect(catalog.slideBlocks.map(block => block.id)).toContain('section-summary')
+    expect(catalog.slideBlocks.map(block => block.id)).not.toContain('kpi-snapshot')
+  })
+
+  it('blocks unavailable quote and decision content', () => {
+    const context = deckContextSchema.parse(JSON.parse(readFileSync('test_data/deck-context/narrative.json', 'utf8')))
+    const catalog = buildNarrativeDeckCatalog(context)
+    expect(catalog.blockedSlideBlocks.map(block => block.id)).toEqual(expect.arrayContaining(['quote-focus', 'decision-request']))
+  })
+
+  it('offers narrative and data knowledge for hybrid contexts', () => {
+    const context = deckContextSchema.parse(JSON.parse(readFileSync('test_data/deck-context/hybrid.json', 'utf8')))
+    const narrative = buildNarrativeDeckCatalog(context)
+    const data = buildDeckCatalog(context.data!)
+    expect(narrative.slideBlocks.map(block => block.id)).toContain('section-summary')
+    expect(data.deckPatterns?.map(pattern => pattern.id)).toEqual(['executive-brief', 'business-review'])
   })
 })
