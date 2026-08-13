@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    // Workflow tests spawn the real CLI several times. CI and busy developer
+    // machines need more than Vitest's 5s unit-test default for those subprocesses.
+    testTimeout: 30_000,
     include: ['packages/miao-viz-cli/src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
