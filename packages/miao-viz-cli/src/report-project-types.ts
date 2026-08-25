@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { queryRecipeSchema, type QueryRecipe } from './query-recipe'
 
-export const REPORT_PROJECT_VERSION = 1 as const
+export const REPORT_PROJECT_VERSION = 2 as const
 const fieldType = z.enum(['number', 'string', 'date', 'boolean', 'unknown'])
 
 export const dataContractSchema = z.object({
@@ -19,14 +19,19 @@ export const evidencePlanSchema = z.object({
 })
 export type EvidencePlan = z.infer<typeof evidencePlanSchema>
 
-export const projectSchema = z.object({
-  schemaVersion: z.literal(REPORT_PROJECT_VERSION),
+const projectBaseSchema = z.object({
   name: z.string().min(1),
   createdAt: z.string(),
   projectVersion: z.number().int().positive(),
   specHash: z.string(),
   evidencePlanHash: z.string()
 })
+const projectV1Schema = projectBaseSchema.extend({ schemaVersion: z.literal(1) })
+const projectV2Schema = projectBaseSchema.extend({
+  schemaVersion: z.literal(REPORT_PROJECT_VERSION),
+  reportProfileHash: z.string().min(1)
+})
+export const projectSchema = z.union([projectV1Schema, projectV2Schema])
 export type ReportProject = z.infer<typeof projectSchema>
 
 const runManifestBaseSchema = z.object({
@@ -63,7 +68,26 @@ const runManifestV2Schema = runManifestBaseSchema.extend({
     notComparable: z.number().int().nonnegative()
   }).optional()
 })
-export const runManifestSchema = z.union([runManifestV1Schema, runManifestV2Schema])
+const runManifestV3Schema = runManifestBaseSchema.extend({
+  schemaVersion: z.literal(3),
+  reportProfileHash: z.string().min(1),
+  baselineRunId: z.string().nullable(),
+  changes: z.object({
+    status: z.enum(['no_baseline', 'ready', 'partial']),
+    metrics: z.number().int().nonnegative(),
+    rankings: z.number().int().nonnegative(),
+    anomaliesAdded: z.number().int().nonnegative(),
+    anomaliesRemoved: z.number().int().nonnegative(),
+    notComparable: z.number().int().nonnegative()
+  }),
+  review: z.object({
+    status: z.enum(['ready', 'needs_review', 'blocked']),
+    materialChanges: z.number().int().nonnegative(),
+    warnings: z.number().int().nonnegative(),
+    blockingIssues: z.number().int().nonnegative()
+  })
+})
+export const runManifestSchema = z.union([runManifestV1Schema, runManifestV2Schema, runManifestV3Schema])
 export type RunManifest = z.infer<typeof runManifestSchema>
 
 export interface EvidencePlanEntry { id: string; recipe: QueryRecipe }

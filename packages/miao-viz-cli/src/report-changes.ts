@@ -13,6 +13,7 @@ export interface MetricChange {
 export interface RankChange {
   evidenceId: string
   item: string
+  kind: 'movement' | 'entered' | 'departed'
   previousRank: number | null
   currentRank: number | null
   movement: number | null
@@ -88,7 +89,7 @@ function compareRanks(previous: AnalyzeEvidence, current: AnalyzeEvidence, outpu
     .sort((a, b) => Number(b[valueKey]) - Number(a[valueKey]))
   const before = sorted(previous.rows)
   const after = sorted(current.rows)
-  const labels = new Set([...before, ...after].map(row => String(row[labelKey])))
+  const labels = [...new Set([...before, ...after].map(row => String(row[labelKey])))].sort()
   for (const label of labels) {
     const previousIndex = before.findIndex(row => String(row[labelKey]) === label)
     const currentIndex = after.findIndex(row => String(row[labelKey]) === label)
@@ -96,7 +97,9 @@ function compareRanks(previous: AnalyzeEvidence, current: AnalyzeEvidence, outpu
     const currentRank = currentIndex < 0 ? null : currentIndex + 1
     if (previousRank !== currentRank) {
       output.push({
-        evidenceId: current.id, item: label, previousRank, currentRank,
+        evidenceId: current.id, item: label,
+        kind: previousRank === null ? 'entered' : currentRank === null ? 'departed' : 'movement',
+        previousRank, currentRank,
         movement: previousRank === null || currentRank === null ? null : previousRank - currentRank
       })
     }

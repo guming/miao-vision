@@ -13,8 +13,10 @@ import {
   atomicWriteJson, hashFile, hashValue, loadReportProject, readRunManifest
 } from './report-project-storage'
 import {
-  evidencePlanSchema, type EvidencePlan, type RunManifest
+  evidencePlanSchema, type EvidencePlan, type ReportProject, type RunManifest
 } from './report-project-types'
+import { readReportProfile, validateReportProfileEvidence } from './report-profile-io'
+import { copyReportProfileAssets, loadReportLogoDataUri, resolveReportProfileAssets } from './report-profile-assets'
 import { normalizeSpec, readJson, readSpec, requiredFlag, stringFlag, fail, writeOutput } from './cli-utils'
 import { validateReportSpec, collectVerifyIssues, strictVerifyError, validateEvidencePaths } from './spec-validator'
 import { resolveChartEvidence } from './chart-evidence'
@@ -23,6 +25,10 @@ import { mapInsightText } from './insight-utils'
 import { renderStaticHtml } from './html-export'
 import { exportHtmlToPdf } from './pdf-export'
 import { compareEvidence, injectChangesHtml, type EvidenceChangeSet } from './report-changes'
+import { buildPeriodOutcomeBrief } from './period-outcome-builder'
+import { evaluateReportReview, type ReportReviewReason } from './report-review'
+import type { ReportProfileV1 } from './report-profile'
+import { injectPeriodOutcomeHtml } from './period-outcome-html'
 import { validateProvenance } from './provenance-validator'
 import type { CliArgs } from './cli-utils'
 import type { AgentError, AgentReportSpec, LoadedDataset } from './types'
@@ -58,6 +64,17 @@ async function reportInit(args: CliArgs): Promise<unknown> {
   if (isAgentError(dataset)) return fail(dataset)
   const context = readContext(contextPath as string)
   if (isAgentError(context)) return fail(context)
+  const profilePath = stringFlag(args, 'profile')
+  let profile = readReportProfile(profilePath)
+  if (isAgentError(profile)) return fail(profile)
+  let profileAssets = null
+  if (profile) {
+    const profileIssue = validateReportProfileEvidence(profile, context)
+    if (profileIssue) return fail(profileIssue)
+    profileAssets = resolveReportProfileAssets(profile, profilePath as string)
+    if (isAgentError(profileAssets)) return fail(profileAssets)
+    profile = profileAssets.profile
+  }
   const plan = extractPlan(context)
   if (isAgentError(plan)) return fail(plan)
   const normalized = normalizeSpec(readSpec(specPath as string))
@@ -65,27 +82,44 @@ async function reportInit(args: CliArgs): Promise<unknown> {
   const validation = verifySpec(normalized, dataset.value, context)
   if (isAgentError(validation)) return fail(validation)
   const contract = createDataContract(dataset.value, context, plan)
-  const project = {
-    schemaVersion: 1 as const, name: basename(root), createdAt: new Date().toISOString(),
-    projectVersion: 1, specHash: hashValue(normalized), evidencePlanHash: hashValue(plan)
+  const project: ReportProject = profile ? {
+    schemaVersion: 2, name: basename(root), createdAt: new Date().toISOString(), projectVersion: 1,
+    specHash: hashValue(normalized), evidencePlanHash: hashValue(plan), reportProfileHash: hashValue(profile)
+  } : {
+    schemaVersion: 1, name: basename(root), createdAt: new Date().toISOString(), projectVersion: 1,
+    specHash: hashValue(normalized), evidencePlanHash: hashValue(plan)
   }
   const summary = {
     project: root, period, contract, evidence: plan.queries.map(query => query.id),
-    hashes: { spec: project.specHash, evidencePlan: project.evidencePlanHash },
-    risks: context.sampleWarnings.map(warning => warning.message)
+    hashes: {
+      spec: project.specHash, evidencePlan: project.evidencePlanHash,
+      ...(project.schemaVersion === 2 ? { reportProfile: project.reportProfileHash } : {})
+    },
+    ...(profile ? { profile: { metrics: profile.metrics.length, client: profile.client?.name ?? null } } : {}),
+    risks: [
+      ...context.sampleWarnings.map(warning => warning.message),
+      ...(profileAssets?.warnings.map(warning => warning.message) ?? [])
+    ]
   }
   if (args.flags['dry-run'] === true) return { ok: true, value: { dryRun: true, ...summary } }
 
   mkdirSync(root, { recursive: true })
+  if (profileAssets) copyReportProfileAssets(profileAssets, root)
   atomicWriteJson(join(root, 'project.json'), project)
   atomicWriteJson(join(root, 'data-contract.json'), contract)
   atomicWriteJson(join(root, 'evidence-plan.json'), plan)
-  atomicWriteJson(join(root, 'preferences.json'), { theme: stringFlag(args, 'theme') ?? 'standard-white' })
+  if (profile) atomicWriteJson(join(root, 'report-profile.json'), profile)
+  atomicWriteJson(join(root, 'preferences.json'), {
+    theme: stringFlag(args, 'theme') ?? 'standard-white',
+    ...(profileAssets?.warnings.length ? { profileWarnings: profileAssets.warnings } : {})
+  })
   writeFileSync(join(root, 'report.yaml'), readFileSync(specPath as string, 'utf8'), 'utf8')
   return createRun(root, project, dataset.value, context, validation, period as string, {
     copyInput: args.flags['copy-input'] === true,
     inputPath: input as string,
-    formats: parseReportFormats(stringFlag(args, 'format'))
+    formats: parseReportFormats(stringFlag(args, 'format')),
+    profile,
+    reviewReasons: profileAssets?.warnings ?? []
   })
 }
 
@@ -159,7 +193,9 @@ async function reportUpdate(args: CliArgs): Promise<unknown> {
     formats: parseReportFormats(stringFlag(args, 'format')),
     pdfTimeout: Number(stringFlag(args, 'pdf-timeout') ?? 30_000),
     keepTemp: args.flags['keep-temp'] === true,
-    baseline: { runId: readLatest(loaded.root)?.runId ?? null, evidence: previous.evidence }
+    baseline: { runId: readLatest(loaded.root)?.runId ?? null, evidence: previous.evidence },
+    profile: loaded.profile,
+    reviewReasons: readProfileWarnings(loaded.preferences)
   })
 }
 
@@ -208,7 +244,7 @@ function reportClean(args: CliArgs): unknown {
 
 async function createRun(
   root: string,
-  project: { projectVersion: number; specHash: string; evidencePlanHash: string },
+  project: ReportProject,
   dataset: LoadedDataset,
   context: AnalyzeContext,
   spec: AgentReportSpec,
@@ -220,6 +256,8 @@ async function createRun(
     pdfTimeout?: number
     keepTemp?: boolean
     baseline?: { runId: string | null; evidence: AnalyzeContext['evidence'] }
+    profile?: ReportProfileV1 | null
+    reviewReasons?: ReportReviewReason[]
   }
 ): Promise<unknown> {
   const runRoot = join(root, 'runs', period)
@@ -227,9 +265,13 @@ async function createRun(
   const now = new Date().toISOString()
   const inputHash = hashFile(options.inputPath)
   const changes = compareEvidence(options.baseline?.evidence ?? null, context.evidence, options.baseline?.runId ?? null)
+  const outcomeBrief = options.profile
+    ? buildPeriodOutcomeBrief({ period, changes, profile: options.profile })
+    : null
+  const review = outcomeBrief ? evaluateReportReview(outcomeBrief, [], options.reviewReasons) : null
   const provenance = validateProvenance(spec, context)
-  const manifest: RunManifest = {
-    schemaVersion: 2, id: period, status: 'running',
+  const manifestData = {
+    id: period, status: 'running' as const,
     input: { path: resolve(options.inputPath), sha256: inputHash, ...(dataset.sheet ? { sheet: dataset.sheet } : {}) },
     projectVersion: project.projectVersion, inputHash, specHash: project.specHash,
     evidencePlanHash: project.evidencePlanHash, evidenceResultHash: hashValue(context.evidence),
@@ -247,6 +289,15 @@ async function createRun(
     baselineRunId: changes.baselineRunId,
     changes: changeSummary(changes)
   }
+  const manifest: RunManifest = project.schemaVersion === 2 && review ? {
+    schemaVersion: 3,
+    ...manifestData,
+    reportProfileHash: project.reportProfileHash,
+    review: {
+      status: review.status, materialChanges: review.materialChanges,
+      warnings: review.warnings, blockingIssues: review.blockingIssues
+    }
+  } : { schemaVersion: 2, ...manifestData }
   atomicWriteJson(join(runRoot, 'manifest.json'), manifest)
   if (options.copyInput) {
     const copiedPath = join(runRoot, `input${basename(options.inputPath).includes('.') ? basename(options.inputPath).slice(basename(options.inputPath).lastIndexOf('.')) : ''}`)
@@ -258,10 +309,22 @@ async function createRun(
   atomicWriteJson(join(runRoot, 'changes.json'), changes)
   manifest.artifacts.evidence = 'evidence.json'
   manifest.artifacts.changes = 'changes.json'
+  if (outcomeBrief && review) {
+    atomicWriteJson(join(runRoot, 'period-outcome-brief.json'), outcomeBrief)
+    atomicWriteJson(join(runRoot, 'review.json'), review)
+    manifest.artifacts.outcomeBrief = 'period-outcome-brief.json'
+    manifest.artifacts.review = 'review.json'
+  }
   const theme = readPreferences(root).theme as Parameters<typeof renderStaticHtml>[3]
-  const html = injectChangesHtml(renderStaticHtml(spec, profileDataset(dataset), dataset.rows, theme, {
+  const baseHtml = renderStaticHtml(spec, profileDataset(dataset), dataset.rows, theme, {
     enabled: true, context, coverage: provenance.coverage
-  }), changes)
+  })
+  const html = outcomeBrief && review
+    ? injectPeriodOutcomeHtml(baseHtml, outcomeBrief, review, {
+      profile: options.profile ?? undefined,
+      logoDataUri: options.profile ? loadReportLogoDataUri(options.profile, root) : undefined
+    })
+    : injectChangesHtml(baseHtml, changes)
   if (options.formats.includes('html')) {
     writeOutput(join(runRoot, 'report.html'), html)
     manifest.artifacts.html = 'report.html'
@@ -285,7 +348,7 @@ async function createRun(
     : join(runRoot, manifest.artifacts.pdf)
   const preview = await createArtifactPreview(html, primaryPath, { fixedName: 'report.preview.png' })
   if (preview.path) manifest.artifacts.preview = 'report.preview.png'
-  manifest.status = 'ready'
+  manifest.status = review?.status === 'needs_review' ? 'needs_review' : 'ready'
   manifest.updatedAt = new Date().toISOString()
   atomicWriteJson(join(runRoot, 'manifest.json'), manifest)
   atomicWriteJson(join(root, 'latest.json'), { schemaVersion: 1, runId: period, manifest: `runs/${period}/manifest.json` })
@@ -294,7 +357,7 @@ async function createRun(
     kind: 'recurring-report', title: spec.title ?? 'Miao Vision Report', period,
     outputs: ['html', 'pdf'].flatMap(format => manifest.artifacts[format] ? [join(runRoot, manifest.artifacts[format])] : []),
     primaryPath, previewPath: preview.path, verified: provenance.issues.length === 0,
-    coverage: provenance.coverage, warnings: [], ...summary,
+    coverage: provenance.coverage, warnings: review?.reasons.map(reason => reason.message) ?? [], ...summary,
     changeCounts: changes.baselineRunId ? {
       up: changes.metrics.filter(change => change.absolute > 0).length,
       down: changes.metrics.filter(change => change.absolute < 0).length,
@@ -304,24 +367,30 @@ async function createRun(
   })
   const warnings = preview.warning ? [preview.warning] : []
   return { ok: true, value: {
-    project: root, runId: period, status: 'ready',
+    project: root, runId: period, status: review?.status ?? 'ready',
     artifacts: Object.fromEntries(Object.entries(manifest.artifacts).map(([key, value]) => [key, join(runRoot, value)])),
-    changes: 'changes' in manifest ? manifest.changes : undefined, warnings, delivery
+    changes: 'changes' in manifest ? manifest.changes : undefined,
+    ...(review ? { review } : {}), warnings, delivery
   } }
 }
 
-function failedRun(root: string, project: { projectVersion: number; specHash: string; evidencePlanHash: string }, dataset: LoadedDataset, input: string, period: string, error: AgentError): unknown {
+function failedRun(root: string, project: ReportProject, dataset: LoadedDataset, input: string, period: string, error: AgentError): unknown {
   const runRoot = join(root, 'runs', period)
   mkdirSync(runRoot, { recursive: true })
   const now = new Date().toISOString()
   const inputHash = hashFile(input)
-  atomicWriteJson(join(runRoot, 'manifest.json'), {
-    schemaVersion: 2, id: period, status: 'failed',
+  const manifestData = {
+    id: period, status: 'failed' as const,
     input: { path: resolve(input), sha256: inputHash, ...(dataset.sheet ? { sheet: dataset.sheet } : {}) },
     projectVersion: project.projectVersion, inputHash, specHash: project.specHash,
     evidencePlanHash: project.evidencePlanHash, createdAt: now, updatedAt: now, artifacts: {},
     error: { code: error.code, message: error.message }
-  })
+  }
+  atomicWriteJson(join(runRoot, 'manifest.json'), project.schemaVersion === 2 ? {
+    schemaVersion: 3, ...manifestData, reportProfileHash: project.reportProfileHash, baselineRunId: null,
+    changes: { status: 'partial', metrics: 0, rankings: 0, anomaliesAdded: 0, anomaliesRemoved: 0, notComparable: 1 },
+    review: { status: 'blocked', materialChanges: 0, warnings: 0, blockingIssues: 1 }
+  } : { schemaVersion: 2, ...manifestData })
   return fail(agentError('REPORT_UPDATE_VALIDATION_FAILED', error.message, { runId: period, cause: error }))
 }
 
@@ -376,6 +445,10 @@ function readPreferences(root: string): Record<string, unknown> {
   try { return JSON.parse(readFileSync(join(root, 'preferences.json'), 'utf8')) } catch { return {} }
 }
 
+function readProfileWarnings(preferences: Record<string, unknown>): ReportReviewReason[] {
+  return Array.isArray(preferences.profileWarnings) ? preferences.profileWarnings as ReportReviewReason[] : []
+}
+
 function directoryBytes(path: string): number {
   return readdirSync(path, { withFileTypes: true }).reduce((sum, entry) => {
     const child = join(path, entry.name)
@@ -404,6 +477,6 @@ function changeSummary(changes: EvidenceChangeSet): NonNullable<Extract<RunManif
   }
 }
 
-function manifestChanges(manifest: RunManifest | null): Extract<RunManifest, { schemaVersion: 2 }>['changes'] | undefined {
-  return manifest?.schemaVersion === 2 ? manifest.changes : undefined
+function manifestChanges(manifest: RunManifest | null): Extract<RunManifest, { schemaVersion: 2 | 3 }>['changes'] | undefined {
+  return manifest && (manifest.schemaVersion === 2 || manifest.schemaVersion === 3) ? manifest.changes : undefined
 }

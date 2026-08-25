@@ -190,11 +190,31 @@ miao-viz report init /path/to/project \
   --input /path/to/period-1.xlsx \
   --spec SYSTEM_TEMP/miao-vision/report.yaml \
   --context SYSTEM_TEMP/miao-vision/context.json \
+  --profile SYSTEM_TEMP/miao-vision/report-profile.yaml \
   --period 2026-W28 \
   --dry-run
 ```
 
-Present the contract, frozen evidence ids, hashes, path, and risks. Initialize without `--dry-run` only after acceptance; use `--copy-input` only when requested.
+Use `--profile` only when the user wants material outcome classification. The profile must contain
+at least one Evidence metric and an absolute or percentage materiality threshold. Ask the user for
+the preferred direction, target, or threshold when it affects the requested judgment. Do not infer
+that an increase is favorable or that a decrease is adverse. Omit `desiredDirection` when the user
+only wants a neutral comparison.
+
+```yaml
+schemaVersion: 1
+metrics:
+  - evidenceId: total
+    metric: total_sales
+    label: Sales
+    desiredDirection: increase
+    materiality:
+      percent: 0.1
+```
+
+Present the contract, frozen Evidence ids, profile hash, path, and risks. Initialize without
+`--dry-run` only after acceptance; use `--copy-input` only when requested. The first run has no
+baseline and must not contain period comparison language.
 
 For later periods:
 
@@ -208,7 +228,12 @@ miao-viz report update /path/to/project \
 
 Replay the saved spec and evidence recipes. Do not redesign, change evidence ids, or guess mappings. Treat data-contract, evidence-plan, validation, and PDF errors as failed runs. Run `report clean` only when the user explicitly requests deletion: show the preview, then obtain confirmation for the exact project and retention count before `--confirm`.
 
-After a successful update, inspect `runs/<period>/changes.json` and preserve its distinctions:
+For a profile-aware project, use `runs/<period>/period-outcome-brief.json` and `review.json` as the
+interpreted delivery state. `ready` can be delivered. `needs_review` requires the user to review the
+listed reasons before sharing. `blocked` must not be delivered. Do not regenerate business meaning
+from `changes.json` when a period outcome brief exists.
+
+For diagnostics, inspect `runs/<period>/changes.json` and preserve its distinctions:
 
 - `metrics`: absolute and percentage changes from comparable Evidence;
 - `rankings`: entries, exits, and rank movement;

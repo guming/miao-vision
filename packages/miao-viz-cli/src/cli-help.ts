@@ -244,6 +244,7 @@ Create a reusable local report project. Use --dry-run to preview without writing
 
 Options:
   --dry-run       Preview contract, evidence plan, hashes, and risks
+  --profile <file>  Validate and save a YAML or JSON client outcome profile
   --copy-input    Copy the source file into the first run
   --sheet <name>  Excel sheet name
 `,

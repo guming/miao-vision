@@ -8,6 +8,7 @@ import {
   dataContractSchema, evidencePlanSchema, projectSchema, runManifestSchema,
   type DataContract, type EvidencePlan, type ReportProject, type RunManifest
 } from './report-project-types'
+import { reportProfileSchema, type ReportProfileV1 } from './report-profile'
 import type { AgentError } from './types'
 
 export interface LoadedReportProject {
@@ -17,6 +18,7 @@ export interface LoadedReportProject {
   plan: EvidencePlan
   spec: unknown
   preferences: Record<string, unknown>
+  profile: ReportProfileV1 | null
 }
 
 export function stableJson(value: unknown): string {
@@ -52,7 +54,12 @@ export function loadReportProject(path: string): LoadedReportProject | AgentErro
     const spec = readFileSync(join(root, 'report.yaml'), 'utf8')
     const preferencesPath = join(root, 'preferences.json')
     const preferences = existsSync(preferencesPath) ? readJson(preferencesPath) as Record<string, unknown> : {}
-    return { root, project, contract, plan, spec, preferences }
+    const profilePath = join(root, 'report-profile.json')
+    const profile = existsSync(profilePath) ? reportProfileSchema.parse(readJson(profilePath)) : null
+    if (project.schemaVersion === 2 && (!profile || hashValue(profile) !== project.reportProfileHash)) {
+      throw new Error('report profile is missing or its lineage hash changed')
+    }
+    return { root, project, contract, plan, spec, preferences, profile }
   } catch (error) {
     return agentError('REPORT_PROJECT_INVALID', 'Report project is missing, invalid, or uses an unsupported version.', {
       project: root, detail: error instanceof Error ? error.message : String(error)
