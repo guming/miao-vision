@@ -11,7 +11,7 @@
   }
 
   let pluginText = 'curl -L https://github.com/miaoshou-dev/miao-vision/releases/latest/download/miao-vision-plugin.zip -o miao-vision-plugin.zip'
-  let cliText = 'npm install -g @miao-vision/cli@0.5.0'
+  let cliText = 'npm install -g @miao-vision/cli@0.6.0'
   let claudeText = 'claude plugin marketplace add miaoshou-dev/miao-vision\nclaude plugin install miao-vision@miao-vision'
   let codexText = '# Download miao-vision-plugin.zip, then install it through the Codex plugin surface.'
   let promptExamples = [
@@ -28,7 +28,7 @@
   </div>
   <div class="install-grid">
     <article class="install-card">
-      <h3>Cross-host Plugin v0.5.0</h3>
+      <h3>Cross-host Plugin v0.6.0</h3>
       <p>The recommended bundle includes the Skill and a versioned CLI compatibility contract. The second command is an optional direct CLI install. Your data stays local.</p>
       <div class="install-steps">
         <div class="install-step">
