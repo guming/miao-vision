@@ -1,7 +1,7 @@
 # Client Outcome Reports PRD
 
 > Date: 2026-08-25
-> Status: Proposal
+> Status: Implemented for pilot validation
 > Product scope: `packages/miao-viz-cli` and `skills/miao-vision`
 > Working name: Client Outcome Report
 
@@ -13,7 +13,7 @@ The current recurring workflow records changes, but it does not decide which cha
 
 This project will extend recurring reports into client outcome reports. A user configures the reporting rules once, supplies a new local data file for each period, reviews the detected outcomes, and exports a branded report that can be sent to a client.
 
-The first release will focus on material change detection and review. Brand profiles and audience-specific editions will follow only after the core workflow proves useful.
+The product focuses on one client-ready report with material change detection, review, branding, and collapsed internal diagnostics. Audience-specific editions are intentionally deferred unless pilot evidence shows that one artifact cannot serve the recurring workflow.
 
 ## 2. Product Position
 
@@ -112,7 +112,6 @@ The CLI validates the dataset, evidence plan, report spec, metric rules, and pro
 miao-viz report update ./acme-monthly \
   --input ./2026-08.xlsx \
   --period 2026-08 \
-  --edition client \
   --format html,pdf
 ```
 
@@ -205,7 +204,7 @@ The profile will not accept arbitrary CSS, remote assets, or online font URLs. A
 
 ## 9. Outcome Brief
 
-Every recurring run will produce `outcome-brief.json`. This file is the single interpreted fact layer used by HTML, PDF, delivery summaries, and later audience editions.
+Every recurring run will produce `period-outcome-brief.json`. This file is the single interpreted fact layer used by HTML, PDF, and delivery summaries.
 
 The outcome brief must contain:
 
@@ -285,7 +284,7 @@ The CLI will continue to return structured errors with repair information where 
 
 ## 13. Client Report Structure
 
-The client edition will use this order:
+The client report will use this order:
 
 1. Cover and reporting period.
 2. Executive outcome summary.
@@ -298,15 +297,11 @@ The client edition will use this order:
 
 The report must remain useful when there are no material changes. In that case, it will state that no configured material threshold was crossed and still show the current core metrics.
 
-## 14. Audience Editions
+## 14. Single-Report Product Boundary
 
-Audience editions are a later extension. All editions will consume the same `outcome-brief.json`.
+The normal workflow produces one client report and does not ask the user to select or manage an edition. Outcome facts, goals, risks, and next actions remain in the readable body. Evidence, methodology, data-quality diagnostics, anomalies, and review reasons remain available in a collapsed HTML appendix or PDF appendix.
 
-- The client edition emphasizes outcomes, goals, risks, and next actions.
-- The operator edition emphasizes anomalies, data quality, replay issues, and delivery tasks.
-- The manager edition emphasizes account risk, adverse outcomes, unresolved review items, and decisions that require escalation.
-
-An edition may change ordering and presentation. It must not recalculate evidence or change the meaning of an outcome.
+The CLI will not add an `--edition` option during pilot validation. Separate operator or manager artifacts should be reconsidered only when at least two pilot teams repeatedly need different recipients, information priorities, and independently shareable files. Expandable diagnostics or a saved profile preference should be evaluated before adding a per-run choice.
 
 ## 15. Generated Project Structure
 
@@ -326,7 +321,7 @@ acme-monthly/
 │       ├── context.json
 │       ├── evidence.json
 │       ├── changes.json
-│       ├── outcome-brief.json
+│       ├── period-outcome-brief.json
 │       ├── review.json
 │       ├── report.html
 │       ├── report.pdf
@@ -401,9 +396,11 @@ This phase will touch more than eight files. It will not add a service or an ext
 
 Phase 2 is independently useful after Phase 1. It will add brand settings, copy approved local assets into the project, render the same profile in HTML and PDF, add a client cover, validate asset paths and colors, and add visual regression checks.
 
-### 17.3 Phase 3: Audience editions
+### 17.3 Phase 3: Single-report pilot readiness
 
-Phase 3 will proceed only when user research confirms demand. It will add `--edition client|operator|manager`, render each edition from the same outcome brief, record artifact hashes, and prevent templates from changing evidence or outcome classifications.
+Phase 3 keeps the normal command unchanged and completes the single-report product. It verifies legacy, profile-aware, branded, material-change, no-material-change, and needs-review workflows; keeps internal diagnostics collapsed; updates CLI and source-skill guidance; and documents installation, privacy, failure, and support expectations for pilot users.
+
+Explicit audience editions are not part of this phase. Demand will be recorded as product research rather than implemented speculatively.
 
 ## 18. Validation and Testing
 
@@ -510,3 +507,11 @@ The first release is ready for pilot use when:
 - At least three real two-period datasets produce useful outcome briefs without manual changes to computed values.
 
 The product is not ready for paid release until installation, updates, trial or licensing boundaries, privacy language, support expectations, and refund triggers are defined. Pilot validation should come before connector work, audience editions, or a template marketplace.
+
+### 22.1 Pilot operating expectations
+
+- Installation uses the packaged local Miao Vision skill and repository-supported CLI workflow.
+- Source data, normalized profiles, evidence, and generated artifacts remain local unless the user explicitly shares them.
+- A failed or blocked run is not a completed delivery. A `needs_review` run requires review of `review.json` before sharing.
+- Pilot support covers reproducible CLI, schema, evidence, rendering, and packaging defects. It does not include invented business rules, remote connectors, scheduling, or custom report-editor work.
+- Pilot users should retain their source files and project directories; generated artifacts are not a backup service.

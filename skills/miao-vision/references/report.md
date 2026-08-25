@@ -233,6 +233,15 @@ interpreted delivery state. `ready` can be delivered. `needs_review` requires th
 listed reasons before sharing. `blocked` must not be delivered. Do not regenerate business meaning
 from `changes.json` when a period outcome brief exists.
 
+Generate one client report per update. Do not ask the user to choose a client, operator, or manager
+edition. Keep the readable body client-facing; evidence, methodology, data-quality details,
+anomalies, and review reasons belong in the collapsed diagnostics appendix. Only expose those
+details separately when the user requests diagnostics.
+
+Recurring projects are local artifacts: source data, profiles, Evidence, and reports remain on the
+user's machine unless the user explicitly shares them. Do not describe a failed or blocked run as
+delivered. Preserve the source files and project directory; generated reports are not a backup.
+
 For diagnostics, inspect `runs/<period>/changes.json` and preserve its distinctions:
 
 - `metrics`: absolute and percentage changes from comparable Evidence;

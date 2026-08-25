@@ -24,9 +24,8 @@ export function injectPeriodOutcomeHtml(
     ${renderGroup('Other material changes', neutral)}
     ${renderGoals(brief)}
     ${renderRankings(brief)}
-    ${renderWarnings(brief)}
     ${renderRecommendations(brief)}
-    ${renderMethodology(brief)}
+    ${renderDiagnostics(brief, review)}
   </section>${renderFooter(options.profile)}${styles(options.profile)}`
   const branded = renderCover(brief, review, options.profile, options.logoDataUri)
   const withCover = branded
@@ -67,13 +66,16 @@ function renderGoals(brief: PeriodOutcomeBrief): string {
   ).join('')}</ul></div>`
 }
 
-function renderWarnings(brief: PeriodOutcomeBrief): string {
+function renderWarnings(brief: PeriodOutcomeBrief, review: ReportReview): string {
   const warnings = brief.warnings.filter(item => item.code !== 'NO_BASELINE')
-  if (!warnings.length && !brief.anomalies.added.length) return ''
-  return `<div class="mv-outcome-group mv-outcome-warnings"><h3>Review notes</h3><ul>
-    ${warnings.map(item => `<li>${escapeHtml(item.message)}</li>`).join('')}
-    ${brief.anomalies.added.map(() => '<li>A new anomaly requires review.</li>').join('')}
-  </ul></div>`
+  if (!warnings.length && !brief.anomalies.added.length && !review.reasons.length) return ''
+  const messages = [...new Set([
+    ...warnings.map(item => item.message),
+    ...brief.anomalies.added.map(() => 'A new anomaly requires review.'),
+    ...review.reasons.map(item => item.message)
+  ])]
+  return `<div class="mv-outcome-warnings"><h4>Review notes</h4><ul>${messages.map(message =>
+    `<li>${escapeHtml(message)}</li>`).join('')}</ul></div>`
 }
 
 function renderRankings(brief: PeriodOutcomeBrief): string {
@@ -92,13 +94,14 @@ function renderRecommendations(brief: PeriodOutcomeBrief): string {
     `<li>${escapeHtml(item.text)}</li>`).join('')}</ul></div>`
 }
 
-function renderMethodology(brief: PeriodOutcomeBrief): string {
+function renderDiagnostics(brief: PeriodOutcomeBrief, review: ReportReview): string {
   const refs = [...new Set([
     ...brief.outcomes.flatMap(item => item.evidenceRefs),
     ...brief.goals.flatMap(item => item.evidenceRefs),
     ...brief.rankings.flatMap(item => item.evidenceRefs)
   ])].sort()
-  return `<details class="mv-outcome-method"><summary>Evidence and methodology</summary>
+  return `<details class="mv-outcome-method"><summary>Evidence, review, and methodology</summary>
+    ${renderWarnings(brief, review)}
     <p>Baseline: ${escapeHtml(brief.baselineRunId ?? 'none')}</p>
     <p>Evidence references: ${refs.length ? refs.map(escapeHtml).join(', ') : 'none for the first comparison'}</p>
   </details>`

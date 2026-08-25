@@ -93,4 +93,22 @@ describe('period outcome HTML', () => {
     expect(html).toContain('Suggested next actions')
     expect(html).toContain('Review channel allocation')
   })
+
+  it('keeps internal review diagnostics in the collapsed appendix', () => {
+    const input = brief()
+    input.warnings = [{ code: 'COMPARISON_UNAVAILABLE', message: 'Comparison needs inspection.', evidenceId: 'total' }]
+    const html = injectPeriodOutcomeHtml('<body></body>', input, {
+      schemaVersion: 1,
+      status: 'needs_review',
+      reasons: [{ code: 'MATERIAL_ADVERSE_OUTCOME', message: 'Confirm this result.', evidenceRefs: ['total'] }],
+      materialChanges: 1,
+      warnings: 2,
+      blockingIssues: 0
+    })
+    const detailsStart = html.indexOf('<details class="mv-outcome-method">')
+    expect(detailsStart).toBeGreaterThan(-1)
+    expect(html.indexOf('Comparison needs inspection.')).toBeGreaterThan(detailsStart)
+    expect(html.indexOf('Confirm this result.')).toBeGreaterThan(detailsStart)
+    expect(html.slice(0, detailsStart)).not.toContain('Review notes')
+  })
 })
