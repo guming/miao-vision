@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { compareEvidence } from './report-changes'
 import type { AnalyzeEvidence } from './context-schema'
 
-const recipe = { select: ['region'], measures: [{ op: 'sum' as const, field: 'sales', as: 'total' }], groupBy: ['region'] }
+const recipe = { schemaVersion: 1 as const, measures: [{ operation: 'sum' as const, field: 'sales', alias: 'total' }], groupBy: ['region'] }
 const ranked = (rows: Array<{ region: string; total: number }>, changed = false): AnalyzeEvidence => ({
   id: 'by_region', query: 'sales by region', rows,
   recipe: changed ? { ...recipe, limit: 2 } : recipe

@@ -73,7 +73,7 @@
   margin: 0;
   background: linear-gradient(90deg, #4285f4 0%, #a142f4 38%, #24c6dc 68%, #12a678 100%);
   background-clip: text; color: transparent; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  font-size: clamp(4.5rem, 9vw, 8.5rem); line-height: 0.9; font-weight: 700;
+  font-size: clamp(3.6rem, 6.2vw, 6rem); line-height: 0.95; font-weight: 700;
 }
 
 .hero-statement {
@@ -129,8 +129,35 @@
   padding-inline: clamp(1.25rem, 4vw, 3.5rem);
   scroll-margin-top: 5rem;
 }
+.install-intro { margin: 0.75rem 0 1.4rem; color: var(--muted); line-height: 1.5; }
+.install-intro code { color: var(--blue); }
+.host-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem; }
+.host-tabs button { padding: 0.65rem 0.9rem; color: var(--muted); background: var(--paper); border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.host-tabs button.active { color: #fff; background: var(--blue); border-color: var(--blue); }
+.install-router { grid-column: 1 / -1; min-height: auto; }
+.install-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.install-recommended { margin: 0 0 0.35rem !important; color: #8ab4f8 !important; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+.download-link { display: inline-flex; align-items: center; gap: 0.35rem; color: #8ab4f8; text-decoration: none; white-space: nowrap; }
+.install-detail-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; }
+.verify-box { padding: 0.9rem; background: #2a2d31; border-radius: 16px; }
+.verify-box p { margin: 0.5rem 0; }
+.verify-box small { display: block; margin-top: 0.65rem; color: #c4c7c5; line-height: 1.4; }
+.copy-success, .copy-fallback { margin: 0.8rem 0 0 !important; font-size: 0.82rem; }
+.copy-success { color: #48d597 !important; }
+.copy-fallback { color: #ffd166 !important; }
+.first-report-panel { display: grid; grid-template-columns: 0.7fr 1.3fr; gap: 1.25rem; align-items: center; padding: 1.35rem; background: #202124; color: #f8fbff; border-radius: 24px; }
+.first-report-panel h3 { margin: 0 0 0.5rem; }
+.first-report-panel p { color: #c4c7c5; line-height: 1.5; }
+.first-report-panel .section-kicker { margin-bottom: 0.6rem; }
+.prompt-example { position: relative; padding: 0.9rem 2.8rem 0.9rem 1rem; background: #111314; border: 1px solid #34383d; border-radius: 14px; color: #e8eaed; line-height: 1.55; }
+.prompt-example code { font: 0.8rem/1.55 Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.install-footer-link { text-align: right; }
+.install-footer-link a { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--muted); }
 
 .section-heading { max-width: 44rem; margin-bottom: 1.5rem; }
+.example-note { margin: 0.75rem 0 0; color: var(--muted); line-height: 1.5; }
+.example-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1rem; }
+.example-actions .btn-primary, .example-actions .btn-secondary { min-height: 2.65rem; font-size: 0.9rem; }
 
 .section-heading h2, .workflow-copy h2, .why-section h2 {
   margin: 0;
@@ -296,5 +323,7 @@
   }
   .track-card { min-height: auto; }
   .try-panel { grid-template-columns: 1fr; }
+  .install-detail-grid, .first-report-panel { grid-template-columns: 1fr; }
+  .install-card-heading { flex-direction: column; }
   .footer { flex-direction: column; }
 }

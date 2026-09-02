@@ -31,6 +31,7 @@ export default defineConfig({
 
   // Shared settings for all the projects below
   use: {
+    baseURL: 'http://127.0.0.1:5173',
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
 
@@ -42,6 +43,13 @@ export default defineConfig({
 
     // Viewport size
     viewport: { width: 1280, height: 720 }
+  },
+
+  webServer: {
+    command: 'npm run dev -- --host 127.0.0.1',
+    url: 'http://127.0.0.1:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 30000
   },
 
   // Configure projects for major browsers

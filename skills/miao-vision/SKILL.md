@@ -45,6 +45,17 @@ Resolve the executable only after selecting a workflow. Prefer `$MIAO_VISION_HOM
 
 Use the same executable throughout the task. In workflow examples, `miao-viz` means that resolved executable.
 
+If installation or the first Report workflow fails, use the single diagnostic entry point before
+guessing at fixes:
+
+```bash
+miao-viz diagnose --host codex --input /absolute/path/to/data.csv --output /absolute/path/to/output
+```
+
+The JSON result reports the executable, versions, host/plugin status, input readability, output
+writeability, stable error code, safe retry flag, and next action. It never prints input contents,
+tokens, secrets, or environment values. A PDF-specific check can be requested with `--pdf`.
+
 ## Shared Rules
 
 - Keep context, profiles, draft specs, and other intermediate files under a task-specific `miao-vision` directory in the operating system's native temporary directory. Resolve that directory with the host runtime instead of hardcoding `/tmp`; on Windows use the system temp location, and on macOS/Linux use their native temp location.

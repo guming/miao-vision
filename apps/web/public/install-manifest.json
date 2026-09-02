@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "cliVersion": "0.6.0",
+  "requiredCliRange": ">=0.3.0 <0.7.0",
+  "releaseTag": "skill-v0.6.0",
+  "releaseUrl": "https://github.com/miaoshou-dev/miao-vision/releases/download/skill-v0.6.0",
+  "hosts": [
+    {
+      "host": "codex",
+      "recommended": true,
+      "title": "Codex Plugin",
+      "commands": [
+        "下载 miao-vision-plugin.zip，并通过 Codex Plugin 面板安装"
+      ],
+      "downloadUrl": "https://github.com/miaoshou-dev/miao-vision/releases/download/skill-v0.6.0/miao-vision-plugin.zip",
+      "verifyCommand": "miao-viz --version",
+      "requiresAgent": true,
+      "requiresApproval": true
+    },
+    {
+      "host": "claude-code",
+      "recommended": true,
+      "title": "Claude Code Plugin",
+      "commands": [
+        "claude plugin marketplace add miaoshou-dev/miao-vision",
+        "claude plugin install miao-vision@miao-vision"
+      ],
+      "downloadUrl": "https://github.com/miaoshou-dev/miao-vision/releases/download/skill-v0.6.0/miao-vision-plugin.zip",
+      "verifyCommand": "miao-viz --version",
+      "requiresAgent": true,
+      "requiresApproval": true
+    },
+    {
+      "host": "openclaw",
+      "recommended": true,
+      "title": "OpenClaw Skill",
+      "commands": [
+        "下载并安装 miao-vision-skill.zip",
+        "miao-viz --version"
+      ],
+      "downloadUrl": "https://github.com/miaoshou-dev/miao-vision/releases/download/skill-v0.6.0/miao-vision-skill.zip",
+      "verifyCommand": "miao-viz --version",
+      "requiresAgent": true,
+      "requiresApproval": true
+    },
+    {
+      "host": "cli",
+      "recommended": true,
+      "title": "纯 CLI",
+      "commands": [
+        "npm install -g @miao-vision/cli@0.6.0"
+      ],
+      "verifyCommand": "miao-viz --version && which miao-viz",
+      "requiresAgent": false,
+      "requiresApproval": false
+    }
+  ],
+  "example": {
+    "id": "sales-report",
+    "artifactUrl": "/examples/report.html",
+    "sampleDataUrl": "/examples/sales.csv",
+    "cliVersion": "0.6.0"
+  }
+}

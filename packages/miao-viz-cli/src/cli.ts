@@ -27,6 +27,7 @@ import { runReportCommand } from './cli-report'
 import { packageTrustedArtifact } from './trusted-artifact'
 import { runRenderGroup } from './cli-render'
 import { runArtifactCommand } from './cli-artifact'
+import { diagnoseEnvironment } from './diagnostic'
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
   if (args.command === '--version' || args.command === '-v' || args.command === 'version') {
@@ -61,6 +62,9 @@ async function main(): Promise<void> {
         return
       case 'artifact':
         printJson(runArtifactCommand(args))
+        return
+      case 'diagnose':
+        printJson(diagnoseEnvironment({ input: stringFlag(args, 'input'), output: stringFlag(args, 'output'), host: stringFlag(args, 'host'), requirePdf: args.flags['pdf'] === true }))
         return
     }
     printJson(agentError('UNKNOWN_COMMAND', `Unknown command: ${args.command ?? '(none)'}`, {

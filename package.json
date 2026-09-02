@@ -30,7 +30,7 @@
   "homepage": "https://github.com/miaoshou-dev/miao-vision#readme",
   "scripts": {
     "dev": "vite",
-    "build": "cp skills/miao-vision/SKILL.md apps/web/public/SKILL.md && cp -r skills/miao-vision/references/ apps/web/public/references/ && vite build",
+    "build": "node scripts/generate-install-manifest.mjs && cp skills/miao-vision/SKILL.md apps/web/public/SKILL.md && cp -r skills/miao-vision/references/ apps/web/public/references/ && vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "check:size": "bash scripts/check-file-size.sh",
@@ -50,6 +50,7 @@
     "pack:skill": "node scripts/pack-miao-vision-skill.mjs",
     "test:skill-runtime": "node --test skills/miao-vision/scripts/cli-runtime.test.mjs",
     "validate:plugin": "node scripts/validate-plugin-release.mjs",
+    "validate:install-manifest": "node scripts/generate-install-manifest.mjs",
     "prepare": "husky"
   },
   "devDependencies": {

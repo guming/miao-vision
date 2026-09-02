@@ -4,6 +4,8 @@
    */
   import './landing-page.css'
   import InstallSection from './InstallSection.svelte'
+  import { installManifest } from '../install-manifest'
+  import { recordFunnelEvent } from '../funnel-events'
   import {
     ArrowRight,
     BarChart3,
@@ -25,6 +27,8 @@
   }
 
   let { onNavigate }: Props = $props()
+
+  $effect(() => { recordFunnelEvent('landing_view') })
 
   const productTracks = [
     {
@@ -114,35 +118,32 @@
         <Github size={18} strokeWidth={1.75} />
         <span>GitHub</span>
       </a>
-      <a class="nav-btn" href="#install">Install Skill</a>
+      <a class="nav-btn" href="#install">Install</a>
     </div>
   </nav>
 
   <header class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">
-        <Terminal size={16} strokeWidth={2} />
-        Local CLI for agent-made visual artifacts
-      </p>
-      <h1>Miao Vision</h1>
+      <p class="eyebrow"><Terminal size={16} strokeWidth={2} /> Local-first AI data reports</p>
+      <h1>CSV / Excel<br />→ 业务报告</h1>
       <p class="hero-statement">
-        Tell Codex or Claude what you want. Miao Vision turns your local data into
-        interactive reports, infographics, or browser decks — no setup needed.
+        用一句话描述目标，Miao Vision 就能把本地 CSV、Excel 或 JSON 变成可直接分享的业务报告。
+        无账号、无需上传，数字保留可验证的证据来源。
       </p>
       <div class="hero-actions">
-        <a class="btn-primary" href="#gallery">
+        <a class="btn-primary" href="#first-report">
           <Sparkles size={18} strokeWidth={2} />
-          <span>See Outputs</span>
+          <span>生成第一份报告</span>
         </a>
-        <a class="btn-secondary" href="#install">
-          <span>Install CLI + Skill</span>
+        <a class="btn-secondary" href="#report-example">
+          <span>查看真实报告</span>
           <ArrowRight size={18} strokeWidth={2} />
         </a>
       </div>
       <div class="hero-proof" aria-label="Product principles">
-        <span><BarChart3 size={15} strokeWidth={2} /> 27 chart types</span>
-        <span><Shield size={15} strokeWidth={2} /> Local-first</span>
-        <span><Filter size={15} strokeWidth={2} /> Interactive HTML</span>
+        <span><Shield size={15} strokeWidth={2} /> 本地处理</span>
+        <span><Filter size={15} strokeWidth={2} /> 无账号 / 无上传</span>
+        <span><FileOutput size={15} strokeWidth={2} /> 离线 HTML</span>
       </div>
     </div>
 
@@ -160,14 +161,15 @@
   </header>
 
   <div class="landing-main">
-    <section id="gallery" class="gallery-section" aria-labelledby="gallery-title">
+    <section id="report-example" class="gallery-section" aria-labelledby="gallery-title">
       <div class="section-heading">
-        <p class="section-kicker">Artifact gallery</p>
-        <h2 id="gallery-title">Designed around the output file</h2>
+        <p class="section-kicker">真实产物 · {installManifest.example.cliVersion}</p>
+        <h2 id="gallery-title">先看一份可信的销售报告</h2>
+        <p class="example-note">自包含 HTML，可离线打开；KPI、图表和洞察均带证据说明。</p>
       </div>
       <div class="artifact-grid">
-        {#each artifacts as artifact}
-          <a href={artifact.url} target="_blank" rel="noopener noreferrer" class="artifact-card">
+        {#each artifacts as artifact, index}
+          <a id={index === 0 ? 'report-card' : undefined} href={artifact.url} target="_blank" rel="noopener noreferrer" class="artifact-card" onclick={() => recordFunnelEvent('example_open')}>
             <div class="artifact-mark" style="background: {artifact.color}"></div>
             <div class="artifact-body">
               <h3>{artifact.name} <span class="artifact-arrow">&#8599;</span></h3>
@@ -180,6 +182,11 @@
             </div>
           </a>
         {/each}
+      </div>
+      <div class="example-actions">
+        <a class="btn-primary" href={installManifest.example.artifactUrl} target="_blank" rel="noopener noreferrer" onclick={() => recordFunnelEvent('example_open')}>打开示例报告</a>
+        <a class="btn-secondary" href={installManifest.example.sampleDataUrl} download>下载样例数据</a>
+        <a class="btn-secondary" href="#first-report">复制提示词并开始</a>
       </div>
     </section>
 

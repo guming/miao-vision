@@ -267,6 +267,18 @@ Preview old runs by default. Use --confirm to delete, excluding the latest run.
 }
 
 const GROUP_HELP: Record<string, string> = {
+  diagnose: `
+Usage: miao-viz diagnose [options]
+
+Check the local CLI, Node.js, host plugin, input file, output directory, and optional PDF dependency.
+The result is JSON-safe and never includes file contents, secrets, or environment values.
+
+Options:
+  --host <id>          codex, claude-code, openclaw, or cli
+  --input <file>       Input file readability check
+  --output <directory> Output directory writeability check
+  --pdf                Check the PDF export dependency
+`,
   artifact: `
 Usage: miao-viz artifact <command> [options]
 
@@ -356,6 +368,7 @@ export function printHelp(groupOrCommand?: string): void {
 Usage:
   miao-viz <group> <command> [options]
   miao-viz --version
+  miao-viz diagnose [--input <file>] [--output <directory>] [--host codex|claude-code|openclaw|cli]
 
 Groups:
   artifact Plan tabular visual outcomes in optional Shadow Mode
