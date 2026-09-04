@@ -367,7 +367,8 @@ export interface AgentChartSpec {
 
 export interface AgentReportSpec {
   specVersion?: 1
-  layout?: { preset: 'narrative' | 'executive' | 'analytical' | 'mosaic'; maxColumns?: 12 }
+  layout?: { preset: 'narrative' | 'executive' | 'analytical' | 'mosaic' | 'poster'; maxColumns?: 12 }
+  poster?: AgentPosterSpec
   title?: string
   description?: string
   theme?: 'standard-white' | 'magazine' | 'standard-dark' | 'minimal' | 'nyt' | 'bloomberg' | 'tableau'
@@ -376,6 +377,20 @@ export interface AgentReportSpec {
   insights?: AgentInsight[]
   charts: AgentChartSpec[]
 }
+
+export interface AgentPosterSpec {
+  chartId: string
+  canvas?: { width?: number; height?: number }
+  hero: { eyebrow?: string; title: string; subtitle?: string }
+  footer: { source: string; date?: string }
+  chart?: { sort?: 'asc' | 'desc'; maxItems?: number; yDomain?: [number, number]; valueFormat?: string }
+  callouts?: AgentPosterCallout[]
+}
+
+export type AgentPosterCallout =
+  | { type: 'formula'; title: string; body: string }
+  | { type: 'note'; text: string }
+  | { type: 'threshold'; title: string; body: string }
 
 export interface RenderJob {
   input: string

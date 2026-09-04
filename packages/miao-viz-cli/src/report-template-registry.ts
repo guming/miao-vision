@@ -21,7 +21,7 @@ export interface ReportTemplateResolver {
   requiredEvidence: string[]
   qualityConstraints: string[]
   intents?: VisualIntentFamily[]
-  layoutPreset?: 'narrative' | 'executive' | 'analytical' | 'mosaic'
+  layoutPreset?: 'narrative' | 'executive' | 'analytical' | 'mosaic' | 'poster'
   canUse(ctx: BlockMatchContext): TemplateDecision
   instantiate(ctx: BlockMatchContext): AgentReportSpec
 }
@@ -77,7 +77,7 @@ export interface ReportTemplateInfo {
   requiredEvidence: string[]
   qualityConstraints: string[]
   intents?: VisualIntentFamily[]
-  layoutPreset?: 'narrative' | 'executive' | 'analytical' | 'mosaic'
+  layoutPreset?: 'narrative' | 'executive' | 'analytical' | 'mosaic' | 'poster'
 }
 
 function scoreForRequirements(ctx: BlockMatchContext, requires: ReportTemplateResolver['requires']): TemplateDecision {
@@ -125,6 +125,38 @@ function compileBlocks(blockIds: string[], ctx: BlockMatchContext): AgentReportS
 }
 
 export const TEMPLATE_REGISTRY: ReportTemplateResolver[] = [
+  {
+    id: 'data-poster-ranking',
+    bestFor: ['single-page ranking poster', 'shareable category comparison', 'static data story'],
+    requires: ['measure', 'dimension'],
+    blocks: ['poster-ranking'],
+    density: 'compact',
+    qualityNotes: ['Requires 3–12 readable categories and one sortable numeric measure.', 'Uses the first measure and first readable dimension.'],
+    requiredEvidence: ['by_dimension'],
+    qualityConstraints: ['No time axis required; values must be finite and rankable.'],
+    intents: ['ranking', 'comparison'],
+    layoutPreset: 'poster',
+    canUse: ctx => {
+      const dimension = ctx.fields.find(f => ['dimension', 'status', 'flag', 'geo'].includes(f.role))
+      const measure = ctx.fields.find(f => f.role === 'measure' || f.role === 'score')
+      const count = dimension?.distinctCount ?? 0
+      if (!dimension || !measure) return { ok: false, score: 0, reason: 'missing required measure or dimension' }
+      if (count < 3) return { ok: false, score: 0, reason: `category count=${count} < 3` }
+      if (count > 12) return { ok: false, score: 0, reason: `category count=${count} > 12` }
+      return { ok: true, score: Math.min(0.91, 0.72 + (ctx.evidence.length > 0 ? 0.1 : 0) + (count <= 10 ? 0.09 : 0)) }
+    },
+    instantiate: ctx => {
+      const dimension = ctx.fields.find(f => ['dimension', 'status', 'flag', 'geo'].includes(f.role))
+      const measure = ctx.fields.find(f => f.role === 'measure' || f.role === 'score')
+      const chartId = 'ranking-chart'
+      return {
+        title: 'Miao Vision Data Poster',
+        layout: { preset: 'poster' },
+        poster: { chartId, hero: { title: 'Category Ranking' }, footer: { source: 'Source: local dataset' }, chart: { sort: 'desc', maxItems: 10 } },
+        charts: [{ id: chartId, type: 'bar', title: `${measure?.name ?? 'Measure'} by ${dimension?.name ?? 'Category'}`, encoding: { x: { field: dimension?.name ?? '' }, y: { field: measure?.name ?? '' } }, style: { showValueLabels: true }, provenance: { evidence: ['by_dimension'], derivedFrom: ['$evidence:by_dimension.rows'] } }]
+      }
+    }
+  },
   {
     id: 'snapshot-overview',
     bestFor: ['static comparison', 'category ranking', 'no time axis'],

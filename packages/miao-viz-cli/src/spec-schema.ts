@@ -129,6 +129,26 @@ const colorScaleSchema = z.object({
 }).strict()
 
 const placementSchema = z.object({ span: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(12)]), emphasis: z.enum(['primary', 'supporting']).optional() }).strict()
+const posterCalloutSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('formula'), title: z.string().min(1), body: z.string().min(1) }).strict(),
+  z.object({ type: z.literal('note'), text: z.string().min(1) }).strict(),
+  z.object({ type: z.literal('threshold'), title: z.string().min(1), body: z.string().min(1) }).strict()
+])
+const posterSchema = z.object({
+  chartId: z.string().min(1),
+  canvas: z.object({ width: z.number().positive().default(1080), height: z.number().positive().default(1350) }).strict().default({ width: 1080, height: 1350 }),
+  hero: z.object({ eyebrow: z.string().optional(), title: z.string().min(1), subtitle: z.string().optional() }).strict(),
+  footer: z.object({ source: z.string().min(1), date: z.string().optional() }).strict(),
+  chart: z.object({ sort: z.enum(['asc', 'desc']).default('desc'), maxItems: z.number().int().min(3).max(12).default(10), yDomain: z.tuple([z.number().finite(), z.number().finite()]).optional(), valueFormat: z.string().max(32).optional() }).strict().default({ sort: 'desc', maxItems: 10 }),
+  callouts: z.array(posterCalloutSchema).max(3).optional()
+}).strict().superRefine((poster, ctx) => {
+  if (poster.canvas.width >= poster.canvas.height) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['canvas'], message: 'poster canvas must be portrait (height greater than width)' })
+  }
+  if (poster.chart.yDomain && poster.chart.yDomain[0] >= poster.chart.yDomain[1]) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['chart', 'yDomain'], message: 'poster chart yDomain must be ascending' })
+  }
+})
 const qualitySchema = z.object({
   sampleSizeField: z.string().min(1).optional(), estimatedField: z.string().min(1).optional(), incompleteField: z.string().min(1).optional(),
   lowSampleThreshold: z.number().nonnegative().optional(), missingRateThreshold: z.number().min(0).max(1).optional()
@@ -206,7 +226,8 @@ export const chartSpecSchema: z.ZodType<AgentChartSpec> = z.object({
 
 export const reportSpecSchema: z.ZodType<AgentReportSpec> = z.object({
   specVersion: z.literal(1).optional(),
-  layout: z.object({ preset: z.enum(['narrative', 'executive', 'analytical', 'mosaic']), maxColumns: z.literal(12).optional() }).strict().optional(),
+  layout: z.object({ preset: z.enum(['narrative', 'executive', 'analytical', 'mosaic', 'poster']), maxColumns: z.literal(12).optional() }).strict().optional(),
+  poster: posterSchema.optional(),
   title: z.string().optional(),
   description: z.string().optional(),
   theme: z.enum(['standard-white', 'magazine', 'standard-dark', 'minimal', 'nyt', 'bloomberg', 'tableau']).optional(),

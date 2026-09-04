@@ -14,6 +14,7 @@ import { resolveDirectives } from './directive-resolver'
 import { mapInsightText } from './insight-utils'
 import { validateProvenance } from './provenance-validator'
 import type { CliArgs } from './cli-utils'
+import type { AgentReportSpec } from './types'
 import { exportHtmlToPdf } from './pdf-export'
 import { exportHtmlToPng } from './png-export'
 import { renderReportHtmlWithTrust } from './trusted-html-render'
@@ -35,6 +36,20 @@ export async function runRenderGroup(args: CliArgs): Promise<void> {
         `Unknown render subcommand: ${args.subcommand ?? '(none)'}. Available: report, deck, article`,
         { subcommand: args.subcommand, available: ['report', 'deck', 'article'] }
       )))
+  }
+}
+
+export function getReportPngExportOptions(spec: AgentReportSpec, args: CliArgs): {
+  width?: number; height?: number; scale?: number; timeout?: number; keepTemp: boolean; selector?: string
+} {
+  const isPoster = spec.layout?.preset === 'poster'
+  return {
+    width: isPoster ? spec.poster?.canvas?.width ?? 1080 : numberFlag(args, 'viewport-width'),
+    height: isPoster ? spec.poster?.canvas?.height ?? 1350 : numberFlag(args, 'viewport-height'),
+    scale: numberFlag(args, 'scale'),
+    timeout: numberFlag(args, 'png-timeout'),
+    keepTemp: args.flags['keep-temp'] === true,
+    selector: isPoster ? '.mv-poster' : undefined
   }
 }
 
@@ -113,7 +128,7 @@ async function runRender(args: CliArgs): Promise<unknown> {
     } else if (format === 'pdf') {
       const pdfPath = outputDir ? join(outputDir, 'report.pdf') : formatOutputPath(output!, 'pdf', false)
       const result = await exportHtmlToPdf(html, pdfPath, {
-        mode: 'report',
+        mode: validation.value.layout?.preset === 'poster' ? 'poster' : 'report',
         pageSize: stringFlag(args, 'page-size') as 'A4' | 'Letter' | undefined,
         orientation: stringFlag(args, 'orientation') as 'portrait' | 'landscape' | undefined,
         margin: stringFlag(args, 'margin'),
@@ -126,11 +141,7 @@ async function runRender(args: CliArgs): Promise<unknown> {
     } else if (format === 'png') {
       const pngPath = outputDir ? join(outputDir, 'report.png') : formatOutputPath(output!, 'png', false)
       const result = await exportHtmlToPng(html, pngPath, {
-        width: numberFlag(args, 'viewport-width'),
-        height: numberFlag(args, 'viewport-height'),
-        scale: numberFlag(args, 'scale'),
-        timeout: numberFlag(args, 'png-timeout'),
-        keepTemp: args.flags['keep-temp'] === true
+        ...getReportPngExportOptions(validation.value, args)
       })
       if (!result.ok) return fail(result)
       written.push(pngPath)

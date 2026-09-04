@@ -1,5 +1,5 @@
 export interface PdfExportOptions {
-  mode: 'report' | 'deck'
+  mode: 'report' | 'deck' | 'poster'
   pageSize?: 'A4' | 'Letter'
   orientation?: 'portrait' | 'landscape'
   margin?: string

@@ -8,6 +8,7 @@ import type { ProvenanceCoverage } from './provenance-validator'
 import type { ThemeName, ReportTheme } from './themes/types'
 import type { AgentChartSpec, AgentInsight, AgentReportSpec, DataProfile } from './types'
 import type { ExposureManifest, ShareSafetyCheck } from './trusted-artifact'
+import { renderPosterHtml } from './poster/poster-renderer'
 
 export interface ReportHtmlOptions extends InteractiveHtmlOptions {
   context?: AnalyzeContext
@@ -66,6 +67,9 @@ export function renderStaticHtml(
   themeOverride?: ThemeName,
   interactiveOptions: ReportHtmlOptions = {}
 ): string {
+  if (spec.layout?.preset === 'poster') {
+    return renderPosterHtml(spec, profile, rows, themeOverride)
+  }
   const theme = getTheme(themeOverride ?? spec.theme)
   const title = spec.title ?? 'Miao Vision Report'
   const interactive = shouldEnableInteractiveRuntime(spec, interactiveOptions)

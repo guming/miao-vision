@@ -32,6 +32,9 @@ export function validateReportSpec(
     return agentError('INVALID_SPEC', parsed.error.issues.map(issue => issue.message).join('; '))
   }
 
+  const posterResult = validatePosterSpec(parsed.data)
+  if (isAgentError(posterResult)) return posterResult
+
   for (const format of formats) {
     if (!OUTPUT_FORMATS.includes(format)) {
       return agentError('UNSUPPORTED_OUTPUT_FORMAT', `Unsupported output format: ${format}`, {
@@ -94,6 +97,26 @@ export function validateReportSpec(
   if (isAgentError(drilldownResult)) return drilldownResult
 
   return ok(parsed.data)
+}
+
+function validatePosterSpec(spec: AgentReportSpec): AgentResult<true> {
+  if (spec.layout?.preset !== 'poster') {
+    if (spec.poster) return agentError('POSTER_LAYOUT_MISMATCH', "poster config requires layout.preset: 'poster'.", { path: 'poster' })
+    return ok(true)
+  }
+  if (!spec.poster) return agentError('POSTER_CONFIG_MISSING', "layout.preset: 'poster' requires poster configuration.", { path: 'poster' })
+  const chartIndex = spec.charts.findIndex(chart => chart.id === spec.poster!.chartId)
+  if (chartIndex < 0) return agentError('POSTER_CHART_NOT_FOUND', `Poster chart '${spec.poster.chartId}' was not found in charts.`, { path: 'poster.chartId', chartId: spec.poster.chartId })
+  const chart = spec.charts[chartIndex]
+  if (chart.type !== 'bar' || chart.variant === 'horizontal' || chart.variant === 'diverging' || chart.variant === 'stacked') {
+    return agentError('POSTER_CHART_INVALID', 'Poster main chart must be a standard vertical bar chart.', { path: `charts[${chartIndex}]`, chartType: chart.type, variant: chart.variant })
+  }
+  const xField = chart.encoding?.x?.field
+  const yField = chart.encoding?.y?.field
+  if (!xField) return agentError('POSTER_CATEGORY_FIELD_MISSING', 'Poster chart requires a categorical x encoding.', { path: `charts[${chartIndex}].encoding.x.field` })
+  if (!yField) return agentError('POSTER_VALUE_FIELD_MISSING', 'Poster chart requires a quantitative y encoding.', { path: `charts[${chartIndex}].encoding.y.field` })
+  if (chart.encoding?.color?.field) return agentError('POSTER_CHART_INVALID', 'Poster ranking chart does not support a color series in the first version.', { path: `charts[${chartIndex}].encoding.color` })
+  return ok(true)
 }
 
 export function getCatalogEntries(): Array<{

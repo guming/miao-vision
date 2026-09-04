@@ -137,7 +137,7 @@ export interface CatalogTemplateEntry {
   requiredEvidence?: string[]
   qualityConstraints?: string[]
   intents?: VisualIntentFamily[]
-  layoutPreset?: 'narrative' | 'executive' | 'analytical' | 'mosaic'
+  layoutPreset?: 'narrative' | 'executive' | 'analytical' | 'mosaic' | 'poster'
 }
 
 export interface BlockedTemplateEntry {
@@ -317,7 +317,7 @@ const catalogTemplateEntrySchema = z.object({
   requiredEvidence: z.array(z.string()).optional(),
   qualityConstraints: z.array(z.string()).optional()
   ,intents: z.array(z.enum(['summary', 'comparison', 'ranking', 'trend', 'change', 'composition', 'distribution', 'relationship', 'flow', 'target-attainment', 'uncertainty', 'geo'])).optional()
-  ,layoutPreset: z.enum(['narrative', 'executive', 'analytical', 'mosaic']).optional()
+  ,layoutPreset: z.enum(['narrative', 'executive', 'analytical', 'mosaic', 'poster']).optional()
 })
 
 const blockedTemplateEntrySchema = z.object({
