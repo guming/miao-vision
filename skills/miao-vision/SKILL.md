@@ -4,14 +4,28 @@ description: >
   Create a self-contained Miao Vision artifact when the user explicitly invokes
   $miao-vision and supplies an article URL or local Markdown/text for an infographic,
   or local Markdown/text and optional CSV, TSV, XLSX, or JSON data for an
-  HTML/PDF report or browser deck.
+  HTML/PDF report, single-page data poster, or browser deck.
   Also validate a user-supplied Miao Vision report or deck spec. Do not trigger from
   isolated keywords such as chart, report, dashboard, slides, infographic, or PDF.
 ---
 
 # Miao Vision
 
-Use Miao Vision for local-first article infographics, data reports, browser decks, recurring reports, and Miao Vision spec validation.
+Use Miao Vision for local-first data reports, single-page data posters, article infographics, browser decks, recurring reports, and Miao Vision spec validation.
+
+## What Miao Vision Can Create
+
+Tell the agent which output you want; it will keep source data local and return a shareable artifact:
+
+| Input or goal | Output |
+|---|---|
+| CSV, TSV, XLSX, or JSON analysis | Evidence-backed HTML report with KPIs, charts, tables, insights, and optional lightweight interactions |
+| Ranked or comparative tabular data | Single-page data poster in HTML, PNG, or PDF, with a large ranking chart, title, callouts, and source footer |
+| Article URL, Markdown, or long-form text | Static article infographic with narrative sections and visual structures |
+| Local data plus a briefing goal | Browser deck with slides, metrics, charts, and keyboard navigation |
+| Existing report/deck spec | Validation, evidence checks, repair hints, and optional rendering |
+
+For a data poster, say “create a single-page data poster” or “make a ranking poster from this spreadsheet.” Use an ordinary report when the user needs multiple views, detail tables, filters, or ongoing exploration. Use a poster when one ranking or comparison should be communicated as a compact visual story.
 
 ## Safety
 
@@ -27,7 +41,7 @@ Proceed only after the user explicitly invokes `$miao-vision` for a supported ar
 | Request | Read exactly one workflow |
 |---|---|
 | Article URL, Markdown, or long-form text to infographic | `references/article.md` |
-| Local CSV/TSV/XLSX/JSON to report, static dashboard, findings artifact, recurring report, business-scene report, executive summary, report edit, multi-file merge, or PNG/PDF export | `references/report.md` |
+| Local CSV/TSV/XLSX/JSON to report, static dashboard, findings artifact, recurring report, business-scene report, executive summary, data poster, report edit, multi-file merge, or PNG/PDF export | `references/report.md` |
 | Browser-based HTML/PDF slides, deck, or briefing from local Markdown/text, structured data, or both | `references/deck.md` |
 | Local tabular data with a materially ambiguous artifact form, or an explicit plan-first request | `references/outcome-brief.md`, then the workflow selected by its V2 Plan |
 | Report or deck spec validation | The matching report or deck workflow above |

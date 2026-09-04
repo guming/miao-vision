@@ -1,10 +1,11 @@
 # Data Report Workflow
 
-Use this workflow for a report, static dashboard, evidence-backed findings artifact, recurring report, or report-spec validation from local CSV, TSV, XLSX, or JSON.
+Use this workflow for a report, static dashboard, single-page data poster, evidence-backed findings artifact, recurring report, or report-spec validation from local CSV, TSV, XLSX, or JSON.
 
 ## Contents
 
 - Create
+- Data poster
 - Evidence and claims
 - Chart and spec rules
 - Recurring reports
@@ -115,6 +116,31 @@ For PDF, render the same validated report with `--format pdf`. For both formats,
 
 For a report PNG, use `--format png`; optional controls are `--viewport-width`,
 `--viewport-height`, `--scale`, and `--png-timeout`.
+
+## Data Poster
+
+Use a poster when one categorical dimension and one numeric measure should become a compact, shareable ranking or comparison. Prefer `data-poster-ranking` from `catalog.templates` when it is available and the dimension has 3–12 readable categories. Do not use a poster for high-cardinality data, multi-view analysis, time-series exploration, or a report that needs filters and detail tables.
+
+The poster spec uses `layout.preset: poster`, points `poster.chartId` at one standard vertical bar chart, and requires a portrait canvas plus a title and source footer:
+
+```yaml
+layout:
+  preset: poster
+poster:
+  chartId: ranking-chart
+  hero:
+    title: Which Categories Rank Highest?
+  footer:
+    source: Internal analysis
+charts:
+  - id: ranking-chart
+    type: bar
+    encoding:
+      x: { field: category }
+      y: { field: value }
+```
+
+Render the same validated spec with `miao-viz render report --format html,png,pdf`. Poster PNG output is cropped to the poster canvas; PDF output is a single portrait page. Keep derived measures in the input data or an earlier validated transform; do not invent values or execute arbitrary formulas in the poster spec.
 
 For schema-compatible files that should be appended row-wise, pass
 `--inputs /path/a.csv,/path/b.csv`. If source names differ, provide a JSON

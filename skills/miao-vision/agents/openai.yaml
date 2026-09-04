@@ -1,7 +1,7 @@
 interface:
   display_name: "Miao Vision"
-  short_description: "Create local-first visual reports and infographics"
-  default_prompt: "Use $miao-vision to turn this article or local dataset into a self-contained visual artifact."
+  short_description: "Create local-first reports, data posters, decks, and infographics"
+  default_prompt: "Use $miao-vision to turn local CSV/TSV/XLSX/JSON data into an evidence-backed report or single-page data poster, or turn an article/brief into an infographic or browser deck. Tell me which artifact you want; Miao Vision keeps data local and returns a self-contained HTML/PNG/PDF artifact."
 
 policy:
   allow_implicit_invocation: false

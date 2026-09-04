@@ -25,7 +25,7 @@ Restart Codex or open a new thread.
 ## 4. Use
 
 ```text
-Use miao-vision to analyze ~/data/sales.csv and generate an HTML visualization report.
+Use miao-vision to analyze ~/data/sales.csv and generate an HTML visualization report, a single-page ranking poster, an article infographic, or a browser deck.
 ```
 
 Data remains local. PDF browser dependencies are installed separately only
